@@ -1,5 +1,4 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
-import { getJson } from "npm:serpapi@2.0.0";
 
 const ALLOWED_ORIGINS = [
   'https://scholarmetricsanalyzer.netlify.app',
@@ -38,15 +37,20 @@ async function fetchScholarProfile(authorId) {
     console.log(`Fetching profile for author ID: ${authorId}`);
     
     // Single API call fetches both author profile and publications
-    const params = {
-      api_key: SERPAPI_KEY,
-      engine: "google_scholar_author",
-      author_id: authorId,
-      sort: "pubdate",
-      num: 100
-    };
+    const serpUrl = new URL('https://serpapi.com/search.json');
+    serpUrl.searchParams.set('api_key', SERPAPI_KEY);
+    serpUrl.searchParams.set('engine', 'google_scholar_author');
+    serpUrl.searchParams.set('author_id', authorId);
+    serpUrl.searchParams.set('sort', 'pubdate');
+    serpUrl.searchParams.set('num', '100');
 
-    const authorData = await getJson(params);
+    const serpResponse = await fetch(serpUrl.toString());
+    if (!serpResponse.ok) {
+      const errText = await serpResponse.text();
+      console.error("SerpAPI HTTP error:", serpResponse.status, errText);
+      throw new Error(`SerpAPI error: ${serpResponse.status}`);
+    }
+    const authorData = await serpResponse.json();
 
     if (!authorData.author) {
       console.error("Author profile not found:", authorData);
