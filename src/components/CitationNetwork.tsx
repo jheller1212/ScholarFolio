@@ -149,14 +149,14 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     });
 
     // Sort co-authors by connection strength
-    const sortedAuthors = Array.from(authorMap.entries()).sort((a, b) => {
+    const sortedByStrength = Array.from(authorMap.entries()).sort((a, b) => {
       const valueA = showCitations ? a[1].citations : a[1].publications.size;
       const valueB = showCitations ? b[1].citations : b[1].publications.size;
       return valueB - valueA;
     });
 
     // Filter top connections based on limit
-    const filteredAuthors = sortedAuthors.slice(0, connectionLimit);
+    const filteredAuthors = sortedByStrength.slice(0, connectionLimit);
 
     // Add filtered co-author nodes and their connections
     const addedAuthors = new Set<string>([mainAuthor]);
