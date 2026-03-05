@@ -14,7 +14,7 @@ const corsHeaders = {
 };
 
 const CACHE_DURATION = 3600; // 1 hour in seconds
-const SERPAPI_KEY = "96a891c5fab8b480711482721adbb324297bcb627e9194765f04cc2e8d2a4e09";
+const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',

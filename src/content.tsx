@@ -84,58 +84,75 @@ function calculateAdvancedMetrics(data: any) {
 function injectMetricsUI(metrics: any) {
   const container = document.createElement('div');
   container.className = 'scholar-metrics-container';
-  container.innerHTML = `
-    <style>
-      .scholar-metrics-container {
-        margin: 20px 0;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
-        border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid rgba(0,0,0,0.1);
-      }
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        margin-top: 12px;
-      }
-      .metric-card {
-        background: rgba(255, 255, 255, 0.9);
-        padding: 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.05);
-      }
-      .metric-title {
-        font-size: 0.75rem;
-        color: #64748b;
-        margin-bottom: 4px;
-      }
-      .metric-value {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1e40af;
-      }
-      .metrics-header {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-    </style>
-    <div class="metrics-grid">
-      ${Object.entries(metrics).map(([key, value]) => `
-        <div class="metric-card">
-          <div class="metric-title">${key.replace(/([A-Z])/g, ' $1').trim()}</div>
-          <div class="metric-value">${value}</div>
-        </div>
-      `).join('')}
-    </div>
+
+  // Add styles safely
+  const style = document.createElement('style');
+  style.textContent = `
+    .scholar-metrics-container {
+      margin: 20px 0;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .metric-title {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .metrics-header {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
   `;
+  container.appendChild(style);
+
+  // Build metrics grid using safe DOM APIs
+  const grid = document.createElement('div');
+  grid.className = 'metrics-grid';
+
+  Object.entries(metrics).forEach(([key, value]) => {
+    const card = document.createElement('div');
+    card.className = 'metric-card';
+
+    const title = document.createElement('div');
+    title.className = 'metric-title';
+    title.textContent = key.replace(/([A-Z])/g, ' $1').trim();
+
+    const val = document.createElement('div');
+    val.className = 'metric-value';
+    val.textContent = String(value);
+
+    card.appendChild(title);
+    card.appendChild(val);
+    grid.appendChild(card);
+  });
+
+  container.appendChild(grid);
 
   const profileHeader = document.querySelector('#gsc_prf_i');
   if (profileHeader) {
@@ -174,16 +191,15 @@ if (window.location.pathname.includes('/citations')) {
         coauthor.citations = parseInt(citations);
         coauthor.hIndex = parseInt(hIndex);
         
-        // Update UI with co-author metrics
-        const coauthorElement = document.querySelector(`a[href="${coauthor.profileUrl}"]`)?.parentElement;
+        // Update UI with co-author metrics using safe DOM APIs
+        const coauthorElement = document.querySelector(`a[href="${CSS.escape(coauthor.profileUrl)}"]`)?.parentElement;
         if (coauthorElement) {
           const metricsDiv = document.createElement('div');
           metricsDiv.className = 'coauthor-metrics';
-          metricsDiv.innerHTML = `
-            <span class="text-sm text-gray-600">
-              ${citations} citations • h-index: ${hIndex}
-            </span>
-          `;
+          const span = document.createElement('span');
+          span.className = 'text-sm text-gray-600';
+          span.textContent = `${citations} citations \u2022 h-index: ${hIndex}`;
+          metricsDiv.appendChild(span);
           coauthorElement.appendChild(metricsDiv);
         }
       } catch (error) {

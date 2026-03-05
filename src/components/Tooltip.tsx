@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 
 interface TooltipProps {
@@ -15,6 +15,13 @@ interface TooltipProps {
 export function Tooltip({ content, children, position = 'bottom' }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const hideTimeoutRef = useRef<number>();
+
+  // Clean up timer on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) window.clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
 
   const handleMouseEnter = () => {
     if (hideTimeoutRef.current) {

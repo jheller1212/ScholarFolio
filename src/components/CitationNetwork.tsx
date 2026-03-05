@@ -89,8 +89,10 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         authorFrequency.set(author, (authorFrequency.get(author) || 0) + 1);
       });
     });
-    const mainAuthor = Array.from(authorFrequency.entries())
-      .sort((a, b) => b[1] - a[1])[0][0];
+    const sortedAuthors = Array.from(authorFrequency.entries())
+      .sort((a, b) => b[1] - a[1]);
+    if (sortedAuthors.length === 0) return;
+    const mainAuthor = sortedAuthors[0][0];
 
     // Process data
     const nodes: Node[] = [];

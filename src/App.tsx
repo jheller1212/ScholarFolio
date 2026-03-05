@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { GraduationCap, Linkedin, Github, AlertCircle } from 'lucide-react';
 import { SearchBar } from './components/SearchBar';
 import { LandingPage } from './components/LandingPage';
@@ -16,84 +16,8 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212'
 };
 
-function App() {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<Author | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
-  const [requestInProgress, setRequestInProgress] = useState(false);
-  const [showError, setShowError] = useState(false);
-
-  const handleSearch = useCallback(async (url: string) => {
-    // Prevent multiple concurrent requests
-    if (requestInProgress) {
-      console.log('[App] Request already in progress, ignoring');
-      return;
-    }
-
-    try {
-      setRequestInProgress(true);
-      setLoading(true);
-      setError(null);
-      setData(null);
-
-      console.log('[App] Validating profile URL:', url);
-      const { isValid, userId } = scholarService.validateProfileUrl(url);
-      if (!isValid) {
-        console.error('[App] Invalid URL format');
-        setError('Invalid Google Scholar URL format. Please enter a valid profile URL.');
-        setShowError(true);
-        return; // Return early instead of throwing an error
-      }
-
-      console.log('[App] Starting profile fetch...');
-      const profileData = await scholarService.fetchProfile(url);
-      if (!profileData) {
-        console.error('[App] No profile data returned');
-        setError('Failed to fetch profile data. Please try again.');
-        setShowError(true);
-        return; // Return early instead of throwing an error
-      }
-
-      // Ensure metrics exists with default values even if undefined
-      const sanitizedData = {
-        ...profileData,
-        metrics: profileData.metrics ?? { citationsPerYear: {} }
-      };
-
-      console.log('[App] Successfully fetched profile data');
-      setData(sanitizedData);
-    } catch (err) {
-      console.error('[App] Error fetching scholar profile:', err);
-      let errorMessage: string;
-      
-      if (err instanceof ApiError) {
-        errorMessage = err.message;
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      } else {
-        errorMessage = 'An unexpected error occurred';
-      }
-      
-      setShowError(true);
-      setError(errorMessage);
-      setData(null);
-    } finally {
-      setRequestInProgress(false);
-      setLoading(false);
-    }
-  }, [requestInProgress]);
-
-  const handleReset = useCallback(() => {
-    setData(null);
-    setError(null);
-    setLoading(false);
-    setRequestInProgress(false);
-    setShowError(false);
-  }, []);
-
-  const SocialLinks = () => (
+function SocialLinks() {
+  return (
     <div className="flex items-center space-x-4">
       <a
         href={SOCIAL_LINKS.linkedin}
@@ -115,6 +39,77 @@ function App() {
       </a>
     </div>
   );
+}
+
+function App() {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<Author | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const requestInProgressRef = useRef(false);
+
+  const handleSearch = useCallback(async (url: string) => {
+    // Prevent multiple concurrent requests using ref to avoid stale closure
+    if (requestInProgressRef.current) {
+      return;
+    }
+
+    try {
+      requestInProgressRef.current = true;
+      setLoading(true);
+      setError(null);
+      setData(null);
+
+      const { isValid, userId } = scholarService.validateProfileUrl(url);
+      if (!isValid) {
+        setError('Invalid Google Scholar URL format. Please enter a valid profile URL.');
+        setShowError(true);
+        return;
+      }
+
+      const profileData = await scholarService.fetchProfile(url);
+      if (!profileData) {
+        setError('Failed to fetch profile data. Please try again.');
+        setShowError(true);
+        return;
+      }
+
+      // Ensure metrics exists with default values even if undefined
+      const sanitizedData = {
+        ...profileData,
+        metrics: profileData.metrics ?? { citationsPerYear: {} }
+      };
+
+      setData(sanitizedData);
+    } catch (err) {
+      let errorMessage: string;
+
+      if (err instanceof ApiError) {
+        errorMessage = err.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      } else {
+        errorMessage = 'An unexpected error occurred';
+      }
+
+      setShowError(true);
+      setError(errorMessage);
+      setData(null);
+    } finally {
+      requestInProgressRef.current = false;
+      setLoading(false);
+    }
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setData(null);
+    setError(null);
+    setLoading(false);
+    requestInProgressRef.current = false;
+    setShowError(false);
+  }, []);
 
   return (
     <ErrorBoundary>

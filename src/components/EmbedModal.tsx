@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Copy, Check, Code } from 'lucide-react';
 
 interface EmbedModalProps {
@@ -9,11 +9,22 @@ interface EmbedModalProps {
 
 export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
   const [copied, setCopied] = useState(false);
-  
+  const copyTimeoutRef = useRef<number>();
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
   if (!isOpen) return null;
 
+  // Sanitize scholarId to prevent XSS when embed code is pasted into other sites
+  const safeScholarId = scholarId.replace(/[^a-zA-Z0-9_-]/g, '');
+
   const embedCode = `<iframe
-  src="https://scholar-metrics.netlify.app/embed/${scholarId}"
+  src="https://scholar-metrics.netlify.app/embed/${safeScholarId}"
   width="100%"
   height="600"
   frameborder="0"
@@ -25,7 +36,8 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
     try {
       await navigator.clipboard.writeText(embedCode);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }

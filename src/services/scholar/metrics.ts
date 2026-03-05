@@ -2,10 +2,28 @@ import type { Publication, Metrics } from '../../types/scholar';
 
 export class MetricsCalculator {
   public calculateMetrics(
-    publications: Publication[], 
-    citationsPerYear: Record<string, number>, 
+    publications: Publication[],
+    citationsPerYear: Record<string, number>,
     authorName: string
   ): Metrics {
+    if (!publications || publications.length === 0) {
+      return {
+        hIndex: 0, gIndex: 0, i10Index: 0, h5Index: 0,
+        totalPublications: 0, publicationsPerYear: '0',
+        citationsPerYear, acc5: 0, avgCitationsPerYear: 0,
+        avgCitationsPerPaper: 0, citationGrowthRate: 0,
+        yearlyGrowthRates: {}, impactTrend: 'stable',
+        peakCitationYear: 0, peakCitations: 0,
+        collaborationScore: 0, soloAuthorScore: 0,
+        averageAuthors: 0, totalCoAuthors: 0,
+        topPaperCitations: 0, topPaperTitle: '', topPaperUrl: '',
+        topCoAuthor: '', topCoAuthorPapers: 0,
+        topCoAuthorCitations: 0, topCoAuthorFirstYear: 0,
+        topCoAuthorLastYear: 0, topCoAuthorFirstPaper: '',
+        topCoAuthorLastPaper: ''
+      };
+    }
+
     const citations = publications.map(p => p.citations);
     const totalCitations = citations.reduce((sum, c) => sum + c, 0);
     
@@ -260,15 +278,19 @@ export class MetricsCalculator {
   }
 
   private findPeakYear(years: number[], citationsPerYear: Record<string, number>): number {
-    return years.reduce((max, year) => 
-      (citationsPerYear[year] > (citationsPerYear[max] || 0)) ? year : max, 
+    if (years.length === 0) return 0;
+    return years.reduce((max, year) =>
+      (citationsPerYear[year] > (citationsPerYear[max] || 0)) ? year : max,
       years[0]
     );
   }
 
   private findMostCitedPaper(publications: Publication[]): Publication {
-    return publications.reduce((max, current) => 
-      current.citations > max.citations ? current : max, 
+    if (publications.length === 0) {
+      return { title: '', authors: [], venue: '', year: 0, citations: 0, url: '' };
+    }
+    return publications.reduce((max, current) =>
+      current.citations > max.citations ? current : max,
       publications[0]
     );
   }

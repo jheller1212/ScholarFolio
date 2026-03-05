@@ -10,7 +10,27 @@ class ScholarFetcher {
   private readonly MAX_RETRIES = 5; // Increased from 3
   private readonly INITIAL_DELAY_MS = 2000; // Increased from 1000
 
+  private validateScholarUrl(url: string): void {
+    try {
+      const parsed = new URL(url);
+      if (!parsed.hostname.includes('scholar.google.')) {
+        throw new Error('Invalid hostname');
+      }
+      if (!parsed.pathname.startsWith('/citations')) {
+        throw new Error('Invalid path');
+      }
+    } catch {
+      throw new ApiError(
+        'Invalid URL. Only Google Scholar profile URLs are allowed.',
+        'INVALID_URL'
+      );
+    }
+  }
+
   private async fetchWithProxy(url: string, attempt: number): Promise<Response> {
+    // Validate URL before proxying to prevent SSRF
+    this.validateScholarUrl(url);
+
     // Try each proxy in sequence until one works
     const proxyIndex = (attempt - 1) % this.CORS_PROXIES.length;
     const proxyUrl = `${this.CORS_PROXIES[proxyIndex]}${encodeURIComponent(url)}`;
