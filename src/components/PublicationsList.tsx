@@ -134,32 +134,34 @@ export function PublicationsList({ publications }: PublicationsListProps) {
               href={pub.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block hover:bg-gray-50 rounded p-2 -mx-2 transition-colors"
+              className="flex items-start justify-between gap-4 hover:bg-gray-50 rounded p-2 -mx-2 transition-colors"
             >
-              <h4 className="text-sm font-medium text-gray-900 hover:text-blue-600 mb-1">
-                {pub.title}
-              </h4>
-              <p className="text-xs text-gray-600 mb-2">
-                {pub.authors.join(', ')}
-              </p>
-              <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  {pub.year}
-                </span>
-                <span className="flex items-center">
-                  <Citation className="h-3 w-3 mr-1" />
-                  {pub.citations.toLocaleString()} citations
-                </span>
-                {pub.venue && (
-                  <span className="text-gray-400">{pub.venue}</span>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 hover:text-blue-600 mb-1">
+                  {pub.title}
+                </h4>
+                <p className="text-xs text-gray-600 mb-2">
+                  {pub.authors.join(', ')}
+                </p>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                  <span className="flex items-center">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {pub.year}
+                  </span>
+                  {pub.venue && (
+                    <span className="text-gray-400">{pub.venue}</span>
+                  )}
+                </div>
+                {pub.journalRanking && (
+                  <div className="mt-2">
+                    <JournalRankingBadge ranking={pub.journalRanking} />
+                  </div>
                 )}
               </div>
-              {pub.journalRanking && (
-                <div className="mt-2">
-                  <JournalRankingBadge ranking={pub.journalRanking} />
-                </div>
-              )}
+              <div className="flex flex-col items-center shrink-0 min-w-[60px]">
+                <span className="text-lg font-bold text-blue-600">{pub.citations.toLocaleString()}</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-wide">citations</span>
+              </div>
             </a>
           </div>
         ))}
