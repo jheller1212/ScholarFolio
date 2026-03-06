@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { GraduationCap, Linkedin, Github, AlertCircle } from 'lucide-react';
-import { SearchBar } from './components/SearchBar';
+import { Linkedin, Github } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
 import { ErrorModal } from './components/ErrorModal';
@@ -18,24 +17,24 @@ const SOCIAL_LINKS = {
 
 function SocialLinks() {
   return (
-    <div className="flex items-center space-x-4">
+    <div className="flex items-center gap-3">
       <a
         href={SOCIAL_LINKS.linkedin}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-gray-600 hover:text-blue-600 transition-colors"
+        className="text-gray-400 hover:text-blue-600 transition-colors"
         title="LinkedIn Profile"
       >
-        <Linkedin className="h-5 w-5" />
+        <Linkedin className="h-4 w-4" />
       </a>
       <a
         href={SOCIAL_LINKS.github}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-gray-600 hover:text-gray-900 transition-colors"
+        className="text-gray-400 hover:text-gray-900 transition-colors"
         title="GitHub Profile"
       >
-        <Github className="h-5 w-5" />
+        <Github className="h-4 w-4" />
       </a>
     </div>
   );
@@ -113,7 +112,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col">
+      <div className="min-h-screen flex flex-col">
         {data && !error ? (
           <ProfileView
             data={data}

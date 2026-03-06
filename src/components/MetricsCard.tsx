@@ -109,42 +109,30 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
 
   const tooltipInfo = metricInfo[getMetricKey()];
 
-  if (!tooltipInfo) {
-    console.warn(`No tooltip info found for metric: ${getMetricKey()}`);
-    return (
-      <div className="bg-white/80 backdrop-blur-lg p-3 rounded-lg shadow-sm border border-gray-100/50 w-full">
-        <div className="flex items-start space-x-2">
-          <div className="p-1.5 bg-gradient-to-br from-primary-start to-primary-end rounded-md text-white mt-0.5">
-            {getIcon()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-gray-500 leading-none">{title}</p>
-            <p className="text-sm font-semibold gradient-text mt-1 truncate">{value}</p>
-            {subtitle && (
-              <p className="text-[10px] text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
-            )}
-          </div>
+  const cardContent = (
+    <div className={`bg-white p-3 rounded-xl border border-gray-100 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 ${tooltipInfo ? 'cursor-help' : ''}`}>
+      <div className="flex items-start gap-2.5">
+        <div className="p-1.5 bg-gradient-to-br from-primary-start to-primary-end rounded-lg text-white mt-0.5 flex-shrink-0">
+          {getIcon()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-gray-400 leading-none">{title}</p>
+          <p className="text-sm font-bold text-gray-900 mt-1.5 truncate">{value}</p>
+          {subtitle && (
+            <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">{subtitle}</p>
+          )}
         </div>
       </div>
-    );
+    </div>
+  );
+
+  if (!tooltipInfo) {
+    return cardContent;
   }
 
   return (
     <Tooltip content={tooltipInfo}>
-      <div className="bg-white/80 backdrop-blur-lg p-3 rounded-lg shadow-sm border border-gray-100/50 cursor-help transition-all hover:shadow-md hover:border-primary-start/50 w-full">
-        <div className="flex items-start space-x-2">
-          <div className="p-1.5 bg-gradient-to-br from-primary-start to-primary-end rounded-md text-white mt-0.5">
-            {getIcon()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-gray-500 leading-none">{title}</p>
-            <p className="text-sm font-semibold gradient-text mt-1 truncate">{value}</p>
-            {subtitle && (
-              <p className="text-[10px] text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
-            )}
-          </div>
-        </div>
-      </div>
+      {cardContent}
     </Tooltip>
   );
 }

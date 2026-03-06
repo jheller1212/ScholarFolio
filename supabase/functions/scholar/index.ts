@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
+import { DOMParser } from "npm:linkedom@0.16.8";
 
 const ALLOWED_ORIGINS = [
   'https://scholarmetricsanalyzer.netlify.app',
@@ -16,7 +17,7 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// In-flight request coalescing to prevent duplicate SerpAPI calls
+// In-flight request coalescing to prevent duplicate API calls
 const inflightRequests = new Map<string, Promise<any>>();
 
 const CACHE_DURATION = 86400; // 24 hours in seconds
@@ -27,134 +28,255 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-async function fetchScholarProfile(authorId) {
-  try {
-    // Validate authorId format
-    if (!authorId || typeof authorId !== 'string' || authorId.length < 12) {
-      throw new Error("Invalid author ID format");
-    }
-    
-    console.log(`Fetching profile for author ID: ${authorId}`);
-    
-    // Single API call fetches both author profile and publications
-    const serpUrl = new URL('https://serpapi.com/search.json');
-    serpUrl.searchParams.set('api_key', SERPAPI_KEY);
-    serpUrl.searchParams.set('engine', 'google_scholar_author');
-    serpUrl.searchParams.set('author_id', authorId);
-    serpUrl.searchParams.set('sort', 'pubdate');
-    serpUrl.searchParams.set('num', '100');
+// --- SerpAPI fetch (primary) ---
+async function fetchViaSerpAPI(authorId: string) {
+  console.log(`[SerpAPI] Fetching profile for author ID: ${authorId}`);
 
-    const serpResponse = await fetch(serpUrl.toString());
-    if (!serpResponse.ok) {
-      const errText = await serpResponse.text();
-      console.error("SerpAPI HTTP error:", serpResponse.status, errText);
-      throw new Error(`SerpAPI error: ${serpResponse.status}`);
-    }
-    const authorData = await serpResponse.json();
-
-    if (!authorData.author) {
-      console.error("Author profile not found:", authorData);
-      throw new Error("Author profile not found");
-    }
-
-    if (!authorData.articles) {
-      console.error("No publications data found:", authorData);
-      throw new Error("Failed to fetch publications");
-    }
-
-    // Transform publications to match frontend schema
-    const publications = (authorData.articles || []).map(article => ({
-      title: article.title || "",
-      authors: (article.authors || "").split(", "),
-      venue: article.publication || "",
-      year: parseInt(article.year) || new Date().getFullYear(),
-      citations: parseInt(article.cited_by?.value) || 0,
-      url: article.link || ""
-    }));
-
-    // Calculate total citations
-    const totalCitations = publications.reduce((sum, pub) => sum + pub.citations, 0);
-
-    // Calculate h-index
-    const citations = publications.map(p => p.citations);
-    const { hIndex, gIndex, i10Index } = calculateIndices(citations);
-
-    // Calculate citations per year
-    const citationsPerYear = {};
-    publications.forEach(pub => {
-      if (pub.year) {
-        const yearStr = String(pub.year);
-        citationsPerYear[yearStr] = (citationsPerYear[yearStr] || 0) + pub.citations;
-      }
-    });
-
-    // Calculate metrics
-    const metrics = {
-      hIndex,
-      gIndex,
-      i10Index,
-      totalPublications: publications.length,
-      publicationsPerYear: (publications.length / Math.max(1, Object.keys(citationsPerYear).length)).toFixed(1),
-      citationsPerYear,
-      avgCitationsPerYear: Math.round(totalCitations / Math.max(1, Object.keys(citationsPerYear).length)),
-      avgCitationsPerPaper: Math.round(totalCitations / Math.max(1, publications.length)),
-      collaborationScore: calculateCollaborationScore(publications),
-      soloAuthorScore: calculateSoloAuthorScore(publications, authorData.author?.name),
-      averageAuthors: calculateAverageAuthors(publications),
-      totalCoAuthors: calculateTotalCoAuthors(publications, authorData.author?.name),
-      topCoAuthor: findTopCoAuthor(publications, authorData.author?.name)
-    };
-
-    // Transform topics/interests
-    const topics = authorData.author?.interests?.map(interest => ({
-      name: interest,
-      url: `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(interest)}`,
-      paperCount: 0 // SerpAPI doesn't provide this information
-    })) || [];
-
-    return {
-      name: authorData.author?.name || "",
-      affiliation: authorData.author?.affiliations?.[0] || "",
-      imageUrl: authorData.author?.thumbnail || "",
-      topics,
-      hIndex,
-      metrics,
-      totalCitations,
-      publications
-    };
-  } catch (error) {
-    console.error("Error fetching from SerpAPI:", error);
-    throw new Error(`Failed to fetch scholar data: ${error.message}`);
+  if (!SERPAPI_KEY) {
+    throw new Error("SERPAPI_KEY not configured");
   }
+
+  const serpUrl = new URL('https://serpapi.com/search.json');
+  serpUrl.searchParams.set('api_key', SERPAPI_KEY);
+  serpUrl.searchParams.set('engine', 'google_scholar_author');
+  serpUrl.searchParams.set('author_id', authorId);
+  serpUrl.searchParams.set('sort', 'pubdate');
+  serpUrl.searchParams.set('num', '100');
+
+  const serpResponse = await fetch(serpUrl.toString());
+  if (!serpResponse.ok) {
+    const errText = await serpResponse.text();
+    console.error("[SerpAPI] HTTP error:", serpResponse.status, errText);
+    const err = new Error(`SerpAPI error: ${serpResponse.status}`);
+    (err as any).status = serpResponse.status;
+    throw err;
+  }
+  const authorData = await serpResponse.json();
+
+  if (!authorData.author) {
+    throw new Error("Author profile not found");
+  }
+
+  if (!authorData.articles) {
+    throw new Error("Failed to fetch publications");
+  }
+
+  const publications = (authorData.articles || []).map(article => ({
+    title: article.title || "",
+    authors: (article.authors || "").split(", "),
+    venue: article.publication || "",
+    year: parseInt(article.year) || new Date().getFullYear(),
+    citations: parseInt(article.cited_by?.value) || 0,
+    url: article.link || ""
+  }));
+
+  const topics = authorData.author?.interests?.map(interest => ({
+    name: interest,
+    url: `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(interest)}`,
+    paperCount: 0
+  })) || [];
+
+  return {
+    name: authorData.author?.name || "",
+    affiliation: authorData.author?.affiliations?.[0] || "",
+    imageUrl: authorData.author?.thumbnail || "",
+    topics,
+    publications
+  };
+}
+
+// --- Direct Google Scholar scraping (fallback) ---
+async function fetchViaDirectScraping(authorId: string) {
+  console.log(`[Scraper] Falling back to direct scraping for author ID: ${authorId}`);
+
+  const scholarUrl = `https://scholar.google.com/citations?user=${authorId}&hl=en&sortby=pubdate&pagesize=100`;
+
+  const response = await fetch(scholarUrl, {
+    headers: {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Cache-Control': 'no-cache'
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google Scholar returned HTTP ${response.status}`);
+  }
+
+  const html = await response.text();
+
+  if (html.includes('unusual traffic') || html.includes('please show you') || html.includes('automated access')) {
+    throw new Error("Rate limited by Google Scholar (CAPTCHA). Please try again later.");
+  }
+
+  if (!html.includes('gsc_prf_in')) {
+    throw new Error("Could not parse Scholar profile. The profile may be private or the URL incorrect.");
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  // Parse author name
+  const nameEl = doc.querySelector('#gsc_prf_in');
+  const name = nameEl?.textContent?.trim() || "";
+
+  // Parse affiliation
+  const affiliationEl = doc.querySelector('.gsc_prf_il');
+  const affiliation = affiliationEl?.textContent?.trim() || "";
+
+  // Parse profile image
+  const imageEl = doc.querySelector('#gsc_prf_pup-img');
+  const imageUrl = imageEl?.getAttribute('src') || "";
+
+  // Parse topics/interests
+  const topicEls = doc.querySelectorAll('#gsc_prf_int a');
+  const topics = Array.from(topicEls).map(el => ({
+    name: el.textContent?.trim() || "",
+    url: `https://scholar.google.com${el.getAttribute('href') || ''}`,
+    paperCount: 0
+  }));
+
+  // Parse publications
+  const publications: any[] = [];
+  const rows = doc.querySelectorAll('#gsc_a_b .gsc_a_tr');
+
+  for (const row of Array.from(rows)) {
+    const titleEl = row.querySelector('.gsc_a_t a');
+    const title = titleEl?.textContent?.trim();
+    const url = titleEl?.getAttribute('href') || '';
+
+    const authorVenueEls = row.querySelectorAll('.gsc_a_t .gs_gray');
+    const authors = (authorVenueEls[0]?.textContent || "").split(',').map(a => a.trim()).filter(Boolean);
+    const venue = authorVenueEls[1]?.textContent?.trim() || '';
+
+    const yearEl = row.querySelector('.gsc_a_y span');
+    const citationsEl = row.querySelector('.gsc_a_c a');
+
+    const yearText = yearEl?.textContent?.trim() || '';
+    const citationsText = citationsEl?.textContent?.trim() || '0';
+
+    const year = parseInt(yearText);
+    if (!title || isNaN(year)) continue;
+
+    publications.push({
+      title,
+      authors: authors.length > 0 ? authors : ['Unknown'],
+      venue,
+      year,
+      citations: parseInt(citationsText.replace('*', '')) || 0,
+      url: url.startsWith('http') ? url : `https://scholar.google.com${url}`
+    });
+  }
+
+  if (publications.length === 0 && !name) {
+    throw new Error("Failed to parse any data from Scholar profile");
+  }
+
+  return { name, affiliation, imageUrl, topics, publications };
+}
+
+// --- Main fetch with fallback ---
+async function fetchScholarProfile(authorId: string) {
+  if (!authorId || typeof authorId !== 'string' || authorId.length < 12) {
+    throw new Error("Invalid author ID format");
+  }
+
+  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[] };
+  let source = 'serpapi';
+
+  try {
+    rawData = await fetchViaSerpAPI(authorId);
+    console.log(`[Fetch] Successfully fetched via SerpAPI (${rawData.publications.length} publications)`);
+  } catch (serpError) {
+    const status = (serpError as any).status;
+    console.warn(`[Fetch] SerpAPI failed (status=${status}): ${serpError.message}`);
+
+    // Fallback on rate limit (429), server errors (5xx), or missing key
+    if (status === 429 || status >= 500 || !SERPAPI_KEY || serpError.message.includes('not configured')) {
+      console.log("[Fetch] Attempting direct scraping fallback...");
+      try {
+        rawData = await fetchViaDirectScraping(authorId);
+        source = 'scraper';
+        console.log(`[Fetch] Successfully fetched via scraping (${rawData.publications.length} publications)`);
+      } catch (scrapeError) {
+        console.error("[Fetch] Scraping fallback also failed:", scrapeError.message);
+        throw new Error(`Both SerpAPI and direct scraping failed. SerpAPI: ${serpError.message}. Scraper: ${scrapeError.message}`);
+      }
+    } else {
+      throw serpError;
+    }
+  }
+
+  // Build unified response from either source
+  const { name, affiliation, imageUrl, topics, publications } = rawData;
+
+  const totalCitations = publications.reduce((sum, pub) => sum + pub.citations, 0);
+  const citations = publications.map(p => p.citations);
+  const { hIndex, gIndex, i10Index } = calculateIndices(citations);
+
+  const citationsPerYear = {};
+  publications.forEach(pub => {
+    if (pub.year) {
+      const yearStr = String(pub.year);
+      citationsPerYear[yearStr] = (citationsPerYear[yearStr] || 0) + pub.citations;
+    }
+  });
+
+  const metrics = {
+    hIndex,
+    gIndex,
+    i10Index,
+    totalPublications: publications.length,
+    publicationsPerYear: (publications.length / Math.max(1, Object.keys(citationsPerYear).length)).toFixed(1),
+    citationsPerYear,
+    avgCitationsPerYear: Math.round(totalCitations / Math.max(1, Object.keys(citationsPerYear).length)),
+    avgCitationsPerPaper: Math.round(totalCitations / Math.max(1, publications.length)),
+    collaborationScore: calculateCollaborationScore(publications),
+    soloAuthorScore: calculateSoloAuthorScore(publications, name),
+    averageAuthors: calculateAverageAuthors(publications),
+    totalCoAuthors: calculateTotalCoAuthors(publications, name),
+    topCoAuthor: findTopCoAuthor(publications, name)
+  };
+
+  return {
+    name,
+    affiliation,
+    imageUrl,
+    topics,
+    hIndex,
+    metrics,
+    totalCitations,
+    publications,
+    _source: source
+  };
 }
 
 function calculateIndices(citations) {
   if (!Array.isArray(citations) || citations.length === 0) {
     return { hIndex: 0, gIndex: 0, i10Index: 0 };
   }
-  
+
   const sorted = [...citations].sort((a, b) => b - a);
-  
-  // h-index
+
   let hIndex = 0;
   for (let i = 0; i < sorted.length; i++) {
     if (sorted[i] >= i + 1) hIndex = i + 1;
     else break;
   }
 
-  // g-index
   let gIndex = 0;
   const cumSum = sorted.reduce((acc, curr, i) => {
     acc[i] = (acc[i - 1] || 0) + curr;
     return acc;
   }, []);
-  
+
   for (let i = 0; i < cumSum.length; i++) {
     if (cumSum[i] >= Math.pow(i + 1, 2)) gIndex = i + 1;
     else break;
   }
 
-  // i10-index
   const i10Index = sorted.filter(c => c >= 10).length;
 
   return { hIndex, gIndex, i10Index };
@@ -162,16 +284,14 @@ function calculateIndices(citations) {
 
 function calculateCollaborationScore(publications) {
   if (!publications || publications.length === 0) return 0;
-  
   const multiAuthorPubs = publications.filter(pub => pub.authors && pub.authors.length > 1);
   return Math.round((multiAuthorPubs.length / publications.length) * 100);
 }
 
 function calculateSoloAuthorScore(publications, authorName) {
   if (!publications || publications.length === 0 || !authorName) return 0;
-  
-  const soloAuthorPubs = publications.filter(pub => 
-    pub.authors && pub.authors.length === 1 && 
+  const soloAuthorPubs = publications.filter(pub =>
+    pub.authors && pub.authors.length === 1 &&
     pub.authors[0].toLowerCase().includes(authorName.toLowerCase())
   );
   return Math.round((soloAuthorPubs.length / publications.length) * 100);
@@ -179,17 +299,14 @@ function calculateSoloAuthorScore(publications, authorName) {
 
 function calculateAverageAuthors(publications) {
   if (!publications || publications.length === 0) return 0;
-  
   const totalAuthors = publications.reduce((sum, pub) => sum + (pub.authors?.length || 0), 0);
   return parseFloat((totalAuthors / publications.length).toFixed(1));
 }
 
 function calculateTotalCoAuthors(publications, authorName) {
   if (!publications || publications.length === 0 || !authorName) return 0;
-  
   const coAuthors = new Set();
   const authorNameLower = authorName.toLowerCase();
-  
   publications.forEach(pub => {
     if (pub.authors) {
       pub.authors.forEach(author => {
@@ -204,10 +321,8 @@ function calculateTotalCoAuthors(publications, authorName) {
 
 function findTopCoAuthor(publications, authorName) {
   if (!publications || publications.length === 0 || !authorName) return '';
-  
   const coAuthorCounts = new Map();
   const authorNameLower = authorName.toLowerCase();
-  
   publications.forEach(pub => {
     if (pub.authors) {
       pub.authors.forEach(author => {
@@ -220,39 +335,28 @@ function findTopCoAuthor(publications, authorName) {
 
   let topCoAuthor = '';
   let maxCollabs = 0;
-  
   coAuthorCounts.forEach((count, author) => {
     if (count > maxCollabs) {
       maxCollabs = count;
       topCoAuthor = author;
     }
   });
-
   return topCoAuthor;
 }
 
-// Extract user ID from various Google Scholar URLs
 function extractScholarUserId(url) {
   try {
-    // First try to parse as URL to validate
     const urlObj = new URL(url);
-    
-    // Check if it's a Google Scholar URL
     if (!urlObj.hostname.includes('scholar.google.')) {
       throw new Error('Not a Google Scholar URL');
     }
-    
-    // Extract user ID parameter
     const userId = urlObj.searchParams.get('user');
     if (!userId || userId.length < 12) {
       throw new Error('Invalid or missing user ID in URL');
     }
-    
-    // Validate user ID contains only safe characters (alphanumeric, hyphens, underscores)
     if (!/^[a-zA-Z0-9_-]+$/.test(userId)) {
       throw new Error('User ID contains invalid characters');
     }
-
     return userId;
   } catch (e) {
     console.error('Error extracting user ID:', e);
@@ -263,13 +367,11 @@ function extractScholarUserId(url) {
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get request body
     let requestData;
     try {
       requestData = await req.json();
@@ -297,7 +399,6 @@ Deno.serve(async (req) => {
 
     console.log(`Processing request for URL: ${profileUrl}`);
 
-    // Extract user ID from URL
     let authorId;
     try {
       authorId = extractScholarUserId(profileUrl);
@@ -313,7 +414,6 @@ Deno.serve(async (req) => {
 
     console.log(`Extracted user ID: ${authorId}`);
 
-    // Create normalized URL for caching
     const normalizedUrl = `https://scholar.google.com/citations?user=${authorId}`;
 
     // Check cache
@@ -344,7 +444,7 @@ Deno.serve(async (req) => {
 
     console.log("Cache miss, fetching fresh data");
 
-    // Coalesce concurrent requests for the same author to avoid duplicate SerpAPI calls
+    // Coalesce concurrent requests for the same author
     let dataPromise = inflightRequests.get(authorId);
     if (!dataPromise) {
       dataPromise = fetchScholarProfile(authorId).finally(() => {
