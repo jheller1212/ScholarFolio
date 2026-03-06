@@ -193,19 +193,15 @@ async function fetchScholarProfile(authorId: string) {
     const status = (serpError as any).status;
     console.warn(`[Fetch] SerpAPI failed (status=${status}): ${serpError.message}`);
 
-    // Fallback on rate limit (429), server errors (5xx), or missing key
-    if (status === 429 || status >= 500 || !SERPAPI_KEY || serpError.message.includes('not configured')) {
-      console.log("[Fetch] Attempting direct scraping fallback...");
-      try {
-        rawData = await fetchViaDirectScraping(authorId);
-        source = 'scraper';
-        console.log(`[Fetch] Successfully fetched via scraping (${rawData.publications.length} publications)`);
-      } catch (scrapeError) {
-        console.error("[Fetch] Scraping fallback also failed:", scrapeError.message);
-        throw new Error(`Both SerpAPI and direct scraping failed. SerpAPI: ${serpError.message}. Scraper: ${scrapeError.message}`);
-      }
-    } else {
-      throw serpError;
+    // Always fall back to direct scraping when SerpAPI fails for any reason
+    console.log("[Fetch] Attempting direct scraping fallback...");
+    try {
+      rawData = await fetchViaDirectScraping(authorId);
+      source = 'scraper';
+      console.log(`[Fetch] Successfully fetched via scraping (${rawData.publications.length} publications)`);
+    } catch (scrapeError) {
+      console.error("[Fetch] Scraping fallback also failed:", scrapeError.message);
+      throw new Error(`Both SerpAPI and direct scraping failed. SerpAPI: ${serpError.message}. Scraper: ${scrapeError.message}`);
     }
   }
 

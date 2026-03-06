@@ -44,7 +44,7 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
           </h1>
 
           <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-12 leading-relaxed">
-            Paste your Google Scholar profile URL to see your publication history, collaboration network, and research reach — on one page.
+            Paste your Google Scholar profile URL to see your publication history, collaboration network, and research reach on one page.
           </p>
 
           {/* Search area */}
@@ -75,7 +75,7 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
               Everything you need to understand your research
             </h2>
             <p className="text-sm text-gray-500 max-w-lg mx-auto">
-              A clear, honest picture of your research — built from your Google Scholar profile.
+              A clear, honest picture of your research, built from your Google Scholar profile.
             </p>
           </div>
 
@@ -84,7 +84,7 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
               {
                 icon: BarChart,
                 title: "Research Reach",
-                description: "How far your work has travelled — citations, growth trends, and the conversations your research has opened."
+                description: "How far your work has travelled. Citations, growth trends, and the conversations your research has opened."
               },
               {
                 icon: Network,
