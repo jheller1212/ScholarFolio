@@ -9,7 +9,9 @@
 }
 
 body {
-  @apply antialiased;
+  @apply antialiased font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .gradient-text {
@@ -34,8 +36,8 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -43,12 +45,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gradient-to-br from-[#019DD4] to-[#E84E10] rounded-full;
+  @apply rounded-full;
+  background: linear-gradient(135deg, #019DD4, #E84E10);
 }
 
-/* Smooth transitions */
-* {
-  @apply transition-colors duration-200;
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #017ba8, #c04010);
 }
 
 /* Loading animation */
@@ -63,4 +65,13 @@ body {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Mesh gradient background */
+.mesh-bg {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(at 20% 20%, rgba(1, 157, 212, 0.06) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, rgba(232, 78, 16, 0.04) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, rgba(1, 157, 212, 0.03) 0px, transparent 50%);
 }

@@ -1,57 +1,43 @@
-/* empty css                     */function g(){var n,r;return{name:((n=document.querySelector("#gsc_prf_in"))==null?void 0:n.textContent)||"",affiliation:((r=document.querySelector(".gsc_prf_il"))==null?void 0:r.textContent)||"",citations:Array.from(document.querySelectorAll("#gsc_rsb_st tr")).map(t=>{var e,i,o;return{metric:((e=t.querySelector("td:first-child"))==null?void 0:e.textContent)||"",all:((i=t.querySelector("td:nth-child(2)"))==null?void 0:i.textContent)||"",since2018:((o=t.querySelector("td:last-child"))==null?void 0:o.textContent)||""}}),publications:Array.from(document.querySelectorAll("#gsc_a_b .gsc_a_tr")).map(t=>{var e,i,o,l,d,a;return{title:((e=t.querySelector(".gsc_a_t a"))==null?void 0:e.textContent)||"",authors:((i=t.querySelector(".gsc_a_t .gsc_a_at"))==null?void 0:i.textContent)||"",venue:((o=t.querySelector(".gsc_a_t .gsc_a_v"))==null?void 0:o.textContent)||"",year:((l=t.querySelector(".gsc_a_y"))==null?void 0:l.textContent)||"",citations:parseInt(((d=t.querySelector(".gsc_a_c"))==null?void 0:d.textContent)||"0"),url:((a=t.querySelector(".gsc_a_t a"))==null?void 0:a.getAttribute("href"))||""}}),coauthors:Array.from(document.querySelectorAll("#gsc_rsb_co .gsc_rsb_a_desc")).map(t=>{var e,i,o;return{name:((e=t.querySelector(".gsc_rsb_a_desc a"))==null?void 0:e.textContent)||"",imageUrl:((i=t.querySelector("img"))==null?void 0:i.src)||"",profileUrl:((o=t.querySelector("a"))==null?void 0:o.href)||""}})}}function f(c){const n=c.publications.length,r={};let t=0,e=0;c.publications.forEach(s=>{s.year&&(r[s.year]=(r[s.year]||0)+1),e+=s.citations});const i=Object.keys(r),o=n/i.length,l=c.name.split(" ")[1];c.publications.forEach(s=>{s.authors.includes(l)&&(t+=Math.round(s.citations*.2))});const d=t/e*100,a=c.publications.filter(s=>s.citations>0).length/n*100;return{totalPublications:n,publicationsPerYear:o.toFixed(1),selfCitationRate:d.toFixed(1)+"%",sIndex:a.toFixed(1)+"%",hpIndex:Math.round(c.citations[0].all*.8),rcr:(e/n/10).toFixed(2)}}function x(c){const n=document.createElement("div");n.className="scholar-metrics-container",n.innerHTML=`
-    <style>
-      .scholar-metrics-container {
-        margin: 20px 0;
-        padding: 16px;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
-        border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid rgba(0,0,0,0.1);
-      }
-      .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-        margin-top: 12px;
-      }
-      .metric-card {
-        background: rgba(255, 255, 255, 0.9);
-        padding: 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,0.05);
-      }
-      .metric-title {
-        font-size: 0.75rem;
-        color: #64748b;
-        margin-bottom: 4px;
-      }
-      .metric-value {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1e40af;
-      }
-      .metrics-header {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-    </style>
-    <div class="metrics-grid">
-      ${Object.entries(c).map(([t,e])=>`
-        <div class="metric-card">
-          <div class="metric-title">${t.replace(/([A-Z])/g," $1").trim()}</div>
-          <div class="metric-value">${e}</div>
-        </div>
-      `).join("")}
-    </div>
-  `;const r=document.querySelector("#gsc_prf_i");r&&r.appendChild(n)}if(window.location.pathname.includes("/citations")){const c=g(),n=f(c);chrome.runtime.sendMessage({type:"PROFILE_DATA",data:{...c,...n}},r=>{chrome.runtime.sendMessage({type:"GET_METRICS"},t=>{t&&x(t)})}),c.coauthors.forEach(async r=>{var t,e,i;if(r.profileUrl)try{const l=await(await fetch(r.profileUrl)).text(),a=new DOMParser().parseFromString(l,"text/html"),s=((t=a.querySelector("#gsc_rsb_st tr:first-child td:nth-child(2)"))==null?void 0:t.textContent)||"0",p=((e=a.querySelector("#gsc_rsb_st tr:nth-child(2) td:nth-child(2)"))==null?void 0:e.textContent)||"0";r.citations=parseInt(s),r.hIndex=parseInt(p);const u=(i=document.querySelector(`a[href="${r.profileUrl}"]`))==null?void 0:i.parentElement;if(u){const m=document.createElement("div");m.className="coauthor-metrics",m.innerHTML=`
-            <span class="text-sm text-gray-600">
-              ${s} citations • h-index: ${p}
-            </span>
-          `,u.appendChild(m)}}catch(o){console.error("Error fetching co-author metrics:",o)}})}
+/* empty css                     */function x(){var a,r;return{name:((a=document.querySelector("#gsc_prf_in"))==null?void 0:a.textContent)||"",affiliation:((r=document.querySelector(".gsc_prf_il"))==null?void 0:r.textContent)||"",citations:Array.from(document.querySelectorAll("#gsc_rsb_st tr")).map(e=>{var t,n,c;return{metric:((t=e.querySelector("td:first-child"))==null?void 0:t.textContent)||"",all:((n=e.querySelector("td:nth-child(2)"))==null?void 0:n.textContent)||"",since2018:((c=e.querySelector("td:last-child"))==null?void 0:c.textContent)||""}}),publications:Array.from(document.querySelectorAll("#gsc_a_b .gsc_a_tr")).map(e=>{var t,n,c,s,d,l;return{title:((t=e.querySelector(".gsc_a_t a"))==null?void 0:t.textContent)||"",authors:((n=e.querySelector(".gsc_a_t .gsc_a_at"))==null?void 0:n.textContent)||"",venue:((c=e.querySelector(".gsc_a_t .gsc_a_v"))==null?void 0:c.textContent)||"",year:((s=e.querySelector(".gsc_a_y"))==null?void 0:s.textContent)||"",citations:parseInt(((d=e.querySelector(".gsc_a_c"))==null?void 0:d.textContent)||"0"),url:((l=e.querySelector(".gsc_a_t a"))==null?void 0:l.getAttribute("href"))||""}}),coauthors:Array.from(document.querySelectorAll("#gsc_rsb_co .gsc_rsb_a_desc")).map(e=>{var t,n,c;return{name:((t=e.querySelector(".gsc_rsb_a_desc a"))==null?void 0:t.textContent)||"",imageUrl:((n=e.querySelector("img"))==null?void 0:n.src)||"",profileUrl:((c=e.querySelector("a"))==null?void 0:c.href)||""}})}}function h(o){const a=o.publications.length,r={};let e=0,t=0;o.publications.forEach(i=>{i.year&&(r[i.year]=(r[i.year]||0)+1),t+=i.citations});const n=Object.keys(r),c=a/n.length,s=o.name.split(" ")[1];o.publications.forEach(i=>{i.authors.includes(s)&&(e+=Math.round(i.citations*.2))});const d=e/t*100,l=o.publications.filter(i=>i.citations>0).length/a*100;return{totalPublications:a,publicationsPerYear:c.toFixed(1),selfCitationRate:d.toFixed(1)+"%",sIndex:l.toFixed(1)+"%",hpIndex:Math.round(o.citations[0].all*.8),rcr:(t/a/10).toFixed(2)}}function f(o){const a=document.createElement("div");a.className="scholar-metrics-container";const r=document.createElement("style");r.textContent=`
+    .scholar-metrics-container {
+      margin: 20px 0;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .metric-card {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .metric-title {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e40af;
+    }
+    .metrics-header {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  `,a.appendChild(r);const e=document.createElement("div");e.className="metrics-grid",Object.entries(o).forEach(([n,c])=>{const s=document.createElement("div");s.className="metric-card";const d=document.createElement("div");d.className="metric-title",d.textContent=n.replace(/([A-Z])/g," $1").trim();const l=document.createElement("div");l.className="metric-value",l.textContent=String(c),s.appendChild(d),s.appendChild(l),e.appendChild(s)}),a.appendChild(e);const t=document.querySelector("#gsc_prf_i");t&&t.appendChild(a)}if(window.location.pathname.includes("/citations")){const o=x(),a=h(o);chrome.runtime.sendMessage({type:"PROFILE_DATA",data:{...o,...a}},r=>{chrome.runtime.sendMessage({type:"GET_METRICS"},e=>{e&&f(e)})}),o.coauthors.forEach(async r=>{var e,t,n;if(r.profileUrl)try{const s=await(await fetch(r.profileUrl)).text(),l=new DOMParser().parseFromString(s,"text/html"),i=((e=l.querySelector("#gsc_rsb_st tr:first-child td:nth-child(2)"))==null?void 0:e.textContent)||"0",u=((t=l.querySelector("#gsc_rsb_st tr:nth-child(2) td:nth-child(2)"))==null?void 0:t.textContent)||"0";r.citations=parseInt(i),r.hIndex=parseInt(u);const g=(n=document.querySelector(`a[href="${CSS.escape(r.profileUrl)}"]`))==null?void 0:n.parentElement;if(g){const m=document.createElement("div");m.className="coauthor-metrics";const p=document.createElement("span");p.className="text-sm text-gray-600",p.textContent=`${i} citations • h-index: ${u}`,m.appendChild(p),g.appendChild(m)}}catch(c){console.error("Error fetching co-author metrics:",c)}})}
 //# sourceMappingURL=content.js.map

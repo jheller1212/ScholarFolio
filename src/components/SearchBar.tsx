@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, ExternalLink, Loader2, AlertCircle, BookOpen } from 'lucide-react';
 import { ApiError } from '../utils/api';
 import DOMPurify from 'dompurify';
@@ -13,8 +13,42 @@ interface SearchBarProps {
 export function SearchBar({ onSearch, isLoading = false, compact = false, error: externalError }: SearchBarProps) {
   const [url, setUrl] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const error = externalError || localError;
+
+  // Progress bar that accelerates to ~90% over ~8s, then waits for completion
+  useEffect(() => {
+    if (isLoading) {
+      setProgress(0);
+      const startTime = Date.now();
+      const estimatedDuration = 8000; // 8 seconds estimated
+      progressRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        // Asymptotic curve: approaches 90% but never reaches it
+        const p = 90 * (1 - Math.exp(-2.5 * elapsed / estimatedDuration));
+        setProgress(Math.min(p, 90));
+      }, 100);
+    } else {
+      if (progressRef.current) {
+        clearInterval(progressRef.current);
+        progressRef.current = null;
+      }
+      if (progress > 0) {
+        // Animate to 100% on completion
+        setProgress(100);
+        const timeout = setTimeout(() => setProgress(0), 500);
+        return () => clearTimeout(timeout);
+      }
+    }
+    return () => {
+      if (progressRef.current) {
+        clearInterval(progressRef.current);
+        progressRef.current = null;
+      }
+    };
+  }, [isLoading]);
 
   const validateUrl = useCallback((url: string): boolean => {
     try {
@@ -139,6 +173,24 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
           )}
         </button>
       </div>
+
+      {isLoading && (
+        <div className="mt-3">
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary-start to-primary-end rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1.5 text-center">
+            {progress < 30 ? 'Connecting to Google Scholar...' :
+             progress < 60 ? 'Fetching publications...' :
+             progress < 85 ? 'Calculating metrics...' :
+             progress < 100 ? 'Almost done...' :
+             'Complete!'}
+          </p>
+        </div>
+      )}
       
       {error && !compact && (
         <div className="mt-2 flex items-start space-x-1">
