@@ -1,15 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <defs>
     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#019DD4"/>
-      <stop offset="100%" style="stop-color:#E84E10"/>
+      <stop offset="0%" style="stop-color:#2d7d7d"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
     </linearGradient>
   </defs>
   <rect width="32" height="32" rx="8" fill="url(#grad)"/>
-  <!-- Bar chart icon -->
   <rect x="7" y="18" width="4" height="8" rx="1" fill="white" opacity="0.9"/>
   <rect x="14" y="12" width="4" height="14" rx="1" fill="white"/>
   <rect x="21" y="7" width="4" height="19" rx="1" fill="white" opacity="0.9"/>
-  <!-- Graduation cap accent -->
   <path d="M16 5L10 8L16 11L22 8L16 5Z" fill="white" opacity="0.6"/>
 </svg>
