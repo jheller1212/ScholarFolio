@@ -6,7 +6,7 @@ export class CrossrefService {
   private readonly EMAIL = 'your-email@domain.com'; // For polite pool
 
   private readonly headers = {
-    'User-Agent': 'ScholarMetricsAnalyzer/1.0 (mailto:your-email@domain.com)'
+    'User-Agent': 'ResearchPortfolio/1.0 (mailto:your-email@domain.com)'
   };
 
   public async getJournalMetadata(doi: string): Promise<JournalRanking | null> {

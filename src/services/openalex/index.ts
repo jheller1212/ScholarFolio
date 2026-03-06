@@ -4,10 +4,10 @@ import { rateLimiter } from '../scholar/rate-limiter';
 
 export class OpenAlexService {
   private readonly API_URL = 'https://api.openalex.org';
-  private readonly EMAIL = 'scholar-metrics@example.com';
+  private readonly EMAIL = 'research-portfolio@example.com';
 
   private readonly headers = {
-    'User-Agent': `ScholarMetricsAnalyzer/1.0 (${this.EMAIL})`
+    'User-Agent': `ResearchPortfolio/1.0 (${this.EMAIL})`
   };
 
   public async getJournalMetrics(issn: string): Promise<JournalRanking | null> {

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Scholar Metrics Analyzer",
-  "version": "1.0.0",
-  "description": "Advanced metrics and analytics for Google Scholar profiles",
+  "name": "Research Portfolio",
+  "version": "0.10.0",
+  "description": "Your research, at a glance — built from your Google Scholar profile",
   "permissions": [
     "activeTab",
     "scripting",

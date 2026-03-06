@@ -1,6 +1,6 @@
-# Scholar Metrics Analyzer
+# Research Portfolio
 
-Analyze and visualize Google Scholar profiles with citation metrics, collaboration networks, and publication insights.
+Your research, at a glance — publication history, collaboration network, and research reach built from your Google Scholar profile.
 
 **Live:** [scholarmetricsanalyzer.netlify.app](https://scholarmetricsanalyzer.netlify.app/)
 
