@@ -2,32 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { Network, Share2, BookOpen, Presentation as Citation, Users, Info } from 'lucide-react';
 import type { Publication } from '../types/scholar';
-
-// Add helper function for name extraction
-function extractLastName(fullName: string): string {
-  // Common prefixes that indicate the start of a last name
-  const lastNamePrefixes = ['van ', 'von ', 'de ', 'del ', 'della ', 'di ', 'da ', 'dos ', 'das ', 'du ', 'den ', 'der '];
-  
-  // Split the name into parts
-  const nameParts = fullName.trim().split(' ');
-  
-  // If only one part, return it
-  if (nameParts.length === 1) {
-    return nameParts[0];
-  }
-  
-  // Check for compound last names with prefixes
-  for (let i = 0; i < nameParts.length - 1; i++) {
-    const possiblePrefix = nameParts[i].toLowerCase() + ' ';
-    if (lastNamePrefixes.includes(possiblePrefix)) {
-      // Return everything from the prefix onwards
-      return nameParts.slice(i).join(' ');
-    }
-  }
-  
-  // If no prefix found, return the last part
-  return nameParts[nameParts.length - 1];
-}
+import { extractLastName } from '../utils/names';
 
 interface Node {
   id: string;

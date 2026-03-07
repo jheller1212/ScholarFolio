@@ -138,12 +138,12 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   }, [data]);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
-      <h3 className="text-sm font-semibold text-gray-900 flex items-center mb-4">
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 flex items-center mb-3">
         <FileText className="h-4 w-4 text-[#2d7d7d] mr-2" />
-        Researcher Profile Summary
+        Research Profile
       </h3>
-      <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+      <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
         {narrative.map((paragraph, i) => (
           <p key={i}>{paragraph}</p>
         ))}

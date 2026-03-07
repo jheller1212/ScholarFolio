@@ -9,6 +9,7 @@ import { CitationNetwork } from './CitationNetwork';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
 import type { Author } from '../types/scholar';
+import { extractLastName } from '../utils/names';
 import packageJson from '../../package.json';
 
 interface ProfileViewProps {
@@ -114,11 +115,11 @@ export function ProfileView({
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Researcher Narrative */}
-        <div className="mb-6">
-          <ResearcherNarrative data={data} />
+          {/* Researcher Narrative */}
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <ResearcherNarrative data={data} />
+          </div>
         </div>
 
         {/* Tabs */}
@@ -174,7 +175,7 @@ export function ProfileView({
                 <MetricsCard title="Collaboration Rate" value={`${data.metrics.collaborationScore}%`} icon="network" />
                 <MetricsCard
                   title="Top Co-author"
-                  value={data.metrics.topCoAuthor.split(' ').pop() || 'N/A'}
+                  value={data.metrics.topCoAuthor ? extractLastName(data.metrics.topCoAuthor) : 'N/A'}
                   subtitle={`${data.metrics.topCoAuthorPapers} papers`}
                   icon="topCoAuthor"
                 />
