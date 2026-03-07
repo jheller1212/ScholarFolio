@@ -14,6 +14,7 @@ import packageJson from '../../package.json';
 
 interface ProfileViewProps {
   data: Author | null;
+  profileUrl?: string | null;
   loading: boolean;
   error: string | null;
   onSearch: (url: string) => void;
@@ -32,6 +33,7 @@ type TabId = typeof tabs[number]['id'];
 
 export function ProfileView({
   data,
+  profileUrl,
   loading,
   error,
   onSearch,
@@ -93,7 +95,19 @@ export function ProfileView({
               )}
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 truncate">
-                  {data.name}
+                  {profileUrl ? (
+                    <a
+                      href={profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#2d7d7d] transition-colors"
+                      title="View on Google Scholar"
+                    >
+                      {data.name}
+                    </a>
+                  ) : (
+                    data.name
+                  )}
                 </h2>
                 <p className="text-sm text-gray-500 mb-3">{data.affiliation}</p>
                 {data.topics && data.topics.length > 0 && (

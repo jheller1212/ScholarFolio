@@ -98,7 +98,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
               type="text"
               value={query}
               onChange={handleInputChange}
-              placeholder="e.g. Ko de Ruyter"
+              placeholder="e.g. Albert Einstein"
               className="w-full px-4 py-2.5 pl-10 pr-20 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 focus:bg-white transition-all"
               autoComplete="off"
               spellCheck="false"

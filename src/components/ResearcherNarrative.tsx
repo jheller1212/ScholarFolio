@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { FileText, TrendingUp, Users, BookOpen, Award } from 'lucide-react';
 import type { Author } from '../types/scholar';
+import { findJournalRanking } from '../data/journalRankings';
 
 interface ResearcherNarrativeProps {
   data: Author;
@@ -19,11 +20,35 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
   publications.forEach(pub => {
     const venue = pub.venue?.trim();
     if (venue && venue.length > 0) {
-      venueCounts.set(venue, (venueCounts.get(venue) || 0) + 1);
+      // Normalize: strip volume/issue/page info after first comma
+      const baseName = venue.replace(/,.*$/, '').replace(/\s+\d+.*$/, '').trim();
+      if (baseName.length > 0) {
+        venueCounts.set(baseName, (venueCounts.get(baseName) || 0) + 1);
+      }
     }
   });
+
+  // Score venues by prestige: FT50 > ABS rank > impact factor > publication count
+  function prestigeScore(venue: string): number {
+    const ranking = findJournalRanking(venue);
+    if (!ranking) return 0;
+    let score = 0;
+    if (ranking.ft50) score += 1000;
+    if (ranking.abs === '4*') score += 500;
+    else if (ranking.abs === '4') score += 400;
+    else if (ranking.abs === '3') score += 300;
+    else if (ranking.abs === '2') score += 200;
+    else if (ranking.abs === '1') score += 100;
+    if (ranking.jcr) score += Math.min(parseFloat(ranking.jcr) * 10, 200);
+    return score;
+  }
+
   return Array.from(venueCounts.entries())
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => {
+      const prestigeDiff = prestigeScore(b[0]) - prestigeScore(a[0]);
+      if (prestigeDiff !== 0) return prestigeDiff;
+      return b[1] - a[1]; // Fall back to publication count
+    })
     .slice(0, limit)
     .map(([name, count]) => ({ name, count }));
 }
@@ -54,8 +79,13 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
     const phase = getProductivityPhase(publications);
     const topPaper = getMostCitedPaper(publications);
 
-    // Build research areas text from topics
-    const topicNames = topics.map(t => t.name).slice(0, 5);
+    // Build research areas text from topics (defensive: name may be object from SerpAPI)
+    const topicNames = topics.map(t => {
+      if (typeof t.name === 'object' && t.name !== null) {
+        return (t.name as any).title || '';
+      }
+      return String(t.name || '');
+    }).filter(Boolean).slice(0, 5);
     let topicsText = '';
     if (topicNames.length > 0) {
       if (topicNames.length === 1) {

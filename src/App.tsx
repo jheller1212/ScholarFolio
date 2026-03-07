@@ -97,6 +97,7 @@ function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
 function App() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Author | null>(null);
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [page, setPage] = useState<Page>('home');
@@ -134,6 +135,7 @@ function App() {
         metrics: profileData.metrics ?? { citationsPerYear: {} }
       };
 
+      setProfileUrl(url);
       setData(sanitizedData);
     } catch (err) {
       let errorMessage: string;
@@ -157,6 +159,7 @@ function App() {
 
   const handleReset = useCallback(() => {
     setData(null);
+    setProfileUrl(null);
     setError(null);
     setLoading(false);
     requestInProgressRef.current = false;
@@ -178,6 +181,7 @@ function App() {
       return (
         <ProfileView
           data={data}
+          profileUrl={profileUrl}
           loading={loading}
           error={error}
           onSearch={handleSearch}
