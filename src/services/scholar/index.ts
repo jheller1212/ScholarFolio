@@ -16,24 +16,33 @@ export interface AuthorSearchResult {
 
 export const scholarService = {
   searchAuthors: async (query: string): Promise<AuthorSearchResult[]> => {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
-        },
-        body: JSON.stringify({ action: 'search', query })
-      }
-    );
+    // Try edge function (SerpAPI) first
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+          },
+          body: JSON.stringify({ action: 'search', query }),
+          signal: AbortSignal.timeout(8000)
+        }
+      );
 
-    if (!response.ok) {
-      throw new ApiError('Author search failed', 'FETCH_ERROR');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.profiles && data.profiles.length > 0) {
+          return data.profiles;
+        }
+      }
+    } catch {
+      console.warn('[ScholarService] Edge function author search failed, trying client-side fallback');
     }
 
-    const data = await response.json();
-    return data.profiles || [];
+    // Fallback: scrape Google Scholar author search via CORS proxy
+    return searchAuthorsClientSide(query);
   },
 
   validateProfileUrl: (url: string) => {
@@ -184,6 +193,52 @@ function buildAuthorResult(data: any): Author {
     publications,
     metrics
   };
+}
+
+async function searchAuthorsClientSide(query: string): Promise<AuthorSearchResult[]> {
+  const searchUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(query)}&hl=en`;
+
+  console.log('[ScholarService] Client-side author search for:', query);
+
+  const html = await scholarFetcher.fetchRaw(searchUrl);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const profiles: AuthorSearchResult[] = [];
+  const profileCards = doc.querySelectorAll('.gsc_1usr');
+
+  for (const card of Array.from(profileCards)) {
+    const nameEl = card.querySelector('.gs_ai_name a');
+    const name = nameEl?.textContent?.trim() || '';
+    const profileLink = nameEl?.getAttribute('href') || '';
+
+    // Extract author ID from profile link
+    const authorIdMatch = profileLink.match(/user=([^&]+)/);
+    const authorId = authorIdMatch ? authorIdMatch[1] : '';
+
+    if (!name || !authorId) continue;
+
+    const affiliation = card.querySelector('.gs_ai_aff')?.textContent?.trim() || '';
+    const citedByText = card.querySelector('.gs_ai_cby')?.textContent?.trim() || '';
+    const citedByMatch = citedByText.match(/(\d+)/);
+    const citedBy = citedByMatch ? parseInt(citedByMatch[1]) : 0;
+
+    const imageUrl = card.querySelector('.gs_ai_pho img')?.getAttribute('src') || '';
+
+    const interestsEls = card.querySelectorAll('.gs_ai_one_int');
+    const interests = Array.from(interestsEls).map(el => el.textContent?.trim() || '').filter(Boolean);
+
+    profiles.push({
+      name,
+      affiliation,
+      imageUrl: imageUrl.startsWith('http') ? imageUrl : imageUrl ? `https://scholar.google.com${imageUrl}` : '',
+      authorId,
+      citedBy,
+      interests
+    });
+  }
+
+  return profiles;
 }
 
 /**

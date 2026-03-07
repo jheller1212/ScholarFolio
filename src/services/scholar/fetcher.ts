@@ -80,6 +80,40 @@ class ScholarFetcher {
     }
   }
 
+  /**
+   * Fetch any Google Scholar page without profile-specific validation.
+   * Used for author search results pages.
+   */
+  public async fetchRaw(url: string): Promise<string> {
+    const errors: string[] = [];
+
+    for (let i = 0; i < this.CORS_PROXIES.length; i++) {
+      try {
+        const response = await this.fetchWithProxy(url, i);
+        const text = await response.text();
+
+        if (!text || text.length < 100) {
+          throw new Error('Empty response');
+        }
+        if (text.includes('unusual traffic') || text.includes('please show you')) {
+          throw new ApiError('Rate limited by Google Scholar.', 'RATE_LIMIT');
+        }
+
+        return text;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.warn(`[ScholarFetcher] Proxy ${i + 1} failed (raw): ${msg}`);
+        errors.push(msg);
+
+        if (error instanceof ApiError && error.code === 'RATE_LIMIT') {
+          throw error;
+        }
+      }
+    }
+
+    throw new ApiError('Could not reach Google Scholar. Please try again.', 'PROXY_ERROR');
+  }
+
   public async fetch(url: string): Promise<string> {
     this.validateScholarUrl(url);
 
