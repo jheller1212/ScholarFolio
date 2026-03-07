@@ -6,7 +6,6 @@ import { PublicationsList } from './PublicationsList';
 import { CitationsChart } from './CitationsChart';
 import { MetricsCard } from './MetricsCard';
 import { CitationNetwork } from './CitationNetwork';
-import { CareerAnalysis } from './CareerAnalysis';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
 import type { Author } from '../types/scholar';
@@ -39,6 +38,7 @@ export function ProfileView({
   socialLinks
 }: ProfileViewProps) {
   const [activeTab, setActiveTab] = useState<TabId>('metrics');
+  const [imgError, setImgError] = useState(false);
 
   if (!data) return null;
 
@@ -78,20 +78,18 @@ export function ProfileView({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4 flex-1 min-w-0">
-              {data.imageUrl ? (
+              {data.imageUrl && !imgError ? (
                 <img
                   src={data.imageUrl}
                   alt={data.name}
                   className="w-16 h-16 rounded-xl object-cover bg-[#eaf4f4] flex-shrink-0"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                  }}
+                  onError={() => setImgError(true)}
                 />
-              ) : null}
-              <div className={`flex-shrink-0 w-16 h-16 rounded-xl bg-[#eaf4f4] flex items-center justify-center ${data.imageUrl ? 'hidden' : ''}`}>
-                <User className="h-8 w-8 text-[#2d7d7d]" />
-              </div>
+              ) : (
+                <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-[#eaf4f4] flex items-center justify-center">
+                  <User className="h-8 w-8 text-[#2d7d7d]" />
+                </div>
+              )}
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 truncate">
                   {data.name}
@@ -182,8 +180,6 @@ export function ProfileView({
                 />
               </div>
             </div>
-
-            <CareerAnalysis />
           </div>
         )}
 

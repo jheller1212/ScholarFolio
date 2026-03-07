@@ -78,7 +78,7 @@ async function fetchViaSerpAPI(authorId: string) {
 
   return {
     name: authorData.author?.name || "",
-    affiliation: authorData.author?.affiliations?.[0] || "",
+    affiliation: authorData.author?.affiliations || "",
     imageUrl: authorData.author?.thumbnail || "",
     topics,
     publications
