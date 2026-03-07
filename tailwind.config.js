@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"DM Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
       },
       colors: {
@@ -14,7 +14,7 @@ export default {
         },
         accent: {
           DEFAULT: '#2d7d7d',
-          light: '#e6f0f0',
+          light: '#eaf4f4',
           dark: '#1f5c5c',
         },
         slate: {
@@ -24,8 +24,14 @@ export default {
           bg: '#f5f0eb',
           50: '#faf8f5',
           100: '#f5f0eb',
-          200: '#ebe3d9',
+          200: '#e8e2da',
         },
+        teal: {
+          DEFAULT: '#2d7d7d',
+          light: '#3d9494',
+          faint: '#eaf4f4',
+        },
+        muted: '#94a3b8',
         surface: {
           50: '#f8fafc',
           100: '#f1f5f9',

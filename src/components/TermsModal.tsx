@@ -25,14 +25,14 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Acceptance of Terms</h3>
             <p className="text-gray-600">
-              By accessing and using Research Portfolio, you accept and agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.
+              By accessing and using Scholar Folio, you accept and agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.
             </p>
           </section>
 
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Service Description</h3>
             <p className="text-gray-600 mb-4">
-              Research Portfolio provides analytics and metrics for Google Scholar profiles. Our service:
+              Scholar Folio provides analytics and metrics for Google Scholar profiles. Our service:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-600">
               <li>Analyzes publicly available academic data</li>
@@ -55,7 +55,7 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Intellectual Property</h3>
             <p className="text-gray-600">
-              All content, features, and functionality of Research Portfolio are owned by us and are protected by international copyright, trademark, and other intellectual property laws.
+              All content, features, and functionality of Scholar Folio are owned by us and are protected by international copyright, trademark, and other intellectual property laws.
             </p>
           </section>
 

@@ -57,7 +57,7 @@ export function ProfileView({
 
             <div className="flex items-center gap-2">
               <Logo size={24} />
-              <span className="font-semibold text-sm text-gray-900 hidden sm:inline">Research Portfolio</span>
+              <span className="font-semibold text-sm text-gray-900 hidden sm:inline">Scholar Folio</span>
               <span className="text-[10px] font-medium text-primary-start bg-primary-start/8 px-1.5 py-0.5 rounded hidden sm:inline">
                 v{packageJson.version}
               </span>

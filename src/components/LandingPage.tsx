@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { Logo } from './Logo';
@@ -8,10 +8,48 @@ interface LandingPageProps {
   onSearch: (url: string) => void;
   loading: boolean;
   error?: string | null;
+  onNavigate?: (page: 'home' | 'about' | 'terms' | 'privacy') => void;
 }
 
-export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Stagger children
+            const children = entry.target.querySelectorAll('.scroll-reveal');
+            children.forEach((child, i) => {
+              setTimeout(() => {
+                child.classList.add('revealed');
+              }, i * 80);
+            });
+            // Also reveal the container itself
+            entry.target.classList.add('revealed');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return ref;
+}
+
+export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPageProps) {
   const [showScholarSearch, setShowScholarSearch] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const featuresRef = useScrollReveal();
+  const ctaRef = useScrollReveal();
 
   return (
     <main className="flex-1 mesh-bg">
@@ -21,44 +59,81 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
           <div className="flex items-center gap-3">
             <Logo size={28} />
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 text-sm tracking-tight">Research Portfolio</span>
-              <span className="text-[11px] text-gray-400 hidden sm:inline">Your research, at a glance</span>
+              <span className="font-semibold text-gray-900 text-sm tracking-tight">Scholar Folio</span>
+              <span className="text-[11px] text-[#94a3b8] hidden sm:inline">Your research, at a glance</span>
             </div>
           </div>
-          <a
-            href="#features"
-            className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          <div className="hidden sm:flex items-center gap-5">
+            <a href="#features" className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
+              What it shows
+            </a>
+            <button onClick={() => onNavigate?.('about')} className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
+              About
+            </button>
+            <a
+              href="https://github.com/JonasHeller1212/ScholarMetricsAnalyzer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
+            >
+              GitHub <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="sm:hidden p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            What it shows
-          </a>
+            {mobileMenuOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
+          </button>
         </div>
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-gray-100 bg-white/90 backdrop-blur-lg">
+            <div className="px-6 py-4 space-y-3">
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-sm text-gray-600 hover:text-gray-900">
+                What it shows
+              </a>
+              <button onClick={() => { onNavigate?.('about'); setMobileMenuOpen(false); }} className="block text-sm text-gray-600 hover:text-gray-900">
+                About
+              </button>
+              <a
+                href="https://github.com/JonasHeller1212/ScholarMetricsAnalyzer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-sm text-gray-600 hover:text-gray-900"
+              >
+                GitHub
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-24 pb-20 px-6">
+      <section className="relative pt-28 pb-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] mb-6 leading-[1.05]">
+          <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] mb-6 leading-[1.05]">
             Know your
             <br />
             <span className="gradient-text">research story</span>
           </h1>
 
-          <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-12 leading-relaxed">
-            Paste your Google Scholar profile URL to see your publication history, collaboration network, and research reach on one page.
+          <p className="animate-fade-up animate-delay-250 text-base md:text-lg text-[#64748b] max-w-xl mx-auto mb-14 leading-relaxed">
+            Paste your Google Scholar profile URL to see your publication history, collaboration network, and research reach — on one page.
           </p>
 
           {/* Search area */}
-          <div className="w-full max-w-xl mx-auto mb-3">
+          <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto mb-3">
             <SearchBar onSearch={onSearch} isLoading={loading} error={error} />
           </div>
 
-          <p className="text-xs text-gray-400 italic mb-6">
+          <p className="animate-fade-up animate-delay-350 text-xs text-[#94a3b8] italic mb-8">
             Numbers here are context, not verdict. Use them to tell your story.
           </p>
 
           <button
             onClick={() => setShowScholarSearch(true)}
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary-start transition-colors group"
+            className="animate-fade-up animate-delay-350 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#2d7d7d] transition-colors group"
           >
             <Search className="h-3.5 w-3.5" />
             <span>Or search by author name</span>
@@ -68,23 +143,23 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-20 px-6">
+      <section id="features" className="py-24 px-6" ref={featuresRef}>
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          <div className="text-center mb-16 scroll-reveal">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] mb-4">
               Everything you need to understand your research
             </h2>
-            <p className="text-sm text-gray-500 max-w-lg mx-auto">
-              A clear, honest picture of your research, built from your Google Scholar profile.
+            <p className="text-sm text-[#64748b] max-w-lg mx-auto">
+              A clear, honest picture of your research — built from your Google Scholar profile.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
                 icon: BarChart,
                 title: "Research Reach",
-                description: "How far your work has travelled. Citations, growth trends, and the conversations your research has opened."
+                description: "How far your work has travelled — citations, growth trends, and the conversations your research has opened."
               },
               {
                 icon: Network,
@@ -99,13 +174,13 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
             ].map((feature, index) => (
               <div
                 key={index}
-                className="group relative bg-white rounded-2xl p-7 border border-gray-100 border-l-[3px] border-l-primary-start shadow-card hover:shadow-card-hover transition-all duration-300"
+                className="scroll-reveal group relative bg-white rounded-2xl p-8 border border-gray-100 border-l-[3px] border-l-[#2d7d7d] shadow-card hover-lift"
               >
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-5">
-                  <feature.icon className="h-5 w-5 text-primary-start" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#eaf4f4] mb-5">
+                  <feature.icon className="h-5 w-5 text-[#2d7d7d]" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
+                <h3 className="text-base font-semibold text-[#1e293b] mb-2">{feature.title}</h3>
+                <p className="text-sm text-[#64748b] leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -113,23 +188,26 @@ export function LandingPage({ onSearch, loading, error }: LandingPageProps) {
       </section>
 
       {/* Bottom CTA */}
-      <section className="py-20 px-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-[#1e293b] rounded-2xl p-8 md:p-12 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 mb-6">
-              <span className="text-xs font-medium text-white/80">Ready to explore?</span>
-            </div>
-
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Explore your research portfolio
+      <section className="py-24 px-6" ref={ctaRef}>
+        <div className="max-w-3xl mx-auto scroll-reveal">
+          <div className="bg-[#1e293b] rounded-2xl p-10 md:p-14 text-center">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-white mb-4">
+              Ready to explore?
             </h2>
-            <p className="text-sm text-white/60 mb-8 max-w-md mx-auto">
+            <p className="text-sm text-white/60 mb-4 font-serif italic">
+              Explore your research portfolio
+            </p>
+            <p className="text-sm text-white/50 mb-10 max-w-md mx-auto">
               Enter your Google Scholar profile URL below for an overview of your research portfolio.
             </p>
 
-            <div className="max-w-xl mx-auto mb-6">
+            <div className="max-w-xl mx-auto mb-4">
               <SearchBar onSearch={onSearch} isLoading={loading} />
             </div>
+
+            <p className="text-xs text-white/40 italic mb-8">
+              Numbers here are context, not verdict. Use them to tell your story.
+            </p>
 
             <div className="flex flex-wrap justify-center gap-6">
               {['Instant Overview', 'Visual Insights', 'Free to Use'].map((label) => (

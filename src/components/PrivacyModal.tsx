@@ -25,7 +25,7 @@ export function PrivacyModal({ isOpen, onClose }: PrivacyModalProps) {
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Data Collection and Usage</h3>
             <p className="text-gray-600 mb-4">
-              Research Portfolio collects and processes only the publicly available data from Google Scholar profiles. We do not store any personal information beyond what is necessary for the application's functionality.
+              Scholar Folio collects and processes only the publicly available data from Google Scholar profiles. We do not store any personal information beyond what is necessary for the application's functionality.
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-600">
               <li>Profile data is processed in real-time and not permanently stored</li>

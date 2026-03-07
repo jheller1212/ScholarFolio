@@ -366,7 +366,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 onClick={() => handleConnectionLimit(10)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   connectionLimit === 10
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -381,7 +381,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 onClick={() => handleConnectionLimit(20)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   connectionLimit === 20
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -399,7 +399,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 onClick={handleShowCitations}
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   !showCitations
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -416,7 +416,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 onClick={handleShowCitations}
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   showCitations
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
@@ -447,12 +447,12 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           className="w-full h-full"
         />
         {!fullScreen && (
-          <div className="mt-4 text-xs text-gray-500 bg-blue-50/50 rounded-lg p-3">
+          <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
             <div className="flex items-start space-x-2">
-              <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+              <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-blue-900 mb-1">Network Visualization Guide</p>
-                <ul className="space-y-1 text-blue-700">
+                <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
+                <ul className="space-y-1 text-[#64748b]">
                   <li>• Node size represents the number of {showCitations ? 'shared citations' : 'shared publications'}</li>
                   <li>• Line thickness shows collaboration strength</li>
                   <li>• Hover over nodes to see detailed metrics</li>

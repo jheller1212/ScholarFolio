@@ -20,7 +20,7 @@ function JournalRankingBadge({ ranking }: { ranking: JournalRanking }) {
         </span>
       )}
       {ranking.abs && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#eaf4f4] text-[#2d7d7d]">
           <Star className="h-3 w-3 mr-0.5" />
           ABS {ranking.abs}
         </span>
@@ -86,7 +86,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
     <div className="bg-white rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <BookOpen className="h-5 w-5 text-blue-600 mr-2" />
+          <BookOpen className="h-5 w-5 text-[#2d7d7d] mr-2" />
           Publications ({publications.length})
         </h3>
         
@@ -95,7 +95,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
             onClick={() => handleSort('citations')}
             className={`text-xs px-2 py-1 rounded ${
               sortField === 'citations'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -106,7 +106,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
             onClick={() => handleSort('year')}
             className={`text-xs px-2 py-1 rounded ${
               sortField === 'year'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -117,7 +117,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
             onClick={() => handleSort('title')}
             className={`text-xs px-2 py-1 rounded ${
               sortField === 'title'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#2d7d7d]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -137,7 +137,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
               className="flex items-start justify-between gap-4 hover:bg-gray-50 rounded p-2 -mx-2 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium text-gray-900 hover:text-blue-600 mb-1">
+                <h4 className="text-sm font-medium text-gray-900 hover:text-[#2d7d7d] mb-1">
                   {pub.title}
                 </h4>
                 <p className="text-xs text-gray-600 mb-2">
@@ -159,7 +159,7 @@ export function PublicationsList({ publications }: PublicationsListProps) {
                 )}
               </div>
               <div className="flex flex-col items-center shrink-0 min-w-[60px]">
-                <span className="text-lg font-bold text-blue-600">{pub.citations.toLocaleString()}</span>
+                <span className="text-lg font-bold text-[#2d7d7d]">{pub.citations.toLocaleString()}</span>
                 <span className="text-[10px] text-gray-400 uppercase tracking-wide">citations</span>
               </div>
             </a>

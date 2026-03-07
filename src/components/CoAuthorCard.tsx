@@ -26,23 +26,23 @@ export function CoAuthorCard({
   const [showPapers, setShowPapers] = React.useState(false);
 
   return (
-    <div className="bg-white rounded-lg border border-blue-50 hover:border-blue-100 transition-colors overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors overflow-hidden">
       <div className="p-3 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {imageUrl ? (
             <img 
               src={imageUrl} 
               alt={name} 
-              className="w-12 h-12 rounded-lg object-cover bg-blue-50"
+              className="w-12 h-12 rounded-lg object-cover bg-[#eaf4f4]"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXIiPjxwYXRoIGQ9Ik0xOSAyMXYtMmE0IDQgMCAwIDAtNC00SDlhNCA0IDAgMCAwLTQgNHYyIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0Ii8+PC9zdmc+';
-                target.className = 'w-12 h-12 rounded-lg p-2 bg-blue-50 text-blue-600';
+                target.className = 'w-12 h-12 rounded-lg p-2 bg-[#eaf4f4] text-[#2d7d7d]';
               }}
             />
           ) : (
-            <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
-              <User className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 rounded-lg bg-[#eaf4f4] flex items-center justify-center">
+              <User className="w-6 h-6 text-[#2d7d7d]" />
             </div>
           )}
           <div className="min-w-0">
@@ -53,7 +53,7 @@ export function CoAuthorCard({
                   href={profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 flex-shrink-0"
+                  className="text-[#2d7d7d] hover:text-[#1f5c5c] flex-shrink-0"
                 >
                   <ExternalLink className="h-3 w-3" />
                 </a>
@@ -67,7 +67,7 @@ export function CoAuthorCard({
               <span className="text-gray-300">•</span>
               <button
                 onClick={() => setShowPapers(!showPapers)}
-                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
+                className="flex items-center space-x-1 text-[#2d7d7d] hover:text-[#1f5c5c]"
               >
                 <BookOpen className="h-3 w-3" />
                 <span>{sharedPublications} shared papers</span>

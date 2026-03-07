@@ -31,14 +31,14 @@ export function TopicsList({ topics = [], compact = false }: TopicsListProps) {
             href={topic.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-colors ${
+            className={`inline-flex items-center space-x-1 px-1.5 py-0.5 bg-[#eaf4f4] hover:bg-[#d5ecec] text-[#2d7d7d] rounded-full transition-colors ${
               compact ? 'text-[10px]' : 'text-xs'
             }`}
             title={`${topicName} (${paperCount} papers)`}
           >
             <Hash className={compact ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             <span>{topicName}</span>
-            {!compact && <span className="text-blue-500">({paperCount})</span>}
+            {!compact && <span className="text-[#3d9494]">({paperCount})</span>}
           </a>
         );
       })}

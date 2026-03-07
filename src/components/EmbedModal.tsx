@@ -48,7 +48,7 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
       <div className="bg-white rounded-xl max-w-2xl w-full">
         <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-xl">
           <div className="flex items-center space-x-2">
-            <Code className="h-5 w-5 text-blue-600" />
+            <Code className="h-5 w-5 text-[#2d7d7d]" />
             <h2 className="text-lg font-semibold text-gray-900">Embed Metrics</h2>
           </div>
           <button
@@ -61,7 +61,7 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
         
         <div className="p-6 space-y-4">
           <p className="text-sm text-gray-600">
-            Copy and paste this code into your website to embed your Research Portfolio:
+            Copy and paste this code into your website to embed your Scholar Folio:
           </p>
           
           <div className="relative">
@@ -87,9 +87,9 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
             </button>
           </div>
           
-          <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-800">
+          <div className="bg-[#eaf4f4] rounded-lg p-4 text-sm text-[#1e293b]">
             <h3 className="font-medium mb-2">Customization Options:</h3>
-            <ul className="list-disc list-inside space-y-1 text-blue-700">
+            <ul className="list-disc list-inside space-y-1 text-[#334155]">
               <li>Adjust the width and height attributes to fit your layout</li>
               <li>The embed automatically adapts to light/dark themes</li>
               <li>Metrics are updated in real-time as citations change</li>

@@ -1,17 +1,22 @@
-# Research Portfolio
+# Scholar Folio
 
-Your research, at a glance — publication history, collaboration network, and research reach built from your Google Scholar profile.
+**Your research, at a glance.**
 
-**Live:** [scholarmetricsanalyzer.netlify.app](https://scholarmetricsanalyzer.netlify.app/)
+Scholar Folio is a free, open-source research portfolio tool. Paste a Google Scholar profile URL and get a clear overview of your publication history, collaboration network, and research reach.
+
+## What it is not
+
+A ranking tool. A benchmarking system. A productivity scorecard. Numbers here are context, not verdict.
 
 ## Features
 
-- **Citation analytics** -- h-index, g-index, i10-index, h5-index, citation growth rates
-- **Trend visualization** -- yearly citation charts with projections and year-over-year growth
-- **Co-author network** -- D3-powered collaboration graph with frequency analysis
-- **Publication list** -- sortable table with journal ranking badges (SJR, JCR, FT50, ABS, ABDC)
-- **Career analysis** -- publication velocity, collaboration patterns, solo author rate
-- **Caching** -- 24-hour Supabase cache to minimize external API calls
+- **Research Reach** — citation counts, h-index, growth trends
+- **Collaboration Network** — co-authorship graph and patterns
+- **Publication History** — venue breakdown, timeline, output evolution
+
+## Built by
+
+[Jonas Heller](https://www.linkedin.com/in/hellerjonas/) — Assistant Professor of Marketing, Maastricht University. Research focus: consumer decision-making in emerging technologies (AR, VR, AI).
 
 ## Tech Stack
 
@@ -71,30 +76,9 @@ npm run build
 npm test
 ```
 
-## Architecture
-
-```
-src/
-  components/     UI components (React + Tailwind)
-  services/       API clients and data fetching
-  types/          TypeScript interfaces
-  utils/          Helper functions
-  data/           Static data (metric descriptions, journal rankings)
-
-supabase/
-  functions/      Edge function for Scholar data fetching
-  migrations/     Database schema (cache table)
-```
-
-The edge function tries SerpAPI first. If SerpAPI returns a 429 (rate limit) or 5xx error, it falls back to scraping Google Scholar directly using server-side DOM parsing.
-
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes
-4. Push to the branch
-5. Open a pull request
+Contributions welcome. Please open an issue before submitting large PRs.
 
 ## License
 

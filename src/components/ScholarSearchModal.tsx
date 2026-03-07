@@ -31,7 +31,7 @@ export function ScholarSearchModal({ isOpen, onClose }: ScholarSearchModalProps)
       <div className="bg-white rounded-xl max-w-2xl w-full">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <Search className="h-5 w-5 text-blue-600 mr-2" />
+            <Search className="h-5 w-5 text-[#2d7d7d] mr-2" />
             Find Your Google Scholar Profile
           </h2>
           <button
@@ -70,12 +70,12 @@ export function ScholarSearchModal({ isOpen, onClose }: ScholarSearchModalProps)
             </div>
           </form>
 
-          <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-800">
+          <div className="bg-[#eaf4f4] rounded-xl p-4 text-sm text-[#1e293b]">
             <h3 className="font-medium mb-2 flex items-center">
               <Info className="h-4 w-4 mr-1" />
               How to find your Google Scholar profile URL:
             </h3>
-            <ol className="list-decimal list-inside space-y-2 text-blue-700">
+            <ol className="list-decimal list-inside space-y-2 text-[#334155]">
               <li>Click the Search button above to open Google Scholar</li>
               <li>Find your profile in the search results</li>
               <li>Click on your name to open your profile</li>

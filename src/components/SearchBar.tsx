@@ -127,7 +127,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
     <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
         {error && (
-          <div className="absolute -top-6 left-0 right-0 text-xs text-red-600 flex items-center">
+          <div className="absolute -top-6 left-0 right-0 text-xs text-[#64748b] flex items-center">
             <AlertCircle className="h-3.5 w-3.5 mr-1" />
             <span>{error}</span>
           </div>
@@ -143,7 +143,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
               ? 'py-1.5 pl-9 pr-16 text-xs' 
               : 'py-3 pl-12 pr-24 text-sm'
           } text-gray-700 bg-white border ${
-            error ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : 'border-gray-200 focus:border-primary-start focus:ring-primary-start/20'
+            error ? 'border-[#64748b] focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20' : 'border-gray-200 focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20'
           } rounded-lg focus:outline-none focus:ring-2 transition-all`}
           autoComplete="off"
           spellCheck="false"
@@ -151,14 +151,14 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
         <div className={`absolute ${
           compact ? 'left-3 top-2' : 'left-4 top-3.5'
         } flex items-center justify-center`}>
-          <ExternalLink className={`h-5 w-5 ${error ? 'text-red-400' : 'gradient-icon'}`} />
+          <ExternalLink className={`h-5 w-5 ${error ? 'text-[#64748b]' : 'gradient-icon'}`} />
         </div>
         <button
           type="submit"
           disabled={!url.trim() || isLoading}
           className={`absolute flex items-center justify-center ${
             compact ? 'right-2 top-1' : 'right-2 top-2'
-          } px-4 py-1.5 bg-gradient-to-r from-primary-start to-primary-end text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed space-x-2 text-xs min-w-[80px]`}
+          } px-4 py-1.5 bg-[#2d7d7d] text-white rounded-lg btn-lift disabled:opacity-50 disabled:cursor-not-allowed space-x-2 text-xs min-w-[80px]`}
         >
           {isLoading ? (
             <>
@@ -194,7 +194,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
       
       {error && !compact && (
         <div className="mt-2 flex items-start space-x-1">
-          <div className="flex items-center space-x-1 text-red-600 text-xs">
+          <div className="flex items-center space-x-1 text-[#64748b] text-xs">
             <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -210,7 +210,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
           <button
             type="button"
             onClick={handleSampleLink}
-            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
+            className="flex items-center space-x-1 text-[#2d7d7d] hover:text-[#1f5c5c] transition-colors"
           >
             <BookOpen className="h-3.5 w-3.5" />
             <span>See an example portfolio</span>

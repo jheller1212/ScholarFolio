@@ -128,7 +128,7 @@ export function CareerAnalysis() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-          <TrendingUp className="h-5 w-5 text-blue-600 mr-2" />
+          <TrendingUp className="h-5 w-5 text-[#2d7d7d] mr-2" />
           Career Stage Metrics Analysis
         </h2>
         <div className="flex items-center space-x-2 text-xs text-gray-500">
@@ -155,12 +155,12 @@ export function CareerAnalysis() {
                   <h4 className="text-xs font-medium text-gray-500">Career Stage Comparison</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-blue-600">Early-Career</div>
+                      <div className="text-sm font-medium text-[#2d7d7d]">Early-Career</div>
                       <div className="text-2xl font-bold text-gray-900">{analysis.earlyCareer.typical}</div>
                       <div className="text-xs text-gray-600">{analysis.earlyCareer.interpretation}</div>
                     </div>
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-indigo-600">Established</div>
+                      <div className="text-sm font-medium text-[#334155]">Established</div>
                       <div className="text-2xl font-bold text-gray-900">{analysis.established.typical}</div>
                       <div className="text-xs text-gray-600">{analysis.established.interpretation}</div>
                     </div>
@@ -191,13 +191,13 @@ export function CareerAnalysis() {
 
                   <div>
                     <h4 className="text-xs font-medium text-gray-500 mb-2 flex items-center">
-                      <CheckCircle className="h-3.5 w-3.5 text-blue-500 mr-1" />
+                      <CheckCircle className="h-3.5 w-3.5 text-[#2d7d7d] mr-1" />
                       Recommendations
                     </h4>
                     <ul className="text-xs text-gray-600 space-y-1">
                       {analysis.recommendations.map((rec, index) => (
                         <li key={index} className="flex items-start">
-                          <span className="text-blue-500 mr-1">•</span>
+                          <span className="text-[#2d7d7d] mr-1">•</span>
                           {rec}
                         </li>
                       ))}
@@ -210,47 +210,47 @@ export function CareerAnalysis() {
         ))}
       </div>
 
-      <div className="bg-blue-50 rounded-xl p-6">
-        <h3 className="text-sm font-medium text-blue-900 mb-4">Key Takeaways</h3>
+      <div className="bg-[#eaf4f4] rounded-xl p-6">
+        <h3 className="text-sm font-medium text-[#1e293b] mb-4">Key Takeaways</h3>
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h4 className="text-xs font-medium text-blue-800 mb-2">Early-Career Researchers</h4>
-            <ul className="text-xs text-blue-700 space-y-2">
+            <h4 className="text-xs font-medium text-[#334155] mb-2">Early-Career Researchers</h4>
+            <ul className="text-xs text-[#64748b] space-y-2">
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Focus on publication quality over quantity
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Use time-normalized metrics (m-quotient)
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Track citation growth rate and trajectory
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Consider field-specific benchmarks
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="text-xs font-medium text-blue-800 mb-2">Established Researchers</h4>
-            <ul className="text-xs text-blue-700 space-y-2">
+            <h4 className="text-xs font-medium text-[#334155] mb-2">Established Researchers</h4>
+            <ul className="text-xs text-[#64748b] space-y-2">
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Balance comprehensive metrics (h-index, total citations)
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Monitor sustained impact through citation patterns
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Consider leadership and mentorship indicators
               </li>
               <li className="flex items-start">
-                <span className="text-blue-500 mr-1">•</span>
+                <span className="text-[#2d7d7d] mr-1">•</span>
                 Evaluate research program breadth and depth
               </li>
             </ul>

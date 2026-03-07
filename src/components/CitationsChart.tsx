@@ -223,51 +223,51 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
       <div className="flex items-start justify-between">
         <div>
           <h4 className="text-sm font-medium text-gray-900 flex items-center">
-            <Citation className="h-4 w-4 text-blue-600 mr-2" />
+            <Citation className="h-4 w-4 text-[#2d7d7d] mr-2" />
             Citation Trends & Projections
           </h4>
           <div className="mt-2 grid grid-cols-3 gap-4">
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-center text-xs text-blue-600 mb-1">
+            <div className="bg-[#eaf4f4] rounded-lg p-3">
+              <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
                 <TrendingUp className="h-3.5 w-3.5 mr-1" />
                 Average Growth
-                <div className="ml-1 text-[10px] text-blue-400 flex items-center">
+                <div className="ml-1 text-[10px] text-[#94a3b8] flex items-center">
                   <Clock className="h-3 w-3 mr-0.5" />
                   {timeRangeText}
                 </div>
               </div>
-              <div className="text-lg font-semibold text-blue-900">
+              <div className="text-lg font-semibold text-[#1e293b]">
                 {stats.avgGrowthRate > 0 ? '+' : ''}{stats.avgGrowthRate}%
               </div>
-              <div className="text-xs text-blue-600">per year</div>
+              <div className="text-xs text-[#2d7d7d]">per year</div>
             </div>
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-center text-xs text-blue-600 mb-1">
+            <div className="bg-[#eaf4f4] rounded-lg p-3">
+              <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
                 <Citation className="h-3.5 w-3.5 mr-1" />
                 Average Citations
-                <div className="ml-1 text-[10px] text-blue-400 flex items-center">
+                <div className="ml-1 text-[10px] text-[#94a3b8] flex items-center">
                   <Clock className="h-3 w-3 mr-0.5" />
                   {timeRangeText}
                 </div>
               </div>
-              <div className="text-lg font-semibold text-blue-900">
+              <div className="text-lg font-semibold text-[#1e293b]">
                 {stats.avgCitations.toLocaleString()}
               </div>
-              <div className="text-xs text-blue-600">per year</div>
+              <div className="text-xs text-[#2d7d7d]">per year</div>
             </div>
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-center text-xs text-blue-600 mb-1">
+            <div className="bg-[#eaf4f4] rounded-lg p-3">
+              <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
                 <Calendar className="h-3.5 w-3.5 mr-1" />
                 Peak Year
-                <div className="ml-1 text-[10px] text-blue-400 flex items-center">
+                <div className="ml-1 text-[10px] text-[#94a3b8] flex items-center">
                   <Clock className="h-3 w-3 mr-0.5" />
                   {timeRangeText}
                 </div>
               </div>
-              <div className="text-lg font-semibold text-blue-900">
+              <div className="text-lg font-semibold text-[#1e293b]">
                 {stats.peakYear}
               </div>
-              <div className="text-xs text-blue-600">
+              <div className="text-xs text-[#2d7d7d]">
                 {stats.peakCitations.toLocaleString()} citations
               </div>
             </div>
@@ -278,7 +278,7 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
             onClick={() => setTimeRange('5y')}
             className={`px-2 py-1 text-xs rounded-md transition-colors ${
               timeRange === '5y'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#64748b]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -288,7 +288,7 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
             onClick={() => setTimeRange('10y')}
             className={`px-2 py-1 text-xs rounded-md transition-colors ${
               timeRange === '10y'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#64748b]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -298,7 +298,7 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
             onClick={() => setTimeRange('all')}
             className={`px-2 py-1 text-xs rounded-md transition-colors ${
               timeRange === 'all'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-[#eaf4f4] text-[#64748b]'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -353,7 +353,7 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
                           <div className="text-gray-600">
                             Total Projected: {(data.actualCitations + data.predictedCitations).toLocaleString()}
                           </div>
-                          <div className="text-blue-600 text-[10px] border-t border-gray-100 pt-1 mt-1">
+                          <div className="text-[#2d7d7d] text-[10px] border-t border-gray-100 pt-1 mt-1">
                             Based on current year progress
                           </div>
                         </>
@@ -424,12 +424,12 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
           </div>
         </div>
         
-        <div className="text-xs text-gray-500 bg-blue-50/50 rounded-lg p-3">
+        <div className="text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
           <div className="flex items-start space-x-2">
-            <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-blue-900 mb-1">Citation Analysis</p>
-              <ul className="space-y-1 text-blue-700">
+              <p className="font-medium text-[#1e293b] mb-1">Citation Analysis</p>
+              <ul className="space-y-1 text-[#64748b]">
                 <li>• Average growth rate shows citation momentum over selected time range ({timeRangeText})</li>
                 <li>• Peak year indicates highest citation impact period</li>
                 <li>• Projections are based on current year's citation rate</li>

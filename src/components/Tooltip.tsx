@@ -70,7 +70,7 @@ export function Tooltip({ content, children, position = 'bottom' }: TooltipProps
                     href={content.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 transition-colors"
+                    className="inline-flex items-center text-xs text-[#2d7d7d] hover:text-[#1f5c5c] transition-colors"
                   >
                     <span>Learn more</span>
                     <ExternalLink className="h-3 w-3 ml-1" />
