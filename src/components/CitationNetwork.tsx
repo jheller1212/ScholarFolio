@@ -295,6 +295,40 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         showCitations ? d.sharedCitations : d.sharedPublications
       }`);
 
+    // Click-to-highlight: clicking a node highlights its connections
+    node.on('click', (_event, d) => {
+      const clickedId = d.id;
+      const connectedIds = new Set<string>();
+      connectedIds.add(clickedId);
+      links.forEach(l => {
+        const sourceId = typeof l.source === 'string' ? l.source : (l.source as any).id;
+        const targetId = typeof l.target === 'string' ? l.target : (l.target as any).id;
+        if (sourceId === clickedId) connectedIds.add(targetId);
+        if (targetId === clickedId) connectedIds.add(sourceId);
+      });
+
+      // Dim non-connected nodes and links
+      node.select('circle')
+        .attr('fill-opacity', (n: any) => connectedIds.has(n.id) ? 1 : 0.15);
+      node.select('text')
+        .attr('fill-opacity', (n: any) => connectedIds.has(n.id) ? 1 : 0.15);
+      link
+        .attr('stroke-opacity', (l: any) => {
+          const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+          const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+          return (sourceId === clickedId || targetId === clickedId) ? 0.8 : 0.05;
+        });
+    });
+
+    // Click on background to reset highlighting
+    svg.on('click', (event) => {
+      if (event.target === svgRef.current) {
+        node.select('circle').attr('fill-opacity', 0.8);
+        node.selectAll('text').attr('fill-opacity', 1);
+        link.attr('stroke-opacity', 0.6);
+      }
+    });
+
     // Add zoom behavior
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
@@ -352,7 +386,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-xl border border-primary-start/10 p-6 hover:shadow-lg transition-all ${
-      fullScreen ? 'h-full' : ''
+      fullScreen ? 'min-h-[600px]' : ''
     }`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold gradient-text flex items-center">
@@ -431,7 +465,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           </div>
         </div>
       </div>
-      <div className="relative h-[calc(100%-4rem)]">
+      <div className={`relative ${fullScreen ? 'h-[520px]' : 'h-[calc(100%-4rem)]'}`}>
         <div className="absolute top-2 right-2 flex items-center space-x-4 text-xs text-gray-500 z-10">
           <div className="flex items-center space-x-1">
             <div className="w-3 h-3 rounded-full bg-[#2d7d7d]" />
@@ -446,23 +480,21 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           ref={svgRef}
           className="w-full h-full"
         />
-        {!fullScreen && (
-          <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
-            <div className="flex items-start space-x-2">
-              <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
-                <ul className="space-y-1 text-[#64748b]">
-                  <li>• Node size represents the number of {showCitations ? 'shared citations' : 'shared publications'}</li>
-                  <li>• Line thickness shows collaboration strength</li>
-                  <li>• Hover over nodes to see detailed metrics</li>
-                  <li>• Drag nodes to explore connections</li>
-                  <li>• Use mouse wheel to zoom in/out</li>
-                </ul>
-              </div>
+        <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
+          <div className="flex items-start space-x-2">
+            <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
+              <ul className="space-y-1 text-[#64748b]">
+                <li>• Node size represents the number of {showCitations ? 'shared citations' : 'shared publications'}</li>
+                <li>• Line thickness shows collaboration strength</li>
+                <li>• Click a node to highlight its connections</li>
+                <li>• Drag nodes to explore connections</li>
+                <li>• Use mouse wheel to zoom in/out</li>
+              </ul>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
