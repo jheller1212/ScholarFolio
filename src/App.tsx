@@ -13,7 +13,7 @@ import { scholarService } from './services/scholar';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
-  github: 'https://github.com/JonasHeller1212/ScholarMetricsAnalyzer'
+  github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
 type Page = 'home' | 'about' | 'terms' | 'privacy';

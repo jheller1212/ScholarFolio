@@ -71,7 +71,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
               About
             </button>
             <a
-              href="https://github.com/JonasHeller1212/ScholarMetricsAnalyzer"
+              href="https://github.com/JonasHeller1212/ResearchFolio"
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
@@ -97,7 +97,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
                 About
               </button>
               <a
-                href="https://github.com/JonasHeller1212/ScholarMetricsAnalyzer"
+                href="https://github.com/JonasHeller1212/ResearchFolio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-sm text-gray-600 hover:text-gray-900"
@@ -110,7 +110,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-16 pb-14 px-6">
+      <section className="relative pt-16 pb-6 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] mb-4 leading-[1.05]">
             Know your
