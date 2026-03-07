@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Research Portfolio",
+  "name": "Scholar Folio",
   "version": "0.10.0",
   "description": "Your research, at a glance — built from your Google Scholar profile",
   "permissions": [
