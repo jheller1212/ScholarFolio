@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { Network, Share2, BookOpen, Presentation as Citation, Users, Info } from 'lucide-react';
+import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints } from 'lucide-react';
 import type { Publication } from '../types/scholar';
 import { extractLastName } from '../utils/names';
 
@@ -11,6 +11,10 @@ interface Node {
   citations: number;
   sharedPublications: number;
   sharedCitations: number;
+  clusterId?: number;
+  betweenness?: number;
+  firstYear?: number;
+  lastYear?: number;
 }
 
 interface Link {
@@ -18,6 +22,8 @@ interface Link {
   target: string;
   valuePublications: number;
   valueCitations: number;
+  firstYear?: number;
+  lastYear?: number;
 }
 
 interface CitationNetworkProps {
@@ -25,13 +31,140 @@ interface CitationNetworkProps {
   fullScreen?: boolean;
 }
 
+type ViewMode = 'publications' | 'citations' | 'temporal' | 'clusters';
+
+// --- Graph algorithms ---
+
+/** Simple community detection via label propagation */
+function detectClusters(nodes: Node[], links: Link[]): Map<string, number> {
+  const labels = new Map<string, number>();
+  nodes.forEach((n, i) => labels.set(n.id, i));
+
+  const adjacency = new Map<string, string[]>();
+  nodes.forEach(n => adjacency.set(n.id, []));
+  links.forEach(l => {
+    const src = typeof l.source === 'string' ? l.source : (l.source as any).id;
+    const tgt = typeof l.target === 'string' ? l.target : (l.target as any).id;
+    adjacency.get(src)?.push(tgt);
+    adjacency.get(tgt)?.push(src);
+  });
+
+  // Run label propagation for a few iterations
+  for (let iter = 0; iter < 10; iter++) {
+    let changed = false;
+    const shuffled = [...nodes].sort(() => Math.random() - 0.5);
+    for (const node of shuffled) {
+      const neighbors = adjacency.get(node.id) || [];
+      if (neighbors.length === 0) continue;
+      // Count neighbor labels
+      const freq = new Map<number, number>();
+      for (const nb of neighbors) {
+        const lbl = labels.get(nb)!;
+        freq.set(lbl, (freq.get(lbl) || 0) + 1);
+      }
+      // Pick most frequent label
+      let maxFreq = 0;
+      let bestLabel = labels.get(node.id)!;
+      for (const [lbl, count] of freq) {
+        if (count > maxFreq) {
+          maxFreq = count;
+          bestLabel = lbl;
+        }
+      }
+      if (bestLabel !== labels.get(node.id)) {
+        labels.set(node.id, bestLabel);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // Normalize cluster IDs to 0, 1, 2, ...
+  const uniqueLabels = [...new Set(labels.values())];
+  const labelMap = new Map<number, number>();
+  uniqueLabels.forEach((lbl, i) => labelMap.set(lbl, i));
+  const normalized = new Map<string, number>();
+  labels.forEach((lbl, id) => normalized.set(id, labelMap.get(lbl)!));
+  return normalized;
+}
+
+/** Approximate betweenness centrality using BFS from all nodes */
+function computeBetweenness(nodes: Node[], links: Link[]): Map<string, number> {
+  const scores = new Map<string, number>();
+  nodes.forEach(n => scores.set(n.id, 0));
+
+  const adjacency = new Map<string, string[]>();
+  nodes.forEach(n => adjacency.set(n.id, []));
+  links.forEach(l => {
+    const src = typeof l.source === 'string' ? l.source : (l.source as any).id;
+    const tgt = typeof l.target === 'string' ? l.target : (l.target as any).id;
+    adjacency.get(src)?.push(tgt);
+    adjacency.get(tgt)?.push(src);
+  });
+
+  for (const source of nodes) {
+    // BFS
+    const dist = new Map<string, number>();
+    const paths = new Map<string, number>();
+    const pred = new Map<string, string[]>();
+    const stack: string[] = [];
+
+    dist.set(source.id, 0);
+    paths.set(source.id, 1);
+    const queue = [source.id];
+
+    while (queue.length > 0) {
+      const v = queue.shift()!;
+      stack.push(v);
+      const d = dist.get(v)!;
+      for (const w of (adjacency.get(v) || [])) {
+        if (!dist.has(w)) {
+          dist.set(w, d + 1);
+          queue.push(w);
+        }
+        if (dist.get(w) === d + 1) {
+          paths.set(w, (paths.get(w) || 0) + (paths.get(v) || 1));
+          if (!pred.has(w)) pred.set(w, []);
+          pred.get(w)!.push(v);
+        }
+      }
+    }
+
+    // Back-propagation
+    const delta = new Map<string, number>();
+    nodes.forEach(n => delta.set(n.id, 0));
+
+    while (stack.length > 0) {
+      const w = stack.pop()!;
+      for (const v of (pred.get(w) || [])) {
+        const d = (delta.get(v) || 0) + ((paths.get(v) || 1) / (paths.get(w) || 1)) * (1 + (delta.get(w) || 0));
+        delta.set(v, d);
+      }
+      if (w !== source.id) {
+        scores.set(w, (scores.get(w) || 0) + (delta.get(w) || 0));
+      }
+    }
+  }
+
+  // Normalize by dividing by 2 (undirected) and by max
+  const maxScore = Math.max(...scores.values(), 1);
+  scores.forEach((val, key) => scores.set(key, val / (2 * maxScore)));
+
+  return scores;
+}
+
+// Cluster colors (distinct, accessible palette)
+const CLUSTER_COLORS = [
+  '#2d7d7d', '#e07a5f', '#3d405b', '#81b29a', '#f2cc8f',
+  '#6d6875', '#b5838d', '#e5989b', '#457b9d', '#a8dadc'
+];
+
 export function CitationNetwork({ publications, fullScreen = false }: CitationNetworkProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
-  const [showCitations, setShowCitations] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('publications');
   const [connectionLimit, setConnectionLimit] = useState<10 | 20>(10);
 
-  // Function to stop the current simulation
   const stopSimulation = () => {
     if (simulationRef.current) {
       simulationRef.current.stop();
@@ -39,10 +172,9 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     }
   };
 
-  // Handle toggle changes
-  const handleShowCitations = () => {
+  const handleViewMode = (mode: ViewMode) => {
     stopSimulation();
-    setShowCitations(!showCitations);
+    setViewMode(mode);
   };
 
   const handleConnectionLimit = (limit: 10 | 20) => {
@@ -53,11 +185,12 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
   useEffect(() => {
     if (!svgRef.current || !publications.length) return;
 
-    // Clear previous visualization
     d3.select(svgRef.current).selectAll('*').remove();
     stopSimulation();
 
-    // Find the main author (most frequent author across all publications)
+    const showCitations = viewMode === 'citations';
+
+    // Find the main author
     const authorFrequency = new Map<string, number>();
     publications.forEach(pub => {
       pub.authors.forEach(author => {
@@ -69,36 +202,41 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     if (sortedAuthors.length === 0) return;
     const mainAuthor = sortedAuthors[0][0];
 
-    // Process data
+    // Process data - track years for temporal feature
     const nodes: Node[] = [];
     const links: Link[] = [];
-    const authorMap = new Map<string, { 
+    const authorMap = new Map<string, {
       publications: Set<string>,
       citations: number,
       papers: Set<string>,
-      coAuthors: Map<string, { papers: Set<string>, citations: number }>
+      years: number[],
+      coAuthors: Map<string, { papers: Set<string>, citations: number, years: number[] }>
     }>();
 
-    // Add the main author as the central node
+    // Main author node
+    const mainYears = publications.map(p => p.year).filter(y => y > 0);
     nodes.push({
       id: mainAuthor,
       name: mainAuthor,
       group: 1,
       citations: publications.reduce((sum, pub) => sum + pub.citations, 0),
       sharedPublications: publications.length,
-      sharedCitations: publications.reduce((sum, pub) => sum + pub.citations, 0)
+      sharedCitations: publications.reduce((sum, pub) => sum + pub.citations, 0),
+      firstYear: Math.min(...mainYears),
+      lastYear: Math.max(...mainYears)
     });
 
-    // Process co-authors and their relationships
+    // Process co-authors
     publications.forEach(pub => {
       const coAuthors = pub.authors.filter(author => author !== mainAuthor);
-      
+
       coAuthors.forEach(author => {
         if (!authorMap.has(author)) {
           authorMap.set(author, {
             publications: new Set(),
             citations: 0,
             papers: new Set(),
+            years: [],
             coAuthors: new Map()
           });
         }
@@ -106,44 +244,47 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         authorData.publications.add(pub.title);
         authorData.citations += pub.citations;
         authorData.papers.add(pub.title);
+        if (pub.year > 0) authorData.years.push(pub.year);
 
         coAuthors.forEach(coAuthor => {
           if (author !== coAuthor) {
             if (!authorData.coAuthors.has(coAuthor)) {
               authorData.coAuthors.set(coAuthor, {
                 papers: new Set(),
-                citations: 0
+                citations: 0,
+                years: []
               });
             }
             const coAuthorData = authorData.coAuthors.get(coAuthor)!;
             coAuthorData.papers.add(pub.title);
             coAuthorData.citations += pub.citations;
+            if (pub.year > 0) coAuthorData.years.push(pub.year);
           }
         });
       });
     });
 
-    // Sort co-authors by connection strength
+    // Sort and filter
     const sortedByStrength = Array.from(authorMap.entries()).sort((a, b) => {
       const valueA = showCitations ? a[1].citations : a[1].publications.size;
       const valueB = showCitations ? b[1].citations : b[1].publications.size;
       return valueB - valueA;
     });
-
-    // Filter top connections based on limit
     const filteredAuthors = sortedByStrength.slice(0, connectionLimit);
 
-    // Add filtered co-author nodes and their connections
     const addedAuthors = new Set<string>([mainAuthor]);
-    
+
     filteredAuthors.forEach(([author, data]) => {
+      const years = data.years;
       nodes.push({
         id: author,
         name: author,
         group: 2,
         citations: data.citations,
         sharedPublications: data.publications.size,
-        sharedCitations: data.citations
+        sharedCitations: data.citations,
+        firstYear: years.length > 0 ? Math.min(...years) : undefined,
+        lastYear: years.length > 0 ? Math.max(...years) : undefined
       });
       addedAuthors.add(author);
 
@@ -151,51 +292,127 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         source: mainAuthor,
         target: author,
         valuePublications: data.publications.size,
-        valueCitations: data.citations
+        valueCitations: data.citations,
+        firstYear: years.length > 0 ? Math.min(...years) : undefined,
+        lastYear: years.length > 0 ? Math.max(...years) : undefined
       });
 
       data.coAuthors.forEach((coAuthorData, coAuthor) => {
         if (addedAuthors.has(coAuthor)) {
+          const coYears = coAuthorData.years;
           links.push({
             source: author,
             target: coAuthor,
             valuePublications: coAuthorData.papers.size,
-            valueCitations: coAuthorData.citations
+            valueCitations: coAuthorData.citations,
+            firstYear: coYears.length > 0 ? Math.min(...coYears) : undefined,
+            lastYear: coYears.length > 0 ? Math.max(...coYears) : undefined
           });
         }
       });
     });
 
-    // Set up the visualization
+    // --- Compute clusters ---
+    const clusterMap = detectClusters(nodes, links);
+    nodes.forEach(n => { n.clusterId = clusterMap.get(n.id) ?? 0; });
+
+    // --- Compute betweenness centrality ---
+    const betweennessMap = computeBetweenness(nodes, links);
+    nodes.forEach(n => { n.betweenness = betweennessMap.get(n.id) ?? 0; });
+
+    // --- Temporal color scale ---
+    const allYears = links.map(l => l.lastYear).filter((y): y is number => y != null);
+    const minYear = allYears.length > 0 ? Math.min(...allYears) : 2000;
+    const maxYear = allYears.length > 0 ? Math.max(...allYears) : 2024;
+    const temporalColorScale = d3.scaleSequential(d3.interpolateRdYlGn)
+      .domain([minYear, maxYear]);
+
+    // --- Set up visualization ---
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
 
     const svg = d3.select(svgRef.current)
       .attr('viewBox', [0, 0, width, height]);
 
-    // Create a gradient for links
-    const gradient = svg.append('defs')
-      .append('linearGradient')
+    const defs = svg.append('defs');
+
+    // Default link gradient
+    const gradient = defs.append('linearGradient')
       .attr('id', 'link-gradient')
       .attr('gradientUnits', 'userSpaceOnUse');
+    gradient.append('stop').attr('offset', '0%').attr('stop-color', '#2d7d7d');
+    gradient.append('stop').attr('offset', '100%').attr('stop-color', '#64748b');
 
-    gradient.append('stop')
-      .attr('offset', '0%')
-      .attr('stop-color', '#2d7d7d');
+    // Bridge author glow filter
+    const filter = defs.append('filter')
+      .attr('id', 'bridge-glow')
+      .attr('x', '-50%').attr('y', '-50%')
+      .attr('width', '200%').attr('height', '200%');
+    filter.append('feGaussianBlur')
+      .attr('in', 'SourceGraphic')
+      .attr('stdDeviation', '3')
+      .attr('result', 'blur');
+    filter.append('feMerge')
+      .selectAll('feMergeNode')
+      .data(['blur', 'SourceGraphic'])
+      .join('feMergeNode')
+      .attr('in', d => d);
 
-    gradient.append('stop')
-      .attr('offset', '100%')
-      .attr('stop-color', '#64748b');
+    // Node color based on view mode
+    function getNodeColor(d: Node): string {
+      if (d.group === 1) return '#2d7d7d'; // main author always teal
+      if (viewMode === 'clusters') {
+        return CLUSTER_COLORS[(d.clusterId ?? 0) % CLUSTER_COLORS.length];
+      }
+      return '#64748b';
+    }
 
-    // Create the simulation with stronger forces
+    // Node stroke for bridge authors
+    function getNodeStroke(d: Node): string {
+      if (viewMode !== 'clusters' && d.group !== 1 && (d.betweenness ?? 0) > 0.3) {
+        return '#f59e0b'; // amber highlight for bridge authors
+      }
+      return 'none';
+    }
+
+    function getNodeStrokeWidth(d: Node): number {
+      if (viewMode !== 'clusters' && d.group !== 1 && (d.betweenness ?? 0) > 0.3) {
+        return 3;
+      }
+      return 0;
+    }
+
+    // Link color based on view mode
+    function getLinkColor(d: Link): string {
+      if (viewMode === 'temporal' && d.lastYear) {
+        return temporalColorScale(d.lastYear);
+      }
+      if (viewMode === 'clusters') {
+        // Color by shared cluster of endpoints
+        const srcNode = nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : (d.source as any).id));
+        const tgtNode = nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : (d.target as any).id));
+        if (srcNode && tgtNode && srcNode.clusterId === tgtNode.clusterId) {
+          return CLUSTER_COLORS[(srcNode.clusterId ?? 0) % CLUSTER_COLORS.length];
+        }
+        return '#d1d5db'; // gray for inter-cluster
+      }
+      return 'url(#link-gradient)';
+    }
+
+    // Link width — scales with citation flow
+    function getLinkWidth(d: Link): number {
+      const value = showCitations ? d.valueCitations / 10 : d.valuePublications;
+      return Math.max(1.5, Math.sqrt(value) * 2);
+    }
+
+    // Simulation
     simulationRef.current = d3.forceSimulation(nodes as d3.SimulationNode[])
       .force('link', d3.forceLink(links)
         .id((d: any) => d.id)
         .distance(d => {
-          const value = showCitations 
-            ? (d as any).valueCitations 
+          const value = showCitations
+            ? (d as any).valueCitations
             : (d as any).valuePublications;
-          // Closer distance for stronger connections
           return 200 / Math.sqrt(value);
         })
       )
@@ -203,7 +420,6 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .strength(d => {
           const node = d as Node;
           const value = showCitations ? node.sharedCitations : node.sharedPublications;
-          // Stronger repulsion for larger nodes
           return -300 * Math.sqrt(value);
         })
       )
@@ -216,18 +432,24 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         })
       );
 
-    // Create the links
+    // Links
     const link = svg.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', 'url(#link-gradient)')
-      .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', d => 
-        Math.sqrt(showCitations ? d.valueCitations / 10 : d.valuePublications) * 2
-      );
+      .attr('stroke', d => getLinkColor(d))
+      .attr('stroke-opacity', d => {
+        if (viewMode === 'temporal' && d.lastYear) return 0.8;
+        if (viewMode === 'clusters') {
+          const srcNode = nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : (d.source as any).id));
+          const tgtNode = nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : (d.target as any).id));
+          return srcNode?.clusterId === tgtNode?.clusterId ? 0.7 : 0.2;
+        }
+        return 0.6;
+      })
+      .attr('stroke-width', d => getLinkWidth(d));
 
-    // Create the nodes
+    // Nodes
     const node = svg.append('g')
       .selectAll('g')
       .data(nodes)
@@ -237,13 +459,16 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .on('drag', dragged)
         .on('end', dragended));
 
-    // Add circles to nodes
+    // Node circles
     node.append('circle')
       .attr('r', d => Math.sqrt(showCitations ? d.sharedCitations / 5 : d.sharedPublications * 10))
-      .attr('fill', d => d.group === 1 ? '#2d7d7d' : '#64748b')
-      .attr('fill-opacity', 0.8);
+      .attr('fill', d => getNodeColor(d))
+      .attr('fill-opacity', 0.8)
+      .attr('stroke', d => getNodeStroke(d))
+      .attr('stroke-width', d => getNodeStrokeWidth(d))
+      .attr('filter', d => (d.betweenness ?? 0) > 0.3 && viewMode !== 'clusters' ? 'url(#bridge-glow)' : 'none');
 
-    // Update the node labels to use the extracted last name
+    // Labels
     node.append('text')
       .text(d => {
         const lastName = extractLastName(d.name);
@@ -255,7 +480,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .attr('fill', '#4B5563')
       .attr('font-size', fullScreen ? '12px' : '10px');
 
-    // Add value labels
+    // Value labels
     node.append('text')
       .text(d => showCitations ? d.sharedCitations : d.sharedPublications)
       .attr('x', 0)
@@ -264,14 +489,23 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .attr('fill', 'white')
       .attr('font-size', fullScreen ? '10px' : '8px');
 
-    // Update tooltips to show full name
+    // Tooltips — enriched with cluster/bridge/temporal info
     node.append('title')
-      .text(d => `${d.name}\n${showCitations ? 'Shared Citations' : 'Shared Publications'}: ${
-        showCitations ? d.sharedCitations : d.sharedPublications
-      }`);
+      .text(d => {
+        let text = `${d.name}\n`;
+        text += `${showCitations ? 'Shared Citations' : 'Shared Publications'}: ${showCitations ? d.sharedCitations : d.sharedPublications}`;
+        if (d.firstYear && d.lastYear) {
+          text += `\nCollaboration: ${d.firstYear}–${d.lastYear}`;
+        }
+        if ((d.betweenness ?? 0) > 0.1) {
+          text += `\nBridge score: ${((d.betweenness ?? 0) * 100).toFixed(0)}%`;
+        }
+        return text;
+      });
 
-    // Click-to-highlight: clicking a node highlights its connections
+    // Click-to-highlight
     node.on('click', (_event, d) => {
+      _event.stopPropagation();
       const clickedId = d.id;
       const connectedIds = new Set<string>();
       connectedIds.add(clickedId);
@@ -282,10 +516,9 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         if (targetId === clickedId) connectedIds.add(sourceId);
       });
 
-      // Dim non-connected nodes and links
       node.select('circle')
         .attr('fill-opacity', (n: any) => connectedIds.has(n.id) ? 1 : 0.15);
-      node.select('text')
+      node.selectAll('text')
         .attr('fill-opacity', (n: any) => connectedIds.has(n.id) ? 1 : 0.15);
       link
         .attr('stroke-opacity', (l: any) => {
@@ -295,7 +528,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         });
     });
 
-    // Click on background to reset highlighting
+    // Background click to reset
     svg.on('click', (event) => {
       if (event.target === svgRef.current) {
         node.select('circle').attr('fill-opacity', 0.8);
@@ -304,7 +537,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       }
     });
 
-    // Add zoom behavior
+    // Zoom
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
@@ -313,7 +546,6 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
 
     svg.call(zoom);
 
-    // Initial zoom out
     const initialScale = 0.8;
     svg.call(
       zoom.transform,
@@ -323,7 +555,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .translate(-width / 2, -height / 2)
     );
 
-    // Update positions on each tick
+    // Tick
     simulationRef.current.on('tick', () => {
       link
         .attr('x1', d => (d.source as any).x)
@@ -335,7 +567,6 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .attr('transform', d => `translate(${(d as any).x},${(d as any).y})`);
     });
 
-    // Drag functions
     function dragstarted(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
       if (!event.active && simulationRef.current) simulationRef.current.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
@@ -353,11 +584,15 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       event.subject.fy = null;
     }
 
-    // Cleanup
     return () => {
       stopSimulation();
     };
-  }, [publications, fullScreen, showCitations, connectionLimit]);
+  }, [publications, fullScreen, viewMode, connectionLimit]);
+
+  // Count clusters for legend
+  const clusterCount = viewMode === 'clusters' ? new Set(
+    Array.from({ length: connectionLimit + 1 }, (_, i) => i)
+  ).size : 0;
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-xl border border-primary-start/10 p-6 hover:shadow-lg transition-all ${
@@ -368,7 +603,8 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           <Network className="h-5 w-5 mr-2 gradient-icon" />
           Co-author Network
         </h3>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-wrap">
+          {/* Connection limit */}
           <div className="flex items-center space-x-2">
             <div className="group relative">
               <button
@@ -381,8 +617,8 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
               >
                 <span>Top 10</span>
               </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block">
-                <p className="text-gray-700">Show top 10 co-authors by collaboration frequency</p>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
+                <p className="text-gray-700">Show top 10 co-authors</p>
               </div>
             </div>
             <div className="group relative">
@@ -396,60 +632,82 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
               >
                 <span>Top 20</span>
               </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block">
-                <p className="text-gray-700">Show top 20 co-authors by collaboration frequency</p>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
+                <p className="text-gray-700">Show top 20 co-authors</p>
               </div>
             </div>
           </div>
           <div className="h-4 w-px bg-gray-200" />
-          <div className="flex items-center space-x-2">
-            <div className="group relative">
-              <button
-                onClick={handleShowCitations}
-                className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                  !showCitations
-                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                <span>Publications</span>
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block">
-                <p className="font-medium text-gray-900 mb-1">Publication View</p>
-                <p className="text-gray-700">Shows connections based on number of shared publications</p>
-              </div>
-            </div>
-            <div className="group relative">
-              <button
-                onClick={handleShowCitations}
-                className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                  showCitations
-                    ? 'bg-[#eaf4f4] text-[#2d7d7d]'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Citation className="h-3.5 w-3.5" />
-                <span>Citations</span>
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block">
-                <p className="font-medium text-gray-900 mb-1">Citation View</p>
-                <p className="text-gray-700">Shows connections weighted by total shared citations</p>
-              </div>
-            </div>
+          {/* View mode buttons */}
+          <div className="flex items-center space-x-1">
+            <ViewModeButton
+              active={viewMode === 'publications'}
+              onClick={() => handleViewMode('publications')}
+              icon={<BookOpen className="h-3.5 w-3.5" />}
+              label="Papers"
+              tooltip="Size by shared publications"
+            />
+            <ViewModeButton
+              active={viewMode === 'citations'}
+              onClick={() => handleViewMode('citations')}
+              icon={<Citation className="h-3.5 w-3.5" />}
+              label="Citations"
+              tooltip="Size by shared citations, edge thickness by citation flow"
+            />
+            <ViewModeButton
+              active={viewMode === 'temporal'}
+              onClick={() => handleViewMode('temporal')}
+              icon={<Clock className="h-3.5 w-3.5" />}
+              label="Timeline"
+              tooltip="Edge color shows recency of collaboration (red=old, green=recent)"
+            />
+            <ViewModeButton
+              active={viewMode === 'clusters'}
+              onClick={() => handleViewMode('clusters')}
+              icon={<Waypoints className="h-3.5 w-3.5" />}
+              label="Clusters"
+              tooltip="Detect research communities and bridge authors"
+            />
           </div>
         </div>
       </div>
       <div className={`relative ${fullScreen ? 'h-[520px]' : 'h-[calc(100%-4rem)]'}`}>
+        {/* Legend */}
         <div className="absolute top-2 right-2 flex items-center space-x-4 text-xs text-gray-500 z-10">
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 rounded-full bg-[#2d7d7d]" />
-            <span>Main Author</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 rounded-full bg-[#64748b]" />
-            <span>Co-authors</span>
-          </div>
+          {viewMode === 'temporal' ? (
+            <>
+              <div className="flex items-center space-x-1">
+                <div className="w-8 h-2 rounded" style={{ background: 'linear-gradient(to right, #d73027, #fee08b, #1a9850)' }} />
+                <span>Old → Recent</span>
+              </div>
+            </>
+          ) : viewMode === 'clusters' ? (
+            <>
+              <div className="flex items-center space-x-1">
+                <Waypoints className="h-3 w-3 text-[#2d7d7d]" />
+                <span>Research clusters</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full border-2 border-amber-400 bg-transparent" />
+                <span>Bridge authors</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-[#2d7d7d]" />
+                <span>Main Author</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full bg-[#64748b]" />
+                <span>Co-authors</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded-full border-2 border-amber-400 bg-transparent" />
+                <span>Bridge</span>
+              </div>
+            </>
+          )}
         </div>
         <svg
           ref={svgRef}
@@ -461,15 +719,51 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
             <div>
               <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
               <ul className="space-y-1 text-[#64748b]">
-                <li>• Node size represents the number of {showCitations ? 'shared citations' : 'shared publications'}</li>
-                <li>• Line thickness shows collaboration strength</li>
+                <li>• Node size represents {viewMode === 'citations' ? 'shared citations' : 'shared publications'}</li>
+                <li>• Line thickness shows collaboration strength{viewMode === 'citations' ? ' (citation flow)' : ''}</li>
+                {viewMode === 'temporal' && (
+                  <li>• Edge color indicates recency: red (oldest) → green (most recent collaboration)</li>
+                )}
+                {viewMode === 'clusters' && (
+                  <>
+                    <li>• Colors indicate detected research communities</li>
+                    <li>• Amber-outlined nodes are bridge authors connecting different groups</li>
+                  </>
+                )}
                 <li>• Click a node to highlight its connections</li>
-                <li>• Drag nodes to explore connections</li>
-                <li>• Use mouse wheel to zoom in/out</li>
+                <li>• Drag nodes to explore • Mouse wheel to zoom</li>
               </ul>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Reusable view mode toggle button */
+function ViewModeButton({ active, onClick, icon, label, tooltip }: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  tooltip: string;
+}) {
+  return (
+    <div className="group relative">
+      <button
+        onClick={onClick}
+        className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+          active
+            ? 'bg-[#eaf4f4] text-[#2d7d7d]'
+            : 'text-gray-600 hover:bg-gray-100'
+        }`}
+      >
+        {icon}
+        <span>{label}</span>
+      </button>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
+        <p className="text-gray-700">{tooltip}</p>
       </div>
     </div>
   );
