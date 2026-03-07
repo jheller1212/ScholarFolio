@@ -224,6 +224,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
       <ScholarSearchModal
         isOpen={showScholarSearch}
         onClose={() => setShowScholarSearch(false)}
+        onSelect={onSearch}
       />
     </main>
   );

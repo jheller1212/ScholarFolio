@@ -161,12 +161,14 @@ export function CitationsChart({ citationsPerYear }: CitationsChartProps) {
       }
     });
 
-    // Calculate year-over-year growth rates
+    // Calculate year-over-year growth rates (skip current incomplete year)
+    const thisYear = new Date().getFullYear();
     for (let i = 1; i < filteredData.length; i++) {
-      const prevYear = filteredData[i - 1].actualCitations;
-      const currentYear = filteredData[i].actualCitations;
-      if (prevYear > 0) {
-        const growthRate = ((currentYear - prevYear) / prevYear) * 100;
+      if (filteredData[i].year === thisYear) continue; // Don't compare incomplete year to full year
+      const prevCites = filteredData[i - 1].actualCitations;
+      const currCites = filteredData[i].actualCitations;
+      if (prevCites > 0) {
+        const growthRate = ((currCites - prevCites) / prevCites) * 100;
         filteredData[i].yearOverYearGrowth = growthRate;
       }
     }

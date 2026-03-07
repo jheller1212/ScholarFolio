@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
 import { CitationsChart } from './CitationsChart';
 import { MetricsCard } from './MetricsCard';
 import { CitationNetwork } from './CitationNetwork';
-import { CareerAnalysis } from './CareerAnalysis';
+import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
 import type { Author } from '../types/scholar';
+import { extractLastName } from '../utils/names';
 import packageJson from '../../package.json';
 
 interface ProfileViewProps {
@@ -38,6 +39,7 @@ export function ProfileView({
   socialLinks
 }: ProfileViewProps) {
   const [activeTab, setActiveTab] = useState<TabId>('metrics');
+  const [imgError, setImgError] = useState(false);
 
   if (!data) return null;
 
@@ -76,14 +78,28 @@ export function ProfileView({
         {/* Profile summary card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-gray-900 mb-1 truncate">
-                {data.name}
-              </h2>
-              <p className="text-sm text-gray-500 mb-3">{data.affiliation}</p>
-              {data.topics && data.topics.length > 0 && (
-                <TopicsList topics={data.topics} />
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              {data.imageUrl && !imgError ? (
+                <img
+                  src={data.imageUrl}
+                  alt={data.name}
+                  className="w-16 h-16 rounded-xl object-cover bg-[#eaf4f4] flex-shrink-0"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-[#eaf4f4] flex items-center justify-center">
+                  <User className="h-8 w-8 text-[#2d7d7d]" />
+                </div>
               )}
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold text-gray-900 mb-1 truncate">
+                  {data.name}
+                </h2>
+                <p className="text-sm text-gray-500 mb-3">{data.affiliation}</p>
+                {data.topics && data.topics.length > 0 && (
+                  <TopicsList topics={data.topics} />
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-8 flex-shrink-0">
@@ -98,6 +114,11 @@ export function ProfileView({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Researcher Narrative */}
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <ResearcherNarrative data={data} />
           </div>
         </div>
 
@@ -154,14 +175,12 @@ export function ProfileView({
                 <MetricsCard title="Collaboration Rate" value={`${data.metrics.collaborationScore}%`} icon="network" />
                 <MetricsCard
                   title="Top Co-author"
-                  value={data.metrics.topCoAuthor.split(' ').pop() || 'N/A'}
+                  value={data.metrics.topCoAuthor ? extractLastName(data.metrics.topCoAuthor) : 'N/A'}
                   subtitle={`${data.metrics.topCoAuthorPapers} papers`}
                   icon="topCoAuthor"
                 />
               </div>
             </div>
-
-            <CareerAnalysis />
           </div>
         )}
 
@@ -174,8 +193,8 @@ export function ProfileView({
         )}
 
         {activeTab === 'network' && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <CitationNetwork publications={data.publications} />
+          <div className="w-full">
+            <CitationNetwork publications={data.publications} fullScreen={true} />
           </div>
         )}
 

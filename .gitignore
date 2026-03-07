@@ -24,6 +24,7 @@ yarn-error.log*
 
 # Tooling
 .bolt
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*

@@ -78,7 +78,7 @@ async function fetchViaSerpAPI(authorId: string) {
 
   return {
     name: authorData.author?.name || "",
-    affiliation: authorData.author?.affiliations?.[0] || "",
+    affiliation: authorData.author?.affiliations || "",
     imageUrl: authorData.author?.thumbnail || "",
     topics,
     publications
@@ -360,6 +360,35 @@ function extractScholarUserId(url) {
   }
 }
 
+// --- Author search by name via SerpAPI ---
+async function searchAuthorsByName(query: string) {
+  if (!SERPAPI_KEY) {
+    throw new Error("SERPAPI_KEY not configured");
+  }
+
+  const serpUrl = new URL('https://serpapi.com/search.json');
+  serpUrl.searchParams.set('api_key', SERPAPI_KEY);
+  serpUrl.searchParams.set('engine', 'google_scholar_profiles');
+  serpUrl.searchParams.set('mauthors', query);
+
+  const response = await fetch(serpUrl.toString());
+  if (!response.ok) {
+    throw new Error(`SerpAPI profiles search error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const profiles = (data.profiles || []).slice(0, 8).map((p: any) => ({
+    name: p.name || '',
+    affiliation: p.affiliations || '',
+    imageUrl: p.thumbnail || '',
+    authorId: p.author_id || '',
+    citedBy: p.cited_by ?? 0,
+    interests: (p.interests || []).map((i: any) => i.title || ''),
+  }));
+
+  return profiles;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -381,7 +410,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { profileUrl } = requestData;
+    const { profileUrl, action, query } = requestData;
+
+    // --- Author search by name ---
+    if (action === 'search' && query) {
+      console.log(`[Search] Searching for authors: ${query}`);
+      const results = await searchAuthorsByName(query);
+      return new Response(
+        JSON.stringify({ profiles: results }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!profileUrl) {
       return new Response(

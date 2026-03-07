@@ -5,7 +5,37 @@ import { ApiError } from '../../utils/api';
 import { scholarFetcher } from './fetcher';
 import { scholarParser } from './parser';
 
+export interface AuthorSearchResult {
+  name: string;
+  affiliation: string;
+  imageUrl: string;
+  authorId: string;
+  citedBy: number;
+  interests: string[];
+}
+
 export const scholarService = {
+  searchAuthors: async (query: string): Promise<AuthorSearchResult[]> => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+        },
+        body: JSON.stringify({ action: 'search', query })
+      }
+    );
+
+    if (!response.ok) {
+      throw new ApiError('Author search failed', 'FETCH_ERROR');
+    }
+
+    const data = await response.json();
+    return data.profiles || [];
+  },
+
   validateProfileUrl: (url: string) => {
     try {
       const urlObj = new URL(url);

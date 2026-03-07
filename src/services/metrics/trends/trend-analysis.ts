@@ -5,11 +5,12 @@ export function calculateImpactTrend(
   timeRange: TimeRange = 'all'
 ): 'increasing' | 'stable' | 'decreasing' {
   const currentYear = new Date().getFullYear();
-  
-  // Filter years based on time range
+
+  // Filter years based on time range, excluding current incomplete year
   const years = Object.keys(citationsPerYear)
     .map(Number)
     .filter(year => {
+      if (year >= currentYear) return false; // Exclude current incomplete year
       switch (timeRange) {
         case '5y':
           return year > currentYear - 5;
@@ -41,11 +42,15 @@ export function calculateImpactTrend(
   });
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  
-  // Determine trend based on slope
-  if (slope > 5) {
+  const avgCitations = sumY / n;
+
+  // Use relative threshold: slope as percentage of average citations
+  // A 5% change relative to average is meaningful regardless of citation volume
+  const threshold = Math.max(avgCitations * 0.05, 1); // At least 1 to handle very low citation counts
+
+  if (slope > threshold) {
     return 'increasing';
-  } else if (slope < -5) {
+  } else if (slope < -threshold) {
     return 'decreasing';
   } else {
     return 'stable';
@@ -60,11 +65,12 @@ export function findPeakYear(
   citations: number;
 } {
   const currentYear = new Date().getFullYear();
-  
-  // Filter years based on time range
+
+  // Filter years based on time range, excluding current incomplete year
   const years = Object.keys(citationsPerYear)
     .map(Number)
     .filter(year => {
+      if (year >= currentYear) return false; // Exclude current incomplete year
       switch (timeRange) {
         case '5y':
           return year > currentYear - 5;
