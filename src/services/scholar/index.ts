@@ -144,13 +144,30 @@ async function fetchViaClientScraping(normalizedUrl: string) {
   }
 
   const totalCitations = publications.reduce((sum, p) => sum + p.citations, 0);
+
+  // Extract actual citations-per-year from the Google Scholar bar chart
   const citationsPerYear: Record<string, number> = {};
-  publications.forEach(pub => {
-    if (pub.year) {
-      const y = String(pub.year);
-      citationsPerYear[y] = (citationsPerYear[y] || 0) + pub.citations;
+  const yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
+  const barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  if (yearEls.length > 0 && yearEls.length === barEls.length) {
+    for (let i = 0; i < yearEls.length; i++) {
+      const year = (yearEls[i] as HTMLElement).textContent?.trim();
+      const citations = parseInt((barEls[i] as HTMLElement).textContent?.trim() || '0') || 0;
+      if (year) {
+        citationsPerYear[year] = citations;
+      }
     }
-  });
+  }
+
+  // Fallback: derive from publications if chart data not available
+  if (Object.keys(citationsPerYear).length === 0) {
+    publications.forEach(pub => {
+      if (pub.year) {
+        const y = String(pub.year);
+        citationsPerYear[y] = (citationsPerYear[y] || 0) + pub.citations;
+      }
+    });
+  }
 
   const citations = publications.map(p => p.citations).sort((a, b) => b - a);
   let hIndex = 0;

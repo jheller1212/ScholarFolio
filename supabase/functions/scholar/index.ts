@@ -70,18 +70,31 @@ async function fetchViaSerpAPI(authorId: string) {
     url: article.link || ""
   }));
 
-  const topics = authorData.author?.interests?.map(interest => ({
-    name: interest,
-    url: `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(interest)}`,
+  const topics = (authorData.author?.interests || []).map((interest: any) => ({
+    name: typeof interest === 'string' ? interest : (interest.title || ''),
+    url: typeof interest === 'string'
+      ? `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(interest)}`
+      : (interest.link || ''),
     paperCount: 0
-  })) || [];
+  }));
+
+  // Extract actual citations-per-year from SerpAPI's cited_by_graph
+  const citationsPerYear: Record<string, number> = {};
+  if (authorData.cited_by_graph) {
+    for (const entry of authorData.cited_by_graph) {
+      if (entry.year && entry.citations != null) {
+        citationsPerYear[String(entry.year)] = entry.citations;
+      }
+    }
+  }
 
   return {
     name: authorData.author?.name || "",
     affiliation: authorData.author?.affiliations || "",
     imageUrl: authorData.author?.thumbnail || "",
     topics,
-    publications
+    publications,
+    citationsPerYear
   };
 }
 
@@ -174,7 +187,22 @@ async function fetchViaDirectScraping(authorId: string) {
     throw new Error("Failed to parse any data from Scholar profile");
   }
 
-  return { name, affiliation, imageUrl, topics, publications };
+  // Parse citations-per-year graph from the profile page
+  // Google Scholar embeds this in the bar chart section (#gsc_rsb_cit)
+  const citationsPerYear: Record<string, number> = {};
+  const yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
+  const barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  if (yearEls.length > 0 && yearEls.length === barEls.length) {
+    for (let i = 0; i < yearEls.length; i++) {
+      const year = yearEls[i]?.textContent?.trim();
+      const citations = parseInt(barEls[i]?.textContent?.trim() || '0') || 0;
+      if (year) {
+        citationsPerYear[year] = citations;
+      }
+    }
+  }
+
+  return { name, affiliation, imageUrl, topics, publications, citationsPerYear };
 }
 
 // --- Main fetch with fallback ---
@@ -183,7 +211,7 @@ async function fetchScholarProfile(authorId: string) {
     throw new Error("Invalid author ID format");
   }
 
-  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[] };
+  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[]; citationsPerYear?: Record<string, number> };
   let source = 'serpapi';
 
   try {
@@ -212,13 +240,20 @@ async function fetchScholarProfile(authorId: string) {
   const citations = publications.map(p => p.citations);
   const { hIndex, gIndex, i10Index } = calculateIndices(citations);
 
-  const citationsPerYear = {};
-  publications.forEach(pub => {
-    if (pub.year) {
-      const yearStr = String(pub.year);
-      citationsPerYear[yearStr] = (citationsPerYear[yearStr] || 0) + pub.citations;
-    }
-  });
+  // Use actual citations-per-year graph if available (from SerpAPI cited_by_graph
+  // or scraped from the profile page). Only fall back to publication-year sums
+  // if no real citation graph data exists.
+  let citationsPerYear: Record<string, number> = {};
+  if (rawData.citationsPerYear && Object.keys(rawData.citationsPerYear).length > 0) {
+    citationsPerYear = rawData.citationsPerYear;
+  } else {
+    publications.forEach(pub => {
+      if (pub.year) {
+        const yearStr = String(pub.year);
+        citationsPerYear[yearStr] = (citationsPerYear[yearStr] || 0) + pub.citations;
+      }
+    });
+  }
 
   const metrics = {
     hIndex,
