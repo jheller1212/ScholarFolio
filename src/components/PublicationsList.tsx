@@ -9,8 +9,6 @@ interface PublicationsListProps {
 type SortField = 'year' | 'citations' | 'title';
 
 function JournalRankingBadge({ ranking }: { ranking: JournalRanking }) {
-  console.log('[PublicationsList] Rendering badge for ranking:', ranking); // Debug log
-
   return (
     <div className="flex flex-wrap gap-1.5">
       {ranking.ft50 && (
@@ -66,12 +64,6 @@ export function PublicationsList({ publications }: PublicationsListProps) {
         return 0;
     }
   });
-
-  // Debug log to check publications data
-  console.log('[PublicationsList] Publications:', sortedPublications.map(p => ({
-    venue: p.venue,
-    ranking: p.journalRanking
-  })));
 
   if (!publications.length) {
     return (

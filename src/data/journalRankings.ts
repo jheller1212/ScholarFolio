@@ -85,54 +85,57 @@ export const JOURNAL_RANKINGS: Record<string, {
   'advances in consumer research': { sjr: 'Q2', abs: '2', abdc: 'B' }
 };
 
-// Helper function to find matching journal with improved matching logic
-export function findJournalRanking(venue: string) {
-  if (!venue) return undefined;
-  
-  // Extract the base journal name by removing volume, issue, pages, and year
-  const baseVenue = venue.toLowerCase()
-    .replace(/,.*$/, '') // Remove everything after first comma
-    .replace(/\s+\d+.*$/, '') // Remove volume/issue numbers and everything after
-    .replace(/\([^)]*\)/g, '') // Remove parenthetical content
-    .replace(/proceedings.*$/i, '') // Remove proceedings text
-    .replace(/conference.*$/i, '') // Remove conference text
+// Helper function to normalize a venue/journal name for matching
+function normalizeVenueName(name: string): string {
+  return name.toLowerCase()
+    .replace(/,.*$/, '')           // Remove everything after first comma
+    .replace(/\s+\d+.*$/, '')      // Remove volume/issue numbers and everything after
+    .replace(/\([^)]*\)/g, '')     // Remove parenthetical content
+    .replace(/proceedings.*$/i, '')
+    .replace(/conference.*$/i, '')
     .trim()
-    .replace(/\s+/g, ' ') // Normalize spaces
-    .replace(/[.,;:\-]/g, '') // Remove punctuation
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;:\-]/g, '')
     .replace(/&/g, 'and')
     .replace(/^the\s+/, '');
+}
+
+// Helper function to find matching journal with strict matching logic
+export function findJournalRanking(venue: string) {
+  if (!venue) return undefined;
+
+  const baseVenue = normalizeVenueName(venue);
+  if (!baseVenue || baseVenue.length < 3) return undefined;
 
   // Try exact match first
   if (JOURNAL_RANKINGS[baseVenue]) {
     return JOURNAL_RANKINGS[baseVenue];
   }
 
-  // Try partial matches with more lenient matching
+  // Try substring containment: venue must fully contain the journal name
+  // or the journal name must fully contain the venue
   for (const [journal, ranking] of Object.entries(JOURNAL_RANKINGS)) {
-    const normalizedJournal = journal.toLowerCase();
-    
-    // Check if the normalized venue contains the journal name or vice versa
-    // But ensure it's a substantial match (at least 80% of the shorter string)
-    const shortestLength = Math.min(baseVenue.length, normalizedJournal.length);
-    const matchThreshold = Math.floor(shortestLength * 0.8);
-    
-    let isMatch = false;
-    
-    // Check if one string contains most of the other
-    if (baseVenue.includes(normalizedJournal) || normalizedJournal.includes(baseVenue)) {
-      const commonChars = baseVenue.split('').filter(char => normalizedJournal.includes(char)).length;
-      isMatch = commonChars >= matchThreshold;
+    if (baseVenue.includes(journal) || journal.includes(baseVenue)) {
+      // Ensure the shorter string is at least 90% the length of the longer
+      // to prevent "journal of finance" matching "journal of financial economics"
+      const ratio = Math.min(baseVenue.length, journal.length) / Math.max(baseVenue.length, journal.length);
+      if (ratio >= 0.85) {
+        return ranking;
+      }
     }
-    
-    // Also check for word-by-word matching
-    if (!isMatch) {
-      const venueWords = baseVenue.split(' ');
-      const journalWords = normalizedJournal.split(' ');
-      const commonWords = venueWords.filter(word => journalWords.includes(word));
-      isMatch = commonWords.length >= Math.min(venueWords.length, journalWords.length) * 0.8;
-    }
-    
-    if (isMatch) {
+  }
+
+  // Strict word matching: ALL significant words must match (not just 80%)
+  const venueWords = baseVenue.split(' ').filter(w => w.length > 2);
+  for (const [journal, ranking] of Object.entries(JOURNAL_RANKINGS)) {
+    const journalWords = journal.split(' ').filter(w => w.length > 2);
+
+    // All words in the shorter list must appear in the longer list
+    const shorter = venueWords.length <= journalWords.length ? venueWords : journalWords;
+    const longer = venueWords.length <= journalWords.length ? journalWords : venueWords;
+    const allMatch = shorter.every(word => longer.includes(word));
+
+    if (allMatch && shorter.length >= 3) {
       return ranking;
     }
   }
