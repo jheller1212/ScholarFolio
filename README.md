@@ -42,8 +42,8 @@ A ranking tool. A benchmarking system. A productivity scorecard. Numbers here ar
 ### Setup
 
 ```bash
-git clone https://github.com/JonasHeller1212/ScholarMetricsAnalyzer.git
-cd ScholarMetricsAnalyzer
+git clone https://github.com/JonasHeller1212/ResearchFolio.git
+cd ResearchFolio
 npm install
 ```
 

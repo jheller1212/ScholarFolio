@@ -69,7 +69,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <p>
               Scholar Folio is open source.{' '}
               <a
-                href="https://github.com/JonasHeller1212/ScholarMetricsAnalyzer"
+                href="https://github.com/JonasHeller1212/ResearchFolio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#2d7d7d] hover:underline inline-flex items-center gap-1"
