@@ -6,10 +6,6 @@
 
 Scholar Folio is a free, open-source research portfolio tool. Paste a Google Scholar profile URL and get a clear overview of your publication history, collaboration network, and research reach.
 
-## What it is not
-
-A ranking tool. A benchmarking system. A productivity scorecard. Numbers here are context, not verdict.
-
 ## Features
 
 - **Research Reach** — citation counts, h-index, growth trends
