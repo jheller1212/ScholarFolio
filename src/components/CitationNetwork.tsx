@@ -153,10 +153,13 @@ function computeBetweenness(nodes: Node[], links: Link[]): Map<string, number> {
   return scores;
 }
 
-// Cluster colors (distinct, accessible palette)
+// Bridge author betweenness threshold (top ~20% of nodes)
+const BRIDGE_THRESHOLD = 0.15;
+
+// Cluster colors (vibrant, distinct, accessible palette)
 const CLUSTER_COLORS = [
-  '#2d7d7d', '#e07a5f', '#3d405b', '#81b29a', '#f2cc8f',
-  '#6d6875', '#b5838d', '#e5989b', '#457b9d', '#a8dadc'
+  '#0d9488', '#e07a5f', '#7c3aed', '#059669', '#db2777',
+  '#2563eb', '#d97706', '#6366f1', '#dc2626', '#0891b2'
 ];
 
 export function CitationNetwork({ publications, fullScreen = false }: CitationNetworkProps) {
@@ -358,25 +361,38 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .join('feMergeNode')
       .attr('in', d => d);
 
+    // Color scale for collaboration strength (used in non-cluster views)
+    const maxPubs = Math.max(...nodes.filter(n => n.group !== 1).map(n => n.sharedPublications), 1);
+    const maxCites = Math.max(...nodes.filter(n => n.group !== 1).map(n => n.sharedCitations), 1);
+    const strengthColorScale = d3.scaleSequential(d3.interpolateViridis)
+      .domain([0, showCitations ? maxCites : maxPubs]);
+
     // Node color based on view mode
     function getNodeColor(d: Node): string {
-      if (d.group === 1) return '#2d7d7d'; // main author always teal
+      if (d.group === 1) return '#0d9488'; // main author teal
       if (viewMode === 'clusters') {
         return CLUSTER_COLORS[(d.clusterId ?? 0) % CLUSTER_COLORS.length];
       }
-      return '#64748b';
+      if (viewMode === 'temporal') {
+        // Color by recency of collaboration
+        if (d.lastYear) return temporalColorScale(d.lastYear);
+        return '#94a3b8';
+      }
+      // Publications/Citations view: color by collaboration strength
+      const value = showCitations ? d.sharedCitations : d.sharedPublications;
+      return strengthColorScale(value);
     }
 
-    // Node stroke for bridge authors
+    // Node stroke for bridge authors — shown in all views
     function getNodeStroke(d: Node): string {
-      if (viewMode !== 'clusters' && d.group !== 1 && (d.betweenness ?? 0) > 0.3) {
+      if (d.group !== 1 && (d.betweenness ?? 0) > BRIDGE_THRESHOLD) {
         return '#f59e0b'; // amber highlight for bridge authors
       }
       return 'none';
     }
 
     function getNodeStrokeWidth(d: Node): number {
-      if (viewMode !== 'clusters' && d.group !== 1 && (d.betweenness ?? 0) > 0.3) {
+      if (d.group !== 1 && (d.betweenness ?? 0) > BRIDGE_THRESHOLD) {
         return 3;
       }
       return 0;
@@ -432,8 +448,11 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         })
       );
 
+    // Container for all zoomable content
+    const container = svg.append('g').attr('class', 'zoom-container');
+
     // Links
-    const link = svg.append('g')
+    const link = container.append('g')
       .selectAll('line')
       .data(links)
       .join('line')
@@ -450,7 +469,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .attr('stroke-width', d => getLinkWidth(d));
 
     // Nodes
-    const node = svg.append('g')
+    const node = container.append('g')
       .selectAll('g')
       .data(nodes)
       .join('g')
@@ -466,7 +485,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .attr('fill-opacity', 0.8)
       .attr('stroke', d => getNodeStroke(d))
       .attr('stroke-width', d => getNodeStrokeWidth(d))
-      .attr('filter', d => (d.betweenness ?? 0) > 0.3 && viewMode !== 'clusters' ? 'url(#bridge-glow)' : 'none');
+      .attr('filter', d => (d.betweenness ?? 0) > BRIDGE_THRESHOLD ? 'url(#bridge-glow)' : 'none');
 
     // Labels
     node.append('text')
@@ -537,11 +556,11 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       }
     });
 
-    // Zoom
+    // Zoom — only transform the container, not individual node groups
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
-        svg.selectAll('g').attr('transform', event.transform);
+        container.attr('transform', event.transform);
       });
 
     svg.call(zoom);
@@ -695,12 +714,12 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           ) : (
             <>
               <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded-full bg-[#2d7d7d]" />
+                <div className="w-3 h-3 rounded-full bg-[#0d9488]" />
                 <span>Main Author</span>
               </div>
               <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded-full bg-[#64748b]" />
-                <span>Co-authors</span>
+                <div className="w-8 h-2 rounded" style={{ background: 'linear-gradient(to right, #440154, #21918c, #fde725)' }} />
+                <span>Weak → Strong</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full border-2 border-amber-400 bg-transparent" />

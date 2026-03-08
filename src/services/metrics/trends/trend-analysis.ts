@@ -4,13 +4,16 @@ export function calculateImpactTrend(
   citationsPerYear: Record<string, number>,
   timeRange: TimeRange = 'all'
 ): 'increasing' | 'stable' | 'decreasing' {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const cutoffYear = currentMonth < 6 ? currentYear - 1 : currentYear;
 
-  // Filter years based on time range, excluding current incomplete year
+  // Filter years based on time range, excluding incomplete years
   const years = Object.keys(citationsPerYear)
     .map(Number)
     .filter(year => {
-      if (year >= currentYear) return false; // Exclude current incomplete year
+      if (year >= cutoffYear) return false; // Exclude incomplete years based on current date
       switch (timeRange) {
         case '5y':
           return year > currentYear - 5;
@@ -64,13 +67,16 @@ export function findPeakYear(
   year: number;
   citations: number;
 } {
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const cutoffYear = currentMonth < 6 ? currentYear - 1 : currentYear;
 
-  // Filter years based on time range, excluding current incomplete year
+  // Filter years based on time range, excluding incomplete years
   const years = Object.keys(citationsPerYear)
     .map(Number)
     .filter(year => {
-      if (year >= currentYear) return false; // Exclude current incomplete year
+      if (year >= cutoffYear) return false; // Exclude incomplete years based on current date
       switch (timeRange) {
         case '5y':
           return year > currentYear - 5;

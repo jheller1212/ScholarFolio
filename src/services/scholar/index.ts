@@ -16,18 +16,27 @@ export interface AuthorSearchResult {
 
 export const scholarService = {
   searchAuthors: async (query: string): Promise<AuthorSearchResult[]> => {
+    const errors: string[] = [];
+
     // Try edge function (SerpAPI) first
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase not configured');
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,
+        `${supabaseUrl}/functions/v1/scholar`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+            'Authorization': `Bearer ${supabaseKey}`
           },
           body: JSON.stringify({ action: 'search', query }),
-          signal: AbortSignal.timeout(8000)
+          signal: AbortSignal.timeout(10000)
         }
       );
 
@@ -36,13 +45,29 @@ export const scholarService = {
         if (data.profiles && data.profiles.length > 0) {
           return data.profiles;
         }
+        // SerpAPI returned OK but no profiles — genuinely no results
+        return [];
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Edge function HTTP ${response.status}`);
       }
-    } catch {
-      console.warn('[ScholarService] Edge function author search failed, trying client-side fallback');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[ScholarService] Edge function author search failed:', msg);
+      errors.push(msg);
     }
 
     // Fallback: scrape Google Scholar author search via CORS proxy
-    return searchAuthorsClientSide(query);
+    try {
+      return await searchAuthorsClientSide(query);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[ScholarService] Client-side author search also failed:', msg);
+      errors.push(msg);
+    }
+
+    console.error('[ScholarService] All search methods failed:', errors);
+    throw new Error(`Search failed: ${errors.join('; ')}`);
   },
 
   validateProfileUrl: (url: string) => {
@@ -199,6 +224,11 @@ function buildAuthorResult(data: any): Author {
     data.metrics?.citationsPerYear || {},
     data.name
   );
+
+  // Propagate the citation graph source from the edge function response
+  if (data.metrics?.citationGraphSource) {
+    metrics.citationGraphSource = data.metrics.citationGraphSource;
+  }
 
   return {
     name: data.name,

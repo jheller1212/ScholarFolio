@@ -244,9 +244,14 @@ async function fetchScholarProfile(authorId: string) {
   // or scraped from the profile page). Only fall back to publication-year sums
   // if no real citation graph data exists.
   let citationsPerYear: Record<string, number> = {};
+  let citationGraphSource = 'none';
   if (rawData.citationsPerYear && Object.keys(rawData.citationsPerYear).length > 0) {
     citationsPerYear = rawData.citationsPerYear;
+    citationGraphSource = source === 'serpapi' ? 'cited_by_graph' : 'scraped_chart';
+    console.log(`[Metrics] Using ${citationGraphSource} data (${Object.keys(citationsPerYear).length} years)`);
   } else {
+    console.warn('[Metrics] No citation graph data — falling back to publication-year sums (less accurate)');
+    citationGraphSource = 'publication_year_sums';
     publications.forEach(pub => {
       if (pub.year) {
         const yearStr = String(pub.year);
@@ -262,6 +267,7 @@ async function fetchScholarProfile(authorId: string) {
     totalPublications: publications.length,
     publicationsPerYear: (publications.length / Math.max(1, Object.keys(citationsPerYear).length)).toFixed(1),
     citationsPerYear,
+    citationGraphSource,
     avgCitationsPerYear: Math.round(totalCitations / Math.max(1, Object.keys(citationsPerYear).length)),
     avgCitationsPerPaper: Math.round(totalCitations / Math.max(1, publications.length)),
     collaborationScore: calculateCollaborationScore(publications),

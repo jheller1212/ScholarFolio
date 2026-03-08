@@ -42,8 +42,10 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
       const profiles = await scholarService.searchAuthors(searchQuery.trim());
       setResults(profiles);
       setSearched(true);
-    } catch {
-      setError('Search failed. Please try again.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.error('[Search] Error:', msg);
+      setError(`Search failed: ${msg}`);
       setResults([]);
       setSearched(true);
     } finally {
