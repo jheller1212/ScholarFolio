@@ -83,12 +83,12 @@ function calculateAdvancedMetrics(data: any) {
 
 function injectMetricsUI(metrics: any) {
   const container = document.createElement('div');
-  container.className = 'scholar-metrics-container';
+  container.className = 'scholar-folio-container';
 
   // Add styles safely
   const style = document.createElement('style');
   style.textContent = `
-    .scholar-metrics-container {
+    .scholar-folio-container {
       margin: 20px 0;
       padding: 16px;
       background: rgba(255, 255, 255, 0.8);
