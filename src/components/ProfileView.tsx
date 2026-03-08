@@ -199,10 +199,8 @@ export function ProfileView({
         )}
 
         {activeTab === 'trends' && (
-          <div className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <CitationsChart citationsPerYear={data.metrics.citationsPerYear} citationGraphSource={data.metrics.citationGraphSource} />
-            </div>
+          <div className="w-full">
+            <CitationsChart citationsPerYear={data.metrics.citationsPerYear} citationGraphSource={data.metrics.citationGraphSource} publications={data.publications} />
           </div>
         )}
 
