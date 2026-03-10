@@ -83,24 +83,17 @@ const tooltipStyle = "bg-white/95 backdrop-blur-sm shadow-lg border border-gray-
 export function CitationsChart({ citationsPerYear, citationGraphSource, publications = [] }: CitationsChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
 
-  if (!citationsPerYear || Object.keys(citationsPerYear).length === 0) {
-    return (
-      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-        <Info className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-medium">Citation graph unavailable</p>
-          <p className="text-amber-600 mt-0.5">
-            Google Scholar's citation-per-year data could not be retrieved. Try reloading to fetch fresh data.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // All hooks must be called unconditionally (Rules of Hooks).
+  // The empty-data guard is handled in the JSX return below.
+  const safeData = citationsPerYear && Object.keys(citationsPerYear).length > 0
+    ? citationsPerYear : {};
+  const hasData = Object.keys(safeData).length > 0;
 
   // --- Main bar chart data ---
   const chartData = useMemo(() => {
+    if (!hasData) return [];
     const currentYear = new Date().getFullYear();
-    const allData = Object.entries(citationsPerYear)
+    const allData = Object.entries(safeData)
       .map(([year, citations]) => ({
         year: parseInt(year),
         actual: citations,
@@ -121,18 +114,19 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
     // Add projection for current year
     const cur = filtered.find(d => d.isCurrentYear);
     if (cur) {
-      const total = projectCurrentYear(cur.actual, citationsPerYear);
+      const total = projectCurrentYear(cur.actual, safeData);
       cur.projectedTotal = total;
       cur.projected = Math.max(0, total - cur.actual);
     }
 
     return filtered;
-  }, [citationsPerYear, timeRange]);
+  }, [safeData, hasData, timeRange]);
 
   // --- Cumulative ---
   const cumulativeData = useMemo(() => {
+    if (!hasData) return [];
     const currentYear = new Date().getFullYear();
-    const years = Object.keys(citationsPerYear).map(Number).sort((a, b) => a - b);
+    const years = Object.keys(safeData).map(Number).sort((a, b) => a - b);
     let cumulative = 0;
     return years
       .filter(y => {
@@ -143,15 +137,16 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         }
       })
       .map(year => {
-        cumulative += citationsPerYear[year] || 0;
-        return { year, cumulative, yearly: citationsPerYear[year] || 0 };
+        cumulative += safeData[year] || 0;
+        return { year, cumulative, yearly: safeData[year] || 0 };
       });
-  }, [citationsPerYear, timeRange]);
+  }, [safeData, hasData, timeRange]);
 
   // --- Citation velocity ---
   const velocityData = useMemo(() => {
+    if (!hasData) return [];
     const currentYear = new Date().getFullYear();
-    const years = Object.keys(citationsPerYear).map(Number).sort((a, b) => a - b);
+    const years = Object.keys(safeData).map(Number).sort((a, b) => a - b);
     return years
       .filter(y => {
         switch (timeRange) {
@@ -161,19 +156,20 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         }
       })
       .map(year => {
-        const val = citationsPerYear[year] || 0;
-        const prev1 = citationsPerYear[year - 1] || 0;
-        const prev2 = citationsPerYear[year - 2] || 0;
-        const hasEnough = citationsPerYear[year - 1] !== undefined && citationsPerYear[year - 2] !== undefined;
+        const val = safeData[year] || 0;
+        const prev1 = safeData[year - 1] || 0;
+        const prev2 = safeData[year - 2] || 0;
+        const hasEnough = safeData[year - 1] !== undefined && safeData[year - 2] !== undefined;
         const movingAvg = hasEnough ? Math.round((val + prev1 + prev2) / 3) : val;
-        const prevVal = citationsPerYear[year - 1];
+        const prevVal = safeData[year - 1];
         const yoyChange = prevVal != null && prevVal > 0 ? Math.round(val - prevVal) : 0;
         return { year, citations: val, movingAvg, yoyChange };
       });
-  }, [citationsPerYear, timeRange]);
+  }, [safeData, hasData, timeRange]);
 
   // --- Publication output + h-index ---
   const productivityData = useMemo(() => {
+    if (!hasData) return [];
     const currentYear = new Date().getFullYear();
     const pubsByYear: Record<number, Publication[]> = {};
     publications.forEach(p => {
@@ -182,7 +178,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         pubsByYear[p.year].push(p);
       }
     });
-    const allYears = Object.keys(citationsPerYear).map(Number).concat(Object.keys(pubsByYear).map(Number));
+    const allYears = Object.keys(safeData).map(Number).concat(Object.keys(pubsByYear).map(Number));
     const uniqueYears = [...new Set(allYears)].sort((a, b) => a - b);
     const allPubs: Publication[] = [];
     return uniqueYears
@@ -203,18 +199,19 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         }
         return { year, publications: yearPubs.length, hIndex: h, totalPubs: allPubs.length };
       });
-  }, [publications, citationsPerYear, timeRange]);
+  }, [publications, safeData, hasData, timeRange]);
 
   // --- Summary stats ---
   const stats = useMemo(() => {
-    const { avgGrowthRate } = calculateGrowthRates(citationsPerYear, timeRange);
+    if (!hasData) return { avgGrowthRate: 0, avgCitations: 0, peakYear: 0, peakCitations: 0, totalCumulative: 0 };
+    const { avgGrowthRate } = calculateGrowthRates(safeData, timeRange);
     const { perYear: avgCitations } = calculateAverageCitations(
       chartData.map(d => ({ year: d.year, citations: d.actual })), timeRange
     );
-    const { year: peakYear, citations: peakCitations } = findPeakYear(citationsPerYear, timeRange);
+    const { year: peakYear, citations: peakCitations } = findPeakYear(safeData, timeRange);
     const totalCumulative = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1].cumulative : 0;
     return { avgGrowthRate, avgCitations, peakYear, peakCitations, totalCumulative };
-  }, [chartData, cumulativeData, timeRange, citationsPerYear]);
+  }, [chartData, cumulativeData, hasData, safeData, timeRange]);
 
   const timeRangeText = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -222,11 +219,26 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       case '5y': return `${currentYear - 4}\u2013${currentYear}`;
       case '10y': return `${currentYear - 9}\u2013${currentYear}`;
       default: {
-        const years = Object.keys(citationsPerYear).map(Number).sort();
+        const years = Object.keys(safeData).map(Number).sort();
         return years.length ? `${years[0]}\u2013${currentYear}` : 'All time';
       }
     }
-  }, [timeRange, citationsPerYear]);
+  }, [timeRange, safeData]);
+
+  // --- Empty data guard (after all hooks) ---
+  if (!hasData) {
+    return (
+      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+        <Info className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="font-medium">Citation graph unavailable</p>
+          <p className="text-amber-600 mt-0.5">
+            Google Scholar's citation-per-year data could not be retrieved. Try reloading to fetch fresh data.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const timeRangeButtons = (
     <div className="flex items-center space-x-1">
