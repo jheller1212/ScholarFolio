@@ -31,7 +31,7 @@ export interface Metrics {
   totalPublications: number;
   publicationsPerYear: string;
   citationsPerYear: Record<string, number>;
-  citationGraphSource?: 'cited_by_graph' | 'scraped_chart' | 'publication_year_sums';
+  citationGraphSource?: 'cited_by_graph' | 'scraped_chart';
   acc5: number;
   avgCitationsPerYear: number;
   avgCitationsPerPaper: number;

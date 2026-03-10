@@ -24,7 +24,7 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
   const safeScholarId = scholarId.replace(/[^a-zA-Z0-9_-]/g, '');
 
   const embedCode = `<iframe
-  src="https://scholar-metrics.netlify.app/embed/${safeScholarId}"
+  src="https://scholarfolio.netlify.app/embed/${safeScholarId}"
   width="100%"
   height="600"
   frameborder="0"

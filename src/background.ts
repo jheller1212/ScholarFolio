@@ -9,13 +9,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Calculate additional metrics
     const metrics = calculateMetrics(currentProfileData);
     // Store the complete data
-    chrome.storage.local.set({ scholarMetrics: metrics });
+    chrome.storage.local.set({ scholarFolio: metrics });
     sendResponse({ success: true });
   }
 
   if (request.type === 'GET_METRICS') {
-    chrome.storage.local.get(['scholarMetrics'], (result) => {
-      sendResponse(result.scholarMetrics || null);
+    chrome.storage.local.get(['scholarFolio'], (result) => {
+      sendResponse(result.scholarFolio || null);
     });
     return true; // Required for async response
   }

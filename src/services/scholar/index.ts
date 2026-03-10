@@ -170,10 +170,22 @@ async function fetchViaClientScraping(normalizedUrl: string) {
 
   const totalCitations = publications.reduce((sum, p) => sum + p.citations, 0);
 
-  // Extract actual citations-per-year from the Google Scholar bar chart
+  // Extract actual citations-per-year from the Google Scholar bar chart.
+  // The main profile page renders the chart inside #gsc_rsb_cit with
+  // .gsc_g_t for year labels and .gsc_g_al for bar values.
+  // The modal (if present) uses .gsc_md_hist_b as a wrapper.
+  // Extract actual citations-per-year from the Google Scholar bar chart.
+  // Never fall back to publication-year sums — that's a different metric.
   const citationsPerYear: Record<string, number> = {};
-  const yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
-  const barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  let citationGraphSource: 'scraped_chart' | undefined;
+
+  // Try the main profile chart first, then fall back to modal chart
+  let yearEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_t');
+  let barEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_al');
+  if (!yearEls.length || yearEls.length !== barEls.length) {
+    yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
+    barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  }
   if (yearEls.length > 0 && yearEls.length === barEls.length) {
     for (let i = 0; i < yearEls.length; i++) {
       const year = (yearEls[i] as HTMLElement).textContent?.trim();
@@ -182,16 +194,7 @@ async function fetchViaClientScraping(normalizedUrl: string) {
         citationsPerYear[year] = citations;
       }
     }
-  }
-
-  // Fallback: derive from publications if chart data not available
-  if (Object.keys(citationsPerYear).length === 0) {
-    publications.forEach(pub => {
-      if (pub.year) {
-        const y = String(pub.year);
-        citationsPerYear[y] = (citationsPerYear[y] || 0) + pub.citations;
-      }
-    });
+    citationGraphSource = 'scraped_chart';
   }
 
   const citations = publications.map(p => p.citations).sort((a, b) => b - a);
@@ -209,7 +212,7 @@ async function fetchViaClientScraping(normalizedUrl: string) {
     hIndex,
     totalCitations,
     publications,
-    metrics: { citationsPerYear }
+    metrics: { citationsPerYear, citationGraphSource }
   };
 }
 

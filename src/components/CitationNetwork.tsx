@@ -35,34 +35,45 @@ type ViewMode = 'publications' | 'citations' | 'temporal' | 'clusters';
 
 // --- Graph algorithms ---
 
-/** Simple community detection via label propagation */
+/**
+ * Community detection via label propagation on the co-author subgraph.
+ * Excludes the main author node (hub) from propagation so that clusters
+ * reflect actual research communities among co-authors rather than
+ * collapsing into one group through the hub.
+ */
 function detectClusters(nodes: Node[], links: Link[]): Map<string, number> {
+  // Identify the main author (group === 1)
+  const mainAuthorId = nodes.find(n => n.group === 1)?.id;
+
   const labels = new Map<string, number>();
   nodes.forEach((n, i) => labels.set(n.id, i));
 
+  // Build adjacency excluding the main author hub
   const adjacency = new Map<string, string[]>();
   nodes.forEach(n => adjacency.set(n.id, []));
   links.forEach(l => {
     const src = typeof l.source === 'string' ? l.source : (l.source as any).id;
     const tgt = typeof l.target === 'string' ? l.target : (l.target as any).id;
+    // Skip edges to/from the main author for clustering purposes
+    if (src === mainAuthorId || tgt === mainAuthorId) return;
     adjacency.get(src)?.push(tgt);
     adjacency.get(tgt)?.push(src);
   });
 
-  // Run label propagation for a few iterations
-  for (let iter = 0; iter < 10; iter++) {
+  // Only propagate labels among non-hub nodes
+  const coAuthorNodes = nodes.filter(n => n.id !== mainAuthorId);
+
+  for (let iter = 0; iter < 15; iter++) {
     let changed = false;
-    const shuffled = [...nodes].sort(() => Math.random() - 0.5);
+    const shuffled = [...coAuthorNodes].sort(() => Math.random() - 0.5);
     for (const node of shuffled) {
       const neighbors = adjacency.get(node.id) || [];
       if (neighbors.length === 0) continue;
-      // Count neighbor labels
       const freq = new Map<number, number>();
       for (const nb of neighbors) {
         const lbl = labels.get(nb)!;
         freq.set(lbl, (freq.get(lbl) || 0) + 1);
       }
-      // Pick most frequent label
       let maxFreq = 0;
       let bestLabel = labels.get(node.id)!;
       for (const [lbl, count] of freq) {
@@ -80,11 +91,19 @@ function detectClusters(nodes: Node[], links: Link[]): Map<string, number> {
   }
 
   // Normalize cluster IDs to 0, 1, 2, ...
-  const uniqueLabels = [...new Set(labels.values())];
+  // Main author gets its own cluster ID (0)
+  const coAuthorLabels = [...new Set(
+    coAuthorNodes.map(n => labels.get(n.id)!)
+  )];
   const labelMap = new Map<number, number>();
-  uniqueLabels.forEach((lbl, i) => labelMap.set(lbl, i));
+  coAuthorLabels.forEach((lbl, i) => labelMap.set(lbl, i + 1)); // 1-indexed for co-authors
+
   const normalized = new Map<string, number>();
-  labels.forEach((lbl, id) => normalized.set(id, labelMap.get(lbl)!));
+  if (mainAuthorId) normalized.set(mainAuthorId, 0);
+  coAuthorNodes.forEach(n => {
+    const lbl = labels.get(n.id)!;
+    normalized.set(n.id, labelMap.get(lbl) ?? 0);
+  });
   return normalized;
 }
 
@@ -462,11 +481,21 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         if (viewMode === 'clusters') {
           const srcNode = nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : (d.source as any).id));
           const tgtNode = nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : (d.target as any).id));
-          return srcNode?.clusterId === tgtNode?.clusterId ? 0.7 : 0.2;
+          // Same cluster: strong, inter-cluster: subtle
+          return srcNode?.clusterId === tgtNode?.clusterId ? 0.7 : 0.25;
         }
         return 0.6;
       })
-      .attr('stroke-width', d => getLinkWidth(d));
+      .attr('stroke-width', d => getLinkWidth(d))
+      .attr('stroke-dasharray', d => {
+        if (viewMode === 'clusters') {
+          const srcNode = nodes.find(n => n.id === (typeof d.source === 'string' ? d.source : (d.source as any).id));
+          const tgtNode = nodes.find(n => n.id === (typeof d.target === 'string' ? d.target : (d.target as any).id));
+          // Dashed lines for inter-cluster connections
+          if (srcNode?.clusterId !== tgtNode?.clusterId) return '4 3';
+        }
+        return 'none';
+      });
 
     // Nodes
     const node = container.append('g')
@@ -516,8 +545,11 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         if (d.firstYear && d.lastYear) {
           text += `\nCollaboration: ${d.firstYear}–${d.lastYear}`;
         }
+        if (d.group !== 1 && d.clusterId != null) {
+          text += `\nCluster: ${d.clusterId}`;
+        }
         if ((d.betweenness ?? 0) > 0.1) {
-          text += `\nBridge score: ${((d.betweenness ?? 0) * 100).toFixed(0)}%`;
+          text += `\nBridge score: ${((d.betweenness ?? 0) * 100).toFixed(0)}% — connects different research groups`;
         }
         return text;
       });
@@ -608,10 +640,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     };
   }, [publications, fullScreen, viewMode, connectionLimit]);
 
-  // Count clusters for legend
-  const clusterCount = viewMode === 'clusters' ? new Set(
-    Array.from({ length: connectionLimit + 1 }, (_, i) => i)
-  ).size : 0;
+  // This variable is no longer needed but leaving a placeholder for the component structure
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-xl border border-primary-start/10 p-6 hover:shadow-lg transition-all ${
@@ -685,7 +714,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
               onClick={() => handleViewMode('clusters')}
               icon={<Waypoints className="h-3.5 w-3.5" />}
               label="Clusters"
-              tooltip="Detect research communities and bridge authors"
+              tooltip="Detect research communities (groups of co-authors who publish together) and bridge authors who connect them"
             />
           </div>
         </div>
@@ -703,12 +732,22 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           ) : viewMode === 'clusters' ? (
             <>
               <div className="flex items-center space-x-1">
-                <Waypoints className="h-3 w-3 text-[#2d7d7d]" />
-                <span>Research clusters</span>
+                <div className="w-3 h-3 rounded-full bg-[#0d9488]" />
+                <span>Main Author</span>
+              </div>
+              <div className="flex items-center space-x-1 gap-0.5">
+                {CLUSTER_COLORS.slice(0, 5).map((c, i) => (
+                  <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
+                ))}
+                <span className="ml-1">Research groups</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div className="w-3 h-3 rounded-full border-2 border-amber-400 bg-transparent" />
                 <span>Bridge authors</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-4 h-0 border-t-2 border-dashed border-gray-300" />
+                <span>Cross-group</span>
               </div>
             </>
           ) : (
@@ -745,8 +784,9 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 )}
                 {viewMode === 'clusters' && (
                   <>
-                    <li>• Colors indicate detected research communities</li>
-                    <li>• Amber-outlined nodes are bridge authors connecting different groups</li>
+                    <li>• <strong>Clusters</strong> are groups of co-authors who frequently publish together — they likely represent distinct research topics, labs, or projects</li>
+                    <li>• Same-color nodes share a research community; dashed gray lines cross between groups</li>
+                    <li>• <strong>Bridge authors</strong> (amber outline) connect different groups and may be key interdisciplinary collaborators</li>
                   </>
                 )}
                 <li>• Click a node to highlight its connections</li>

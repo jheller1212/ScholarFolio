@@ -19,20 +19,8 @@ class MetricsCalculator {
     }
 
     if (!citationsPerYear || Object.keys(citationsPerYear).length === 0) {
-      console.warn('[MetricsCalculator] No citationsPerYear graph data provided — falling back to publication-year sums. Citation trends may be inaccurate.');
-      citationsPerYear = this.extractCitationsPerYear(publications);
-    } else {
-      // Validate: if data looks like publication-year sums (monotonically decreasing
-      // by large amounts for recent years), warn about it
-      const years = Object.keys(citationsPerYear).map(Number).sort((a, b) => a - b);
-      if (years.length >= 3) {
-        const last3 = years.slice(-3);
-        const vals = last3.map(y => citationsPerYear[y]);
-        // If each successive year has <50% of the prior year, it's likely pub-year sums
-        if (vals[0] > 0 && vals[1] / vals[0] < 0.5 && vals[2] / vals[1] < 0.5) {
-          console.warn('[MetricsCalculator] citationsPerYear looks like publication-year sums rather than citations-received-per-year. Data source may need correction.');
-        }
-      }
+      console.warn('[MetricsCalculator] No citationsPerYear graph data provided — metrics derived from citation graph will be empty.');
+      citationsPerYear = {};
     }
 
     const citations = publications.map(p => p.citations);
@@ -98,20 +86,6 @@ class MetricsCalculator {
     };
   }
 
-  // Helper function to extract citations per year when not provided
-  private extractCitationsPerYear(publications: Publication[]): Record<string, number> {
-    const citationsPerYear: Record<string, number> = {};
-    
-    publications.forEach(pub => {
-      if (pub.year) {
-        const year = String(pub.year);
-        citationsPerYear[year] = (citationsPerYear[year] || 0) + pub.citations;
-      }
-    });
-    
-    return citationsPerYear;
-  }
-  
   // Return default empty metrics object when no data is available
   private getEmptyMetrics(): Metrics {
     return {

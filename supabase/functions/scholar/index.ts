@@ -187,11 +187,15 @@ async function fetchViaDirectScraping(authorId: string) {
     throw new Error("Failed to parse any data from Scholar profile");
   }
 
-  // Parse citations-per-year graph from the profile page
-  // Google Scholar embeds this in the bar chart section (#gsc_rsb_cit)
+  // Parse citations-per-year graph from the profile page.
+  // The main chart lives in #gsc_rsb_cit; the modal uses .gsc_md_hist_b.
   const citationsPerYear: Record<string, number> = {};
-  const yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
-  const barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  let yearEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_t');
+  let barEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_al');
+  if (!yearEls.length || yearEls.length !== barEls.length) {
+    yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
+    barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
+  }
   if (yearEls.length > 0 && yearEls.length === barEls.length) {
     for (let i = 0; i < yearEls.length; i++) {
       const year = yearEls[i]?.textContent?.trim();
@@ -240,25 +244,16 @@ async function fetchScholarProfile(authorId: string) {
   const citations = publications.map(p => p.citations);
   const { hIndex, gIndex, i10Index } = calculateIndices(citations);
 
-  // Use actual citations-per-year graph if available (from SerpAPI cited_by_graph
-  // or scraped from the profile page). Only fall back to publication-year sums
-  // if no real citation graph data exists.
-  let citationsPerYear: Record<string, number> = {};
-  let citationGraphSource = 'none';
-  if (rawData.citationsPerYear && Object.keys(rawData.citationsPerYear).length > 0) {
-    citationsPerYear = rawData.citationsPerYear;
-    citationGraphSource = source === 'serpapi' ? 'cited_by_graph' : 'scraped_chart';
-    console.log(`[Metrics] Using ${citationGraphSource} data (${Object.keys(citationsPerYear).length} years)`);
-  } else {
-    console.warn('[Metrics] No citation graph data — falling back to publication-year sums (less accurate)');
-    citationGraphSource = 'publication_year_sums';
-    publications.forEach(pub => {
-      if (pub.year) {
-        const yearStr = String(pub.year);
-        citationsPerYear[yearStr] = (citationsPerYear[yearStr] || 0) + pub.citations;
-      }
-    });
-  }
+  // Use actual citations-per-year graph from SerpAPI cited_by_graph or scraped
+  // from the profile page. These match the Google Scholar bar chart exactly.
+  // Never fall back to publication-year sums — that's a different metric entirely.
+  const citationsPerYear: Record<string, number> = rawData.citationsPerYear && Object.keys(rawData.citationsPerYear).length > 0
+    ? rawData.citationsPerYear
+    : {};
+  const citationGraphSource = Object.keys(citationsPerYear).length > 0
+    ? (source === 'serpapi' ? 'cited_by_graph' : 'scraped_chart')
+    : 'none';
+  console.log(`[Metrics] Citation graph: ${citationGraphSource} (${Object.keys(citationsPerYear).length} years)`);
 
   const metrics = {
     hIndex,
