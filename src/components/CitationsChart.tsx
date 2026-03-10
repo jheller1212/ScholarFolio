@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Rectangle, CartesianGrid,
-  LabelList, LineChart, Line, Area, AreaChart, ComposedChart, ReferenceLine, Legend
+  LabelList, LineChart, Line, Area, AreaChart, ComposedChart, ReferenceLine
 } from 'recharts';
-import { Info, TrendingUp, Calendar, Presentation as Citation, Clock, BarChart3, Activity, Layers } from 'lucide-react';
+import { Info, TrendingUp, Calendar, Presentation as Citation, BarChart3, Activity, Layers } from 'lucide-react';
 import { calculateGrowthRates } from '../services/metrics/trends/growth-metrics';
 import { calculateAverageCitations } from '../services/metrics/citation/impact-metrics';
 import { findPeakYear } from '../services/metrics/trends/trend-analysis';
@@ -16,13 +16,70 @@ interface CitationsChartProps {
   publications?: Publication[];
 }
 
-function calculateCurrentYearProjection(currentYearCitations: number): number {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentDay = currentDate.getDate();
-  const daysPassed = Math.floor((currentMonth * 30.44) + currentDay);
+type ChartMode = 'bar' | 'line';
+
+/**
+ * Smart current-year projection that blends:
+ * 1. YTD pace (linear extrapolation from citations so far this year)
+ * 2. Recent growth trend (weighted average of last 2-3 years' growth rates)
+ *
+ * Blends the two signals: early in the year trusts the growth trend more,
+ * later trusts the YTD pace more (since we have more actual data).
+ */
+function projectCurrentYear(
+  currentYearCitations: number,
+  citationsPerYear: Record<string, number>
+): number {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const daysPassed = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const yearProgress = daysPassed / 365;
-  return yearProgress > 0 ? Math.round(currentYearCitations / yearProgress) : currentYearCitations;
+
+  // 1. YTD pace: simple linear extrapolation
+  const ytdProjection = yearProgress > 0.05
+    ? Math.round(currentYearCitations / yearProgress)
+    : 0;
+
+  // 2. Growth-trend projection: use last 2-3 completed years
+  const currentYear = now.getFullYear();
+  const recentYears = [currentYear - 1, currentYear - 2, currentYear - 3]
+    .filter(y => citationsPerYear[String(y)] != null);
+
+  let trendProjection = 0;
+  if (recentYears.length >= 2) {
+    // Compute weighted average growth rate (more recent years weighted higher)
+    const growthRates: number[] = [];
+    for (let i = 0; i < recentYears.length - 1; i++) {
+      const newer = citationsPerYear[String(recentYears[i])];
+      const older = citationsPerYear[String(recentYears[i + 1])];
+      if (older > 0) {
+        growthRates.push((newer - older) / older);
+      }
+    }
+    if (growthRates.length > 0) {
+      // Weight: [2, 1] for the rates (most recent gets double weight)
+      const weights = growthRates.map((_, i) => growthRates.length - i);
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      const weightedGrowth = growthRates.reduce((sum, rate, i) => sum + rate * weights[i], 0) / totalWeight;
+
+      const lastFullYear = citationsPerYear[String(currentYear - 1)];
+      if (lastFullYear > 0) {
+        trendProjection = Math.round(lastFullYear * (1 + weightedGrowth));
+      }
+    }
+  }
+
+  // If we only have YTD or only have trend, use whichever is available
+  if (ytdProjection <= 0 && trendProjection > 0) return trendProjection;
+  if (trendProjection <= 0 && ytdProjection > 0) return ytdProjection;
+  if (ytdProjection <= 0 && trendProjection <= 0) return currentYearCitations;
+
+  // Blend: early in the year (< 25%), trust trend more.
+  // Later (> 75%), trust YTD pace more. Smooth linear transition.
+  const ytdWeight = Math.max(0, Math.min(1, (yearProgress - 0.1) / 0.8));
+  const trendWeight = 1 - ytdWeight;
+
+  return Math.round(ytdProjection * ytdWeight + trendProjection * trendWeight);
 }
 
 // Custom bar for actual vs predicted
@@ -78,6 +135,7 @@ const tooltipStyle = "bg-white/95 backdrop-blur-sm shadow-lg border border-gray-
 
 export function CitationsChart({ citationsPerYear, citationGraphSource, publications = [] }: CitationsChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('5y');
+  const [chartMode, setChartMode] = useState<ChartMode>('bar');
 
   // If no real citation graph data is available, show a message
   if (!citationsPerYear || Object.keys(citationsPerYear).length === 0) {
@@ -94,13 +152,14 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
     );
   }
 
-  // --- Bar chart data (citations per year + projections) ---
+  // --- Main chart data (citations per year + current-year projection) ---
   const chartData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const historicalData = Object.entries(citationsPerYear)
       .map(([year, citations]) => ({
         year: parseInt(year), citations, actualCitations: citations,
-        predictedCitations: 0, yearOverYearGrowth: 0, projectedGrowth: 0
+        predictedCitations: 0, projectedTotal: 0,
+        yearOverYearGrowth: 0, projectedGrowth: 0
       }))
       .sort((a, b) => a.year - b.year);
 
@@ -112,6 +171,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       }
     });
 
+    // Calculate YoY growth for completed years
     for (let i = 1; i < filteredData.length; i++) {
       if (filteredData[i].year === currentYear) continue;
       const prev = filteredData[i - 1].actualCitations;
@@ -121,12 +181,15 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       }
     }
 
+    // Smart projection for current year
     const currentYearData = filteredData.find(d => d.year === currentYear);
     if (currentYearData) {
-      const projectedTotal = calculateCurrentYearProjection(currentYearData.actualCitations);
+      const projectedTotal = projectCurrentYear(currentYearData.actualCitations, citationsPerYear);
+      currentYearData.projectedTotal = projectedTotal;
       currentYearData.predictedCitations = Math.max(0, projectedTotal - currentYearData.actualCitations);
       const prevYearData = filteredData.find(d => d.year === currentYear - 1);
       if (prevYearData && prevYearData.actualCitations > 0) {
+        currentYearData.yearOverYearGrowth = ((currentYearData.actualCitations - prevYearData.actualCitations) / prevYearData.actualCitations) * 100;
         currentYearData.projectedGrowth = ((projectedTotal - prevYearData.actualCitations) / prevYearData.actualCitations) * 100;
       }
     }
@@ -168,7 +231,6 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       .concat(Object.keys(pubsByYear).map(Number));
     const uniqueYears = [...new Set(allYears)].sort((a, b) => a - b);
 
-    // Running h-index: compute h-index including all papers up to that year
     const allPubsSorted: Publication[] = [];
     return uniqueYears
       .filter(y => {
@@ -181,19 +243,13 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       .map(year => {
         const yearPubs = pubsByYear[year] || [];
         allPubsSorted.push(...yearPubs);
-        // Compute h-index up to this year
         const sorted = allPubsSorted.map(p => p.citations).sort((a, b) => b - a);
         let h = 0;
         for (let i = 0; i < sorted.length; i++) {
           if (sorted[i] >= i + 1) h = i + 1;
           else break;
         }
-        return {
-          year,
-          publications: yearPubs.length,
-          hIndex: h,
-          totalPubs: allPubsSorted.length
-        };
+        return { year, publications: yearPubs.length, hIndex: h, totalPubs: allPubsSorted.length };
       });
   }, [publications, citationsPerYear, timeRange]);
 
@@ -212,12 +268,10 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       })
       .map(year => {
         const val = citationsPerYear[year] || 0;
-        // 3-year moving average
         const prev1 = citationsPerYear[year - 1] || 0;
         const prev2 = citationsPerYear[year - 2] || 0;
         const hasEnoughData = citationsPerYear[year - 1] !== undefined && citationsPerYear[year - 2] !== undefined;
         const movingAvg = hasEnoughData ? Math.round((val + prev1 + prev2) / 3) : val;
-        // YoY change
         const prevVal = citationsPerYear[year - 1];
         const yoyChange = prevVal != null && prevVal > 0 ? Math.round(val - prevVal) : 0;
         return { year, citations: val, movingAvg, yoyChange };
@@ -231,7 +285,6 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       chartData.map(d => ({ year: d.year, citations: d.actualCitations })), timeRange
     );
     const { year: peakYear, citations: peakCitations } = findPeakYear(citationsPerYear, timeRange);
-    // Total cumulative
     const totalCumulative = cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1].cumulative : 0;
     return { avgGrowthRate, avgCitations, peakYear, peakCitations, totalCumulative };
   }, [chartData, cumulativeData, timeRange, citationsPerYear]);
@@ -263,6 +316,120 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       ))}
     </div>
   );
+
+  const chartModeToggle = (
+    <div className="flex items-center bg-gray-100 rounded-md p-0.5">
+      <button
+        onClick={() => setChartMode('bar')}
+        className={`px-2 py-1 text-xs rounded transition-colors ${
+          chartMode === 'bar' ? 'bg-white text-[#2d7d7d] font-medium shadow-sm' : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        Bar
+      </button>
+      <button
+        onClick={() => setChartMode('line')}
+        className={`px-2 py-1 text-xs rounded transition-colors ${
+          chartMode === 'line' ? 'bg-white text-[#2d7d7d] font-medium shadow-sm' : 'text-gray-500 hover:text-gray-700'
+        }`}
+      >
+        Line
+      </button>
+    </div>
+  );
+
+  // Tooltip for the main chart
+  const mainChartTooltip = (
+    <Tooltip cursor={false} content={({ active, payload }) => {
+      if (!active || !payload?.length) return null;
+      const d = payload[0].payload;
+      const currentYear = new Date().getFullYear();
+      return (
+        <div className={tooltipStyle}>
+          <div className="font-medium text-gray-900 mb-1">{d.year}</div>
+          <div className="space-y-1">
+            <div className="text-gray-600">Citations: {d.actualCitations.toLocaleString()}</div>
+            {d.year === currentYear && d.projectedTotal > d.actualCitations && (
+              <div className="text-gray-500">Projected full year: ~{d.projectedTotal.toLocaleString()}</div>
+            )}
+            {d.yearOverYearGrowth !== 0 && (
+              <div className="text-gray-600 border-t border-gray-100 pt-1 mt-1">
+                YoY: {d.yearOverYearGrowth > 0 ? '+' : ''}{d.yearOverYearGrowth.toFixed(1)}%
+              </div>
+            )}
+            {d.year === currentYear && d.projectedGrowth !== 0 && (
+              <div className="text-gray-500">
+                Projected YoY: {d.projectedGrowth > 0 ? '+' : ''}{d.projectedGrowth.toFixed(1)}%
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }} />
+  );
+
+  const renderMainChart = () => {
+    const currentYear = new Date().getFullYear();
+
+    if (chartMode === 'line') {
+      // For line chart, show actual + projected as a dashed extension
+      const lineData = chartData.map(d => ({
+        ...d,
+        projected: d.year === currentYear && d.projectedTotal > d.actualCitations ? d.projectedTotal : undefined
+      }));
+
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={lineData} margin={{ top: 30, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+            <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#666' }} axisLine={{ stroke: '#e5e5e5' }} tickLine={false} />
+            <YAxis orientation="right" tick={{ fontSize: 11, fill: '#666' }} tickCount={6} axisLine={false} tickLine={false} width={50} domain={[0, 'auto']} allowDecimals={false} />
+            {mainChartTooltip}
+            <defs>
+              <linearGradient id="citationLineGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2d7d7d" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#2d7d7d" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey="actualCitations" stroke="#2d7d7d" strokeWidth={2.5} fill="url(#citationLineGradient)" dot={{ r: 3, fill: '#2d7d7d' }} activeDot={{ r: 5, fill: '#2d7d7d' }} />
+            {lineData.some(d => d.projected !== undefined) && (
+              <Line type="monotone" dataKey="projected" stroke="#94a3b8" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 4, fill: '#94a3b8', stroke: '#94a3b8' }} connectNulls={false} />
+            )}
+            <LabelList dataKey="yearOverYearGrowth" content={({ x, y, width, value, index }: any) => {
+              const d = chartData[index];
+              if (d.year === currentYear) {
+                return <CurrentYearGrowthLabel x={x - 10} y={y} width={20} value={value} projectedValue={d.projectedGrowth} />;
+              }
+              return <GrowthLabel x={x - 10} y={y} width={20} value={value} />;
+            }} position="top" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    // Bar chart (default)
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 30, right: 30, left: 0, bottom: 5 }} barCategoryGap={2}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+          <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#666' }} axisLine={{ stroke: '#e5e5e5' }} tickLine={false} />
+          <YAxis orientation="right" tick={{ fontSize: 11, fill: '#666' }} tickCount={6} axisLine={false} tickLine={false} width={50} domain={[0, 'auto']} allowDecimals={false} />
+          {mainChartTooltip}
+          <Bar dataKey="actualCitations" shape={<CustomBar />} stackId="citations">
+            <LabelList dataKey="yearOverYearGrowth" content={({ x, y, width, value, index }: any) => {
+              const d = chartData[index];
+              const currentYear = new Date().getFullYear();
+              if (d.year === currentYear) {
+                return <CurrentYearGrowthLabel x={x} y={y} width={width} value={value} projectedValue={d.projectedGrowth} />;
+              }
+              return <GrowthLabel x={x} y={y} width={width} value={value} />;
+            }} position="top" />
+          </Bar>
+          <Bar dataKey="predictedCitations" stackId="citations" shape={<CustomBar isPredicted={true} />} />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -306,55 +473,20 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
             <div className="text-[10px] text-[#64748b]">cumulative ({timeRangeText})</div>
           </div>
         </div>
-        {timeRangeButtons}
+        <div className="flex items-center space-x-2">
+          {chartModeToggle}
+          {timeRangeButtons}
+        </div>
       </div>
 
-      {/* Row 1: Citation bar chart (full width) */}
+      {/* Row 1: Main citation chart (full width) */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">
         <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
           <BarChart3 className="h-4 w-4 text-[#2d7d7d] mr-2" />
           Annual Citations & Year-over-Year Growth
         </h4>
         <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 30, right: 30, left: 0, bottom: 5 }} barCategoryGap={2}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#666' }} axisLine={{ stroke: '#e5e5e5' }} tickLine={false} />
-              <YAxis orientation="right" tick={{ fontSize: 11, fill: '#666' }} tickCount={6} axisLine={false} tickLine={false} width={50} domain={[0, 'auto']} allowDecimals={false} />
-              <Tooltip cursor={false} content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                const currentYear = new Date().getFullYear();
-                return (
-                  <div className={tooltipStyle}>
-                    <div className="font-medium text-gray-900 mb-1">{d.year}</div>
-                    <div className="space-y-1">
-                      <div className="text-gray-600">Citations: {d.actualCitations.toLocaleString()}</div>
-                      {d.year === currentYear && d.predictedCitations > 0 && (
-                        <div className="text-gray-500">Projected total: {(d.actualCitations + d.predictedCitations).toLocaleString()}</div>
-                      )}
-                      {d.yearOverYearGrowth !== 0 && (
-                        <div className="text-gray-600 border-t border-gray-100 pt-1 mt-1">
-                          YoY: {d.yearOverYearGrowth > 0 ? '+' : ''}{d.yearOverYearGrowth.toFixed(1)}%
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              }} />
-              <Bar dataKey="actualCitations" shape={<CustomBar />} stackId="citations">
-                <LabelList dataKey="yearOverYearGrowth" content={({ x, y, width, value, index }: any) => {
-                  const d = chartData[index];
-                  const currentYear = new Date().getFullYear();
-                  if (d.year === currentYear) {
-                    return <CurrentYearGrowthLabel x={x} y={y} width={width} value={value} projectedValue={d.projectedGrowth} />;
-                  }
-                  return <GrowthLabel x={x} y={y} width={width} value={value} />;
-                }} position="top" />
-              </Bar>
-              <Bar dataKey="predictedCitations" stackId="citations" shape={<CustomBar isPredicted={true} />} />
-            </BarChart>
-          </ResponsiveContainer>
+          {renderMainChart()}
         </div>
         <div className="flex items-center justify-end space-x-4 text-xs text-gray-400 mt-1">
           <div className="flex items-center space-x-1"><div className="w-3 h-3 bg-[#2d7d7d] rounded-sm" /><span>Actual</span></div>
