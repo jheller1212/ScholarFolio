@@ -397,7 +397,7 @@ function extractScholarUserId(url) {
 }
 
 // --- Author search by name via SerpAPI ---
-async function searchAuthorsByName(query: string) {
+async function searchAuthorsByNameSerpAPI(query: string) {
   if (!SERPAPI_KEY) {
     throw new Error("SERPAPI_KEY not configured");
   }
@@ -409,7 +409,8 @@ async function searchAuthorsByName(query: string) {
 
   const response = await fetch(serpUrl.toString());
   if (!response.ok) {
-    throw new Error(`SerpAPI profiles search error: ${response.status}`);
+    const errBody = await response.text().catch(() => '');
+    throw new Error(`SerpAPI profiles search error: ${response.status} — ${errBody}`);
   }
 
   const data = await response.json();
@@ -423,6 +424,86 @@ async function searchAuthorsByName(query: string) {
   }));
 
   return profiles;
+}
+
+// --- Author search by name via direct scraping (fallback) ---
+async function searchAuthorsByNameScraping(query: string) {
+  const searchUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(query)}&hl=en`;
+
+  console.log(`[Search-Scraper] Scraping author search for: ${query}`);
+
+  const response = await fetch(searchUrl, {
+    headers: {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Cache-Control': 'no-cache'
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google Scholar returned HTTP ${response.status}`);
+  }
+
+  const html = await response.text();
+
+  if (html.includes('unusual traffic') || html.includes('please show you') || html.includes('automated access')) {
+    throw new Error("Rate limited by Google Scholar (CAPTCHA)");
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const profiles: any[] = [];
+  const profileCards = doc.querySelectorAll('.gsc_1usr');
+
+  for (const card of Array.from(profileCards)) {
+    const nameEl = card.querySelector('.gs_ai_name a');
+    const name = nameEl?.textContent?.trim() || '';
+    const profileLink = nameEl?.getAttribute('href') || '';
+
+    const authorIdMatch = profileLink.match(/user=([^&]+)/);
+    const authorId = authorIdMatch ? authorIdMatch[1] : '';
+
+    if (!name || !authorId) continue;
+
+    const affiliation = card.querySelector('.gs_ai_aff')?.textContent?.trim() || '';
+    const citedByText = card.querySelector('.gs_ai_cby')?.textContent?.trim() || '';
+    const citedByMatch = citedByText.match(/(\d+)/);
+    const citedBy = citedByMatch ? parseInt(citedByMatch[1]) : 0;
+
+    const imageUrl = card.querySelector('.gs_ai_pho img')?.getAttribute('src') || '';
+
+    const interestsEls = card.querySelectorAll('.gs_ai_one_int');
+    const interests = Array.from(interestsEls).map(el => el.textContent?.trim() || '').filter(Boolean);
+
+    profiles.push({ name, affiliation, imageUrl, authorId, citedBy, interests });
+  }
+
+  return profiles.slice(0, 8);
+}
+
+// --- Author search with fallback ---
+async function searchAuthorsByName(query: string) {
+  // Try SerpAPI first
+  try {
+    const results = await searchAuthorsByNameSerpAPI(query);
+    console.log(`[Search] SerpAPI returned ${results.length} profiles`);
+    return results;
+  } catch (e) {
+    console.warn(`[Search] SerpAPI failed: ${e.message}`);
+  }
+
+  // Fallback: scrape Google Scholar directly (server-side, no CORS issues)
+  try {
+    const results = await searchAuthorsByNameScraping(query);
+    console.log(`[Search] Scraping fallback returned ${results.length} profiles`);
+    return results;
+  } catch (e) {
+    console.warn(`[Search] Scraping fallback also failed: ${e.message}`);
+    throw new Error(`Author search failed. SerpAPI and scraping both unavailable. Last error: ${e.message}`);
+  }
 }
 
 Deno.serve(async (req) => {
