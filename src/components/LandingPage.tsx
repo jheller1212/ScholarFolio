@@ -61,7 +61,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-900 text-sm tracking-tight">Scholar Folio</span>
               <span className="text-[11px] text-[#94a3b8] hidden sm:inline">Your research, at a glance</span>
-              <span className="text-[9px] text-gray-400 hidden sm:inline" title="Build time">
+              <span className="text-[9px] text-transparent hidden sm:inline select-all" title="Build time">
                 {new Date(__BUILD_TIME__).toLocaleString()}
               </span>
             </div>
