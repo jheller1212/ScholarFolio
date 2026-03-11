@@ -65,6 +65,9 @@ export function ProfileView({
               <span className="text-[10px] font-medium text-primary-start bg-primary-start/8 px-1.5 py-0.5 rounded hidden sm:inline">
                 v{packageJson.version}
               </span>
+              <span className="text-[9px] text-gray-400 hidden sm:inline" title="Build time">
+                {new Date(__BUILD_TIME__).toLocaleString()}
+              </span>
             </div>
 
             <div className="flex-1 max-w-md ml-auto">

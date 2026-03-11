@@ -23,14 +23,15 @@ class MetricsCalculator {
       citationsPerYear = {};
     }
 
+    const currentYear = new Date().getFullYear();
     const citations = publications.map(p => p.citations);
-    
+
     // Calculate citation metrics
     const hIndex = calculateHIndex(citations);
     const gIndex = calculateGIndex(citations);
     const i10Index = calculateI10Index(citations);
     const h5Index = calculateH5Index(publications);
-    
+
     // Calculate average citations per paper from publication data
     const averages = calculateAverageCitations(
       publications.map(p => ({ year: p.year, citations: p.citations })),
@@ -50,17 +51,16 @@ class MetricsCalculator {
     const avgCitationsFromGraph = graphYears.length > 0
       ? Number((graphTotal / graphYears.length).toFixed(1))
       : averages.perYear;
-    
+
     // Calculate growth and trends for the selected time range
     const { yearlyGrowthRates, avgGrowthRate } = calculateGrowthRates(citationsPerYear, timeRange);
     const peak = findPeakYear(citationsPerYear, timeRange);
     const impactTrend = calculateImpactTrend(citationsPerYear, timeRange);
-    
+
     // Calculate collaboration metrics
     const coAuthorStats = calculateCoAuthorMetrics(publications, authorName);
-    
+
     // Find most cited paper within the time range
-    const currentYear = new Date().getFullYear();
     const filteredPubs = publications.filter(pub => {
       switch (timeRange) {
         case '5y':
