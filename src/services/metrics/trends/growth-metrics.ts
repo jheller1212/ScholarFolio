@@ -16,11 +16,9 @@ export function calculateGrowthRates(
   // Get current date info
   const now = new Date();
   const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-  // Google Scholar citation data lags by several months.
-  // In the first half of the year (Jan-Jun), exclude the previous year too
-  // since its data is likely still incomplete in Scholar's index.
-  const cutoffYear = currentMonth < 6 ? currentYear - 1 : currentYear;
+  // Only exclude the current (incomplete) year.
+  // Google Scholar has complete previous-year data by early in the new year.
+  const cutoffYear = currentYear;
 
   // Get years and sort them
   const years = Object.keys(citationsPerYear)

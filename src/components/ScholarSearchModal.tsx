@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, X, Loader2, User, GraduationCap } from 'lucide-react';
-import { scholarService, type AuthorSearchResult } from '../services/scholar';
+import React, { useState, useRef, useEffect } from 'react';
+import { Search, X, ExternalLink, ClipboardPaste, ArrowRight } from 'lucide-react';
 
 interface ScholarSearchModalProps {
   isOpen: boolean;
@@ -9,80 +8,46 @@ interface ScholarSearchModalProps {
 }
 
 export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchModalProps) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<AuthorSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [pastedUrl, setPastedUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      setQuery('');
-      setResults([]);
-      setSearched(false);
+      setPastedUrl('');
       setError(null);
     }
   }, [isOpen]);
 
-  const doSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.trim().length < 2) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
+  const openGoogleScholar = () => {
+    window.open('https://scholar.google.com/citations?view_op=search_authors', '_blank');
+  };
 
-    setLoading(true);
-    setError(null);
-    try {
-      const profiles = await scholarService.searchAuthors(searchQuery.trim());
-      setResults(profiles);
-      setSearched(true);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      console.error('[Search] Error:', msg);
-      setError(`Search failed: ${msg}`);
-      setResults([]);
-      setSearched(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(value), 400);
-  }, [doSearch]);
-
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    doSearch(query);
-  }, [query, doSearch]);
+    const url = pastedUrl.trim();
+    if (!url) return;
 
-  const handleSelect = useCallback((authorId: string) => {
-    const profileUrl = `https://scholar.google.com/citations?user=${authorId}`;
-    onSelect(profileUrl);
-    onClose();
-  }, [onSelect, onClose]);
+    if (url.includes('scholar.google.com/citations') && url.includes('user=')) {
+      onSelect(url);
+      onClose();
+    } else {
+      setError('Please paste a valid Google Scholar profile URL (should contain scholar.google.com/citations?user=...)');
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl max-h-[70vh] flex flex-col">
+      <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900 flex items-center">
             <Search className="h-4 w-4 text-[#2d7d7d] mr-2" />
-            Search by Author Name
+            Find Author on Google Scholar
           </h2>
           <button
             onClick={onClose}
@@ -92,89 +57,79 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
           </button>
         </div>
 
-        {/* Search input */}
-        <form onSubmit={handleSubmit} className="p-4 border-b border-gray-50 flex-shrink-0">
-          <div className="relative">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={handleInputChange}
-              placeholder="e.g. Albert Einstein"
-              className="w-full px-4 py-2.5 pl-10 pr-20 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 focus:bg-white transition-all"
-              autoComplete="off"
-              spellCheck="false"
-            />
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            {loading && (
-              <Loader2 className="absolute right-3 top-3 h-4 w-4 text-[#2d7d7d] animate-spin" />
-            )}
-          </div>
-        </form>
-
-        {/* Results */}
-        <div className="overflow-y-auto flex-1">
-          {error && (
-            <p className="text-sm text-gray-500 text-center py-8">{error}</p>
-          )}
-
-          {!error && searched && results.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-8">No authors found. Try a different name.</p>
-          )}
-
-          {results.length > 0 && (
-            <ul className="divide-y divide-gray-50">
-              {results.map((profile) => (
-                <li key={profile.authorId}>
-                  <button
-                    onClick={() => handleSelect(profile.authorId)}
-                    className="w-full text-left px-4 py-3 hover:bg-[#eaf4f4]/50 transition-colors flex items-start gap-3"
-                  >
-                    {profile.imageUrl ? (
-                      <img
-                        src={profile.imageUrl}
-                        alt={profile.name}
-                        className="w-10 h-10 rounded-lg object-cover bg-gray-100 flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 text-[#2d7d7d]" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-gray-900 truncate">
-                        {profile.name}
-                      </div>
-                      {profile.affiliation && (
-                        <div className="text-xs text-gray-500 truncate mt-0.5">
-                          {profile.affiliation}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3 mt-1">
-                        {profile.citedBy > 0 && (
-                          <span className="text-xs text-gray-400">
-                            Cited by {profile.citedBy.toLocaleString()}
-                          </span>
-                        )}
-                        {profile.interests.length > 0 && (
-                          <span className="text-xs text-gray-400 truncate">
-                            {profile.interests.slice(0, 3).join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {!error && !searched && !loading && (
-            <div className="py-10 text-center">
-              <GraduationCap className="h-8 w-8 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">Type an author name to search Google Scholar</p>
+        {/* Steps */}
+        <div className="p-5 space-y-5">
+          {/* Step 1 */}
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#2d7d7d] text-white text-xs font-bold flex items-center justify-center mt-0.5">
+              1
             </div>
-          )}
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800 mb-2">
+                Search for the author on Google Scholar
+              </p>
+              <button
+                onClick={openGoogleScholar}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#2d7d7d] text-white text-sm font-medium rounded-lg hover:bg-[#236363] transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open Google Scholar
+              </button>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#2d7d7d] text-white text-xs font-bold flex items-center justify-center mt-0.5">
+              2
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800">
+                Click on the author's profile, then copy the URL from your browser
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                It should look like: scholar.google.com/citations?user=...
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[#2d7d7d] text-white text-xs font-bold flex items-center justify-center mt-0.5">
+              3
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800 mb-2">
+                Paste the profile URL here
+              </p>
+              <form onSubmit={handleSubmit}>
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={pastedUrl}
+                    onChange={(e) => { setPastedUrl(e.target.value); setError(null); }}
+                    placeholder="https://scholar.google.com/citations?user=..."
+                    className="w-full px-4 py-2.5 pl-10 pr-12 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 focus:bg-white transition-all"
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  <ClipboardPaste className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  {pastedUrl.trim() && (
+                    <button
+                      type="submit"
+                      className="absolute right-2 top-1.5 p-1.5 bg-[#2d7d7d] text-white rounded-md hover:bg-[#236363] transition-colors"
+                    >
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {error && (
+                  <p className="text-xs text-red-500 mt-1.5">{error}</p>
+                )}
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </div>

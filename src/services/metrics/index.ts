@@ -31,11 +31,25 @@ class MetricsCalculator {
     const i10Index = calculateI10Index(citations);
     const h5Index = calculateH5Index(publications);
     
-    // Calculate average citations for the selected time range
+    // Calculate average citations per paper from publication data
     const averages = calculateAverageCitations(
-      publications.map(p => ({ year: p.year, citations: p.citations })), 
+      publications.map(p => ({ year: p.year, citations: p.citations })),
       timeRange
     );
+
+    // Calculate avg citations per year from the citation graph (not publication data)
+    const graphYears = Object.keys(citationsPerYear).map(Number).filter(y => {
+      if (y >= currentYear) return false;
+      switch (timeRange) {
+        case '5y': return y > currentYear - 5;
+        case '10y': return y > currentYear - 10;
+        default: return true;
+      }
+    });
+    const graphTotal = graphYears.reduce((sum, y) => sum + (citationsPerYear[y] || 0), 0);
+    const avgCitationsFromGraph = graphYears.length > 0
+      ? Number((graphTotal / graphYears.length).toFixed(1))
+      : averages.perYear;
     
     // Calculate growth and trends for the selected time range
     const { yearlyGrowthRates, avgGrowthRate } = calculateGrowthRates(citationsPerYear, timeRange);
@@ -72,7 +86,7 @@ class MetricsCalculator {
       publicationsPerYear: (publications.length / Math.max(1, Object.keys(citationsPerYear).length)).toFixed(1),
       citationsPerYear,
       acc5: calculateACC5(publications),
-      avgCitationsPerYear: averages.perYear,
+      avgCitationsPerYear: avgCitationsFromGraph,
       avgCitationsPerPaper: averages.perPaper,
       citationGrowthRate: avgGrowthRate,
       yearlyGrowthRates,
