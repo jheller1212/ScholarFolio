@@ -78,6 +78,22 @@ const ProjectedBar = (props: any) => {
   );
 };
 
+/** Renders YoY growth % label above each bar */
+const YoYLabel = (props: any) => {
+  const { x, y, width, value, index } = props;
+  // value is the 'actual' dataKey value; we need yoyGrowth from the data
+  const data = props.data?.[index];
+  const growth = data?.yoyGrowth;
+  if (growth == null) return null;
+  const color = growth >= 0 ? '#059669' : '#dc2626';
+  const text = `${growth >= 0 ? '+' : ''}${growth}%`;
+  return (
+    <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fontWeight={500} fill={color}>
+      {text}
+    </text>
+  );
+};
+
 const tooltipStyle = "bg-white/95 backdrop-blur-sm shadow-lg border border-gray-100 rounded-lg p-3 text-xs";
 
 export function CitationsChart({ citationsPerYear, citationGraphSource, publications = [] }: CitationsChartProps) {
@@ -100,8 +116,17 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         projected: 0,
         projectedTotal: 0,
         isCurrentYear: parseInt(year) === currentYear,
+        yoyGrowth: null as number | null,
       }))
       .sort((a, b) => a.year - b.year);
+
+    // Calculate YoY growth %
+    for (let i = 1; i < allData.length; i++) {
+      const prev = allData[i - 1].actual;
+      if (prev > 0 && !allData[i].isCurrentYear) {
+        allData[i].yoyGrowth = Math.round(((allData[i].actual - prev) / prev) * 100);
+      }
+    }
 
     const filtered = allData.filter(d => {
       switch (timeRange) {
@@ -320,21 +345,28 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
                   <div className={tooltipStyle}>
                     <div className="font-medium text-gray-900 mb-1">{d.year}</div>
                     <div className="text-gray-600">Citations: {d.actual.toLocaleString()}</div>
+                    {d.yoyGrowth != null && (
+                      <div className={d.yoyGrowth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                        YoY: {d.yoyGrowth >= 0 ? '+' : ''}{d.yoyGrowth}%
+                      </div>
+                    )}
                     {d.isCurrentYear && d.projected > 0 && (
-                      <div className="text-gray-400 mt-1 pt-1 border-t border-gray-100">
-                        Projected full year: ~{d.projectedTotal.toLocaleString()}
+                      <div className="text-gray-400 mt-1 pt-1 border-t border-gray-100 space-y-0.5">
+                        <div>Projected full year: ~{d.projectedTotal.toLocaleString()}</div>
+                        <div className="text-[10px] leading-tight">Blended estimate: YTD pace extrapolated to 365 days, weighted with a trend projection based on the prior 3 years' growth rates.</div>
                       </div>
                     )}
                   </div>
                 );
               }} />
-              <Bar dataKey="actual" stackId="a" shape={<ActualBar />} />
+              <Bar dataKey="actual" stackId="a" shape={<ActualBar />} label={<YoYLabel data={chartData} />} />
               <Bar dataKey="projected" stackId="a" shape={<ProjectedBar />} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="flex items-center justify-end space-x-4 text-xs text-gray-400 mt-1">
           <div className="flex items-center space-x-1"><div className="w-3 h-3 bg-[#2d7d7d] rounded-sm" /><span>Citations</span></div>
+          <div className="flex items-center space-x-1"><span className="text-emerald-600 font-medium">+%</span><span>/</span><span className="text-rose-600 font-medium">−%</span><span>YoY</span></div>
           {chartData.some(d => d.projected > 0) && (
             <div className="flex items-center space-x-1">
               <div className="w-3 h-3 rounded-sm border border-[#2d7d7d]/30" style={{

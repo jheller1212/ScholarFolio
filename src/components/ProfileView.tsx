@@ -180,6 +180,24 @@ export function ProfileView({
                   subtitle="3-year avg. growth rate"
                   icon="citationGrowth"
                 />
+                <MetricsCard
+                  title="Citation Half-Life"
+                  value={`${data.metrics.citationHalfLife} yr${data.metrics.citationHalfLife !== 1 ? 's' : ''}`}
+                  subtitle="Years to 50% of citations"
+                  icon="halfLife"
+                />
+                <MetricsCard
+                  title="Citation Gini"
+                  value={data.metrics.citationGini}
+                  subtitle={data.metrics.citationGini >= 0.7 ? 'Concentrated' : data.metrics.citationGini >= 0.4 ? 'Moderate' : 'Spread evenly'}
+                  icon="gini"
+                />
+                <MetricsCard
+                  title="Citations/Career Yr"
+                  value={data.metrics.ageNormalizedRate}
+                  subtitle="Age-normalized rate"
+                  icon="ageNormalized"
+                />
               </div>
             </div>
 

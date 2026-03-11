@@ -5,6 +5,7 @@ import { calculateAverageCitations, calculateACC5 } from './citation/impact-metr
 import { calculateCoAuthorMetrics } from './collaboration/co-author-metrics';
 import { calculateGrowthRates } from './trends/growth-metrics';
 import { findPeakYear, calculateImpactTrend } from './trends/trend-analysis';
+import { calculateCitationHalfLife, calculateCitationGini, calculateAgeNormalizedRate } from './citation/advanced-metrics';
 import type { Publication, Metrics, TimeRange } from '../../types/scholar';
 
 class MetricsCalculator {
@@ -60,6 +61,12 @@ class MetricsCalculator {
     // Calculate collaboration metrics
     const coAuthorStats = calculateCoAuthorMetrics(publications, authorName);
 
+    // Calculate advanced citation metrics
+    const citationHalfLife = calculateCitationHalfLife(citationsPerYear, timeRange);
+    const citationGini = calculateCitationGini(publications);
+    const totalCitations = publications.reduce((sum, p) => sum + p.citations, 0);
+    const ageNormalizedRate = calculateAgeNormalizedRate(totalCitations, citationsPerYear);
+
     // Find most cited paper within the time range
     const filteredPubs = publications.filter(pub => {
       switch (timeRange) {
@@ -94,6 +101,9 @@ class MetricsCalculator {
       peakCitationYear: peak.year,
       peakCitations: peak.citations,
       ...coAuthorStats,
+      citationHalfLife,
+      citationGini,
+      ageNormalizedRate,
       topPaperCitations: mostCitedPaper?.citations || 0,
       topPaperTitle: mostCitedPaper?.title || '',
       topPaperUrl: mostCitedPaper?.url || ''
@@ -129,6 +139,9 @@ class MetricsCalculator {
       topCoAuthorLastYear: 0,
       topCoAuthorFirstPaper: '',
       topCoAuthorLastPaper: '',
+      citationHalfLife: 0,
+      citationGini: 0,
+      ageNormalizedRate: 0,
       topPaperCitations: 0,
       topPaperTitle: '',
       topPaperUrl: ''

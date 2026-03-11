@@ -71,6 +71,90 @@ function getMostCitedPaper(publications: Author['publications']): Author['public
   return publications.reduce((max, p) => p.citations > max.citations ? p : max, publications[0]);
 }
 
+/**
+ * Parse an affiliation string into a position/title and an institution.
+ * Google Scholar (and SerpAPI) often returns strings like:
+ *   "Assistant Professor in Marketing, Maastricht University School of Business and Economics"
+ *   "PhD Student, Stanford University"
+ *   "Professor of Computer Science, MIT"
+ * We split on the first comma that likely separates position from institution.
+ */
+function parseAffiliation(raw: string): { position: string; institution: string } {
+  if (!raw) return { position: '', institution: '' };
+
+  // Common academic title keywords that signal the start is a position, not an institution
+  const titlePatterns = /^(professor|prof\.|assistant|associate|lecturer|instructor|postdoc|post-doc|phd|doctoral|research\s+(scientist|fellow|associate|assistant)|visiting|adjunct|emeritus|dean|chair|director|senior\s+lecturer|junior\s+professor)/i;
+
+  const commaIdx = raw.indexOf(',');
+  if (commaIdx === -1) {
+    // No comma — decide if the whole thing is a position or institution
+    if (titlePatterns.test(raw.trim())) {
+      return { position: raw.trim(), institution: '' };
+    }
+    return { position: '', institution: raw.trim() };
+  }
+
+  const before = raw.slice(0, commaIdx).trim();
+  const after = raw.slice(commaIdx + 1).trim();
+
+  if (titlePatterns.test(before)) {
+    return { position: before, institution: after };
+  }
+
+  // No recognisable title — treat the whole string as the institution
+  return { position: '', institution: raw.trim() };
+}
+
+/**
+ * Extract dominant themes from a set of publication titles.
+ * Returns lowercased bigrams/trigrams that appear frequently.
+ */
+function extractTitleThemes(publications: Author['publications']): string[] {
+  // Common stop words to filter out
+  const stopWords = new Set([
+    'the', 'a', 'an', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with',
+    'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'has',
+    'have', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'may', 'might', 'can', 'shall', 'not', 'no', 'but', 'if', 'at', 'as',
+    'it', 'its', 'this', 'that', 'these', 'those', 'their', 'them', 'they',
+    'we', 'our', 'how', 'what', 'which', 'who', 'whom', 'when', 'where',
+    'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
+    'some', 'such', 'than', 'too', 'very', 'also', 'just', 'about', 'above',
+    'after', 'again', 'between', 'into', 'through', 'during', 'before',
+    'new', 'using', 'based', 'study', 'analysis', 'research', 'approach',
+    'role', 'effect', 'effects', 'impact', 'case', 'evidence', 'towards',
+    'toward', 'among', 'across', 'review', 'via', 'under', 'over',
+  ]);
+
+  const bigramCounts = new Map<string, number>();
+
+  for (const pub of publications) {
+    const words = pub.title.toLowerCase()
+      .replace(/[^a-z\s-]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w));
+
+    // Count meaningful bigrams
+    for (let i = 0; i < words.length - 1; i++) {
+      const bigram = `${words[i]} ${words[i + 1]}`;
+      bigramCounts.set(bigram, (bigramCounts.get(bigram) || 0) + 1);
+    }
+    // Also count significant single words (longer, more likely domain terms)
+    for (const w of words) {
+      if (w.length >= 5) {
+        bigramCounts.set(w, (bigramCounts.get(w) || 0) + 1);
+      }
+    }
+  }
+
+  // Return themes that appear in at least 2 papers, sorted by frequency
+  return Array.from(bigramCounts.entries())
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .map(([term]) => term)
+    .slice(0, 8);
+}
+
 /** Infer research methods/approaches from publication titles. */
 function inferResearchMethods(publications: Author['publications']): string[] {
   const titleCorpus = publications.map(p => p.title.toLowerCase()).join(' ');
@@ -151,9 +235,19 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
     // Career overview paragraph
     const paragraphs: string[] = [];
 
-    let careerParagraph = `${name} is a researcher`;
-    if (data.affiliation) {
-      careerParagraph += ` affiliated with ${data.affiliation}`;
+    const { position, institution } = parseAffiliation(data.affiliation);
+    let careerParagraph = `${name} is`;
+    if (position) {
+      // e.g. "is an Assistant Professor in Marketing at Maastricht University"
+      const article = /^[aeiou]/i.test(position) ? ' an' : ' a';
+      careerParagraph += `${article} ${position}`;
+      if (institution) {
+        careerParagraph += ` at ${institution}`;
+      }
+    } else if (institution) {
+      careerParagraph += ` a researcher at ${institution}`;
+    } else {
+      careerParagraph += ' a researcher';
     }
     if (topicsText) {
       careerParagraph += `, working in the areas of ${topicsText}`;
@@ -206,6 +300,46 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
       trendParagraph += ` Citations have been ${growthDirection} at an average rate of ${Math.abs(metrics.citationGrowthRate)}% per year over the last three complete years.`;
     }
     if (trendParagraph) paragraphs.push(trendParagraph);
+
+    // Research evolution paragraph — compare early vs recent title themes
+    if (career.years >= 4 && publications.length >= 6) {
+      const sorted = [...publications].sort((a, b) => a.year - b.year);
+      const midpoint = Math.floor(sorted.length / 2);
+      const earlyPubs = sorted.slice(0, midpoint);
+      const recentPubs = sorted.slice(midpoint);
+
+      const earlyThemes = extractTitleThemes(earlyPubs);
+      const recentThemes = extractTitleThemes(recentPubs);
+
+      // Find themes unique to each period (not in the other's top themes)
+      const earlySet = new Set(earlyThemes);
+      const recentSet = new Set(recentThemes);
+      const earlyOnly = earlyThemes.filter(t => !recentSet.has(t)).slice(0, 3);
+      const recentOnly = recentThemes.filter(t => !earlySet.has(t)).slice(0, 3);
+
+      const formatList = (items: string[]) => {
+        if (items.length === 1) return items[0];
+        return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+      };
+
+      if (earlyOnly.length > 0 && recentOnly.length > 0) {
+        paragraphs.push(
+          `Their earlier work focused on topics such as ${formatList(earlyOnly)}, while their more recent publications have shifted towards ${formatList(recentOnly)}.`
+        );
+      } else if (recentOnly.length > 0) {
+        paragraphs.push(
+          `Their recent work has increasingly focused on ${formatList(recentOnly)}.`
+        );
+      } else if (earlyThemes.length > 0 && recentThemes.length > 0) {
+        // Themes overlap — research focus has been consistent
+        const shared = earlyThemes.filter(t => recentSet.has(t)).slice(0, 3);
+        if (shared.length > 0) {
+          paragraphs.push(
+            `Throughout their career, their research has consistently centered on ${formatList(shared)}.`
+          );
+        }
+      }
+    }
 
     // Collaboration paragraph
     let collabParagraph = '';
