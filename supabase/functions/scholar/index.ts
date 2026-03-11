@@ -668,11 +668,14 @@ Deno.serve(async (req) => {
     }
 
     if (cached?.data) {
-      // Invalidate stale cache entries that are missing citation graph data
-      // (from before the cited_by.graph fix).
       const hasCitationGraph = cached.data.metrics?.citationsPerYear
         && Object.keys(cached.data.metrics.citationsPerYear).length > 0;
-      if (hasCitationGraph) {
+      // Invalidate cache entries that were stored before pagination fix
+      // (exactly 100 publications is suspicious — likely truncated)
+      const pubCount = cached.data.publications?.length || 0;
+      const likelyTruncated = pubCount === 100;
+
+      if (hasCitationGraph && !likelyTruncated) {
         console.log("Cache hit for:", normalizedUrl);
         return new Response(
           JSON.stringify(cached.data),
@@ -685,7 +688,7 @@ Deno.serve(async (req) => {
           }
         );
       } else {
-        console.log("Cache hit but missing citationsPerYear — refetching:", normalizedUrl);
+        console.log(`Cache hit but stale (citationGraph=${!!hasCitationGraph}, pubs=${pubCount}, truncated=${likelyTruncated}) — refetching:`, normalizedUrl);
       }
     }
 
