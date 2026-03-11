@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  TrendingUp, 
-  Users, 
-  BookOpen, 
+import {
+  TrendingUp,
+  Users,
+  BookOpen,
   Presentation as Citation,
   Award,
   Network,
@@ -21,7 +21,10 @@ import {
   Gauge,
   Workflow,
   Crown,
-  Activity
+  Activity,
+  Hourglass,
+  PieChart,
+  Timer
 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { metricInfo } from '../data/metricInfo';
@@ -32,8 +35,8 @@ interface MetricsCardProps {
   subtitle?: string;
   icon: 'citations' | 'hIndex' | 'gIndex' | 'publications' | 'i10Index' | 'scr' | 'hpIndex' | 
         'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' | 
-        'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' | 
-        'citationGrowth' | 'peak' | 'trend' | 'fwci';
+        'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
+        'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized';
 }
 
 export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) {
@@ -68,6 +71,11 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'soloAuthor': return <User className="h-3.5 w-3.5" />;
       case 'topCoAuthor': return <UserCheck className="h-3.5 w-3.5" />;
       
+      // Advanced metrics
+      case 'halfLife': return <Hourglass className="h-3.5 w-3.5" />;
+      case 'gini': return <PieChart className="h-3.5 w-3.5" />;
+      case 'ageNormalized': return <Timer className="h-3.5 w-3.5" />;
+
       // Other metrics
       case 'acc5': return <UserPlus className="h-3.5 w-3.5" />;
       case 'scr': return <Workflow className="h-3.5 w-3.5" />;
@@ -103,6 +111,9 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'topCoAuthor': return 'topCoAuthor';
       case 'peak': return 'peak';
       case 'trend': return 'trend';
+      case 'halfLife': return 'halfLife';
+      case 'gini': return 'gini';
+      case 'ageNormalized': return 'ageNormalized';
       default: return 'citations';
     }
   };

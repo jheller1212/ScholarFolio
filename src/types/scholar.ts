@@ -44,6 +44,9 @@ export interface Metrics {
   soloAuthorScore: number;
   averageAuthors: number;
   totalCoAuthors: number;
+  citationHalfLife: number;
+  citationGini: number;
+  ageNormalizedRate: number;
   topPaperCitations: number;
   topPaperTitle: string;
   topPaperUrl: string;

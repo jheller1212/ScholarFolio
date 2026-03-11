@@ -101,6 +101,24 @@ export const metricInfo = {
     cons: "May undervalue important older works and fluctuate more than career-spanning metrics.",
     link: "https://scholar.google.com/intl/en/scholar/metrics.html#metrics"
   },
+  halfLife: {
+    description: "Number of years back from the present needed to account for 50% of total citations. Calculated by summing citations from the most recent year backwards until the cumulative total reaches half of all citations.",
+    pros: "Reveals whether a researcher's impact is recent and growing or driven by classic older works. A short half-life signals current relevance.",
+    cons: "Can be misleading for researchers with very few total citations or a single breakout paper.",
+    link: "https://en.wikipedia.org/wiki/Citation_impact#Citation_half-life"
+  },
+  gini: {
+    description: "Measures how evenly citations are distributed across all publications, on a 0–1 scale. 0 means every paper has equal citations; 1 means all citations come from a single paper.\n\nExample:\n• Gini ≈ 0.3 — citations are spread fairly evenly\n• Gini ≈ 0.7 — citations are concentrated in a few papers\n• Gini ≈ 0.9 — almost all citations come from one or two works",
+    pros: "Complements h-index by revealing whether impact is broad or concentrated in a few 'hit' papers. Useful for understanding research portfolio balance.",
+    cons: "Sensitive to publication count — researchers with few papers will naturally show higher concentration.",
+    link: "https://en.wikipedia.org/wiki/Gini_coefficient"
+  },
+  ageNormalized: {
+    description: "Total citations divided by career length in years (from first publication year to the current year). Normalizes raw citation count by how long a researcher has been active.\n\nExample: 5,000 citations over a 20-year career = 250 citations/career year.",
+    pros: "Enables fairer comparison between early-career and established researchers by accounting for career length. Shows sustained impact rate.",
+    cons: "Career start year is approximated from the earliest citation year, which may not match actual career start. Doesn't account for career breaks.",
+    link: "https://en.wikipedia.org/wiki/Citation_impact#Time-normalized_metrics"
+  },
   pubsPerYear: {
     description: "Average number of publications per year",
     pros: "Shows research productivity consistency and output level throughout career.",
