@@ -36,12 +36,14 @@ async function fetchViaSerpAPI(authorId: string) {
     throw new Error("SERPAPI_KEY not configured");
   }
 
+  // First request — get author profile + first page of articles
   const serpUrl = new URL('https://serpapi.com/search.json');
   serpUrl.searchParams.set('api_key', SERPAPI_KEY);
   serpUrl.searchParams.set('engine', 'google_scholar_author');
   serpUrl.searchParams.set('author_id', authorId);
   serpUrl.searchParams.set('sort', 'pubdate');
   serpUrl.searchParams.set('num', '100');
+  serpUrl.searchParams.set('start', '0');
 
   const serpResponse = await fetch(serpUrl.toString());
   if (!serpResponse.ok) {
@@ -61,7 +63,45 @@ async function fetchViaSerpAPI(authorId: string) {
     throw new Error("Failed to fetch publications");
   }
 
-  const publications = (authorData.articles || []).map(article => ({
+  // Collect all articles across pages (max 10 pages = 1000 articles as safety limit)
+  let allArticles = [...(authorData.articles || [])];
+  let start = allArticles.length;
+  const MAX_PAGES = 10;
+
+  for (let page = 1; page < MAX_PAGES; page++) {
+    // Stop if the first page returned fewer than 100 — no more pages
+    if (allArticles.length < start) break;
+
+    const nextUrl = new URL('https://serpapi.com/search.json');
+    nextUrl.searchParams.set('api_key', SERPAPI_KEY);
+    nextUrl.searchParams.set('engine', 'google_scholar_author');
+    nextUrl.searchParams.set('author_id', authorId);
+    nextUrl.searchParams.set('sort', 'pubdate');
+    nextUrl.searchParams.set('num', '100');
+    nextUrl.searchParams.set('start', String(start));
+
+    const nextResponse = await fetch(nextUrl.toString());
+    if (!nextResponse.ok) {
+      console.warn(`[SerpAPI] Pagination page ${page + 1} failed (HTTP ${nextResponse.status}), stopping`);
+      break;
+    }
+
+    const nextData = await nextResponse.json();
+    const nextArticles = nextData.articles || [];
+
+    if (nextArticles.length === 0) break;
+
+    allArticles = allArticles.concat(nextArticles);
+    start += nextArticles.length;
+    console.log(`[SerpAPI] Page ${page + 1}: fetched ${nextArticles.length} articles (total: ${allArticles.length})`);
+
+    // If fewer than 100 returned, we've reached the last page
+    if (nextArticles.length < 100) break;
+  }
+
+  console.log(`[SerpAPI] Total articles fetched: ${allArticles.length}`);
+
+  const publications = allArticles.map(article => ({
     title: article.title || "",
     authors: (article.authors || "").split(", "),
     venue: article.publication || "",
@@ -101,18 +141,57 @@ async function fetchViaSerpAPI(authorId: string) {
 }
 
 // --- Direct Google Scholar scraping (fallback) ---
+
+/** Parse publications from a Google Scholar profile HTML document */
+function parsePublicationsFromHtml(doc: any): any[] {
+  const publications: any[] = [];
+  const rows = doc.querySelectorAll('#gsc_a_b .gsc_a_tr');
+
+  for (const row of Array.from(rows)) {
+    const titleEl = (row as any).querySelector('.gsc_a_t a');
+    const title = titleEl?.textContent?.trim();
+    const url = titleEl?.getAttribute('href') || '';
+
+    const authorVenueEls = (row as any).querySelectorAll('.gsc_a_t .gs_gray');
+    const authors = (authorVenueEls[0]?.textContent || "").split(',').map((a: string) => a.trim()).filter(Boolean);
+    const venue = authorVenueEls[1]?.textContent?.trim() || '';
+
+    const yearEl = (row as any).querySelector('.gsc_a_y span');
+    const citationsEl = (row as any).querySelector('.gsc_a_c a');
+
+    const yearText = yearEl?.textContent?.trim() || '';
+    const citationsText = citationsEl?.textContent?.trim() || '0';
+
+    const year = parseInt(yearText);
+    if (!title || isNaN(year)) continue;
+
+    publications.push({
+      title,
+      authors: authors.length > 0 ? authors : ['Unknown'],
+      venue,
+      year,
+      citations: parseInt(citationsText.replace('*', '')) || 0,
+      url: url.startsWith('http') ? url : `https://scholar.google.com${url}`
+    });
+  }
+
+  return publications;
+}
+
+const SCRAPER_HEADERS = {
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.5',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Cache-Control': 'no-cache'
+};
+
 async function fetchViaDirectScraping(authorId: string) {
   console.log(`[Scraper] Falling back to direct scraping for author ID: ${authorId}`);
 
   const scholarUrl = `https://scholar.google.com/citations?user=${authorId}&hl=en&sortby=pubdate&pagesize=100`;
 
   const response = await fetch(scholarUrl, {
-    headers: {
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Cache-Control': 'no-cache'
-    },
+    headers: SCRAPER_HEADERS,
     signal: AbortSignal.timeout(15000)
   });
 
@@ -148,41 +227,47 @@ async function fetchViaDirectScraping(authorId: string) {
   // Parse topics/interests
   const topicEls = doc.querySelectorAll('#gsc_prf_int a');
   const topics = Array.from(topicEls).map(el => ({
-    name: el.textContent?.trim() || "",
-    url: `https://scholar.google.com${el.getAttribute('href') || ''}`,
+    name: (el as any).textContent?.trim() || "",
+    url: `https://scholar.google.com${(el as any).getAttribute('href') || ''}`,
     paperCount: 0
   }));
 
-  // Parse publications
-  const publications: any[] = [];
-  const rows = doc.querySelectorAll('#gsc_a_b .gsc_a_tr');
+  // Parse first page of publications
+  let publications = parsePublicationsFromHtml(doc);
+  console.log(`[Scraper] Page 1: ${publications.length} publications`);
 
-  for (const row of Array.from(rows)) {
-    const titleEl = row.querySelector('.gsc_a_t a');
-    const title = titleEl?.textContent?.trim();
-    const url = titleEl?.getAttribute('href') || '';
+  // Paginate to get remaining publications (max 5 extra pages to limit CAPTCHA risk)
+  const MAX_SCRAPE_PAGES = 5;
+  let cstart = publications.length;
 
-    const authorVenueEls = row.querySelectorAll('.gsc_a_t .gs_gray');
-    const authors = (authorVenueEls[0]?.textContent || "").split(',').map(a => a.trim()).filter(Boolean);
-    const venue = authorVenueEls[1]?.textContent?.trim() || '';
+  for (let page = 1; page < MAX_SCRAPE_PAGES && publications.length >= cstart; page++) {
+    if (publications.length < 100 * page) break; // Last page had fewer than 100
 
-    const yearEl = row.querySelector('.gsc_a_y span');
-    const citationsEl = row.querySelector('.gsc_a_c a');
+    const nextUrl = `https://scholar.google.com/citations?user=${authorId}&hl=en&sortby=pubdate&pagesize=100&cstart=${cstart}`;
+    try {
+      const nextResponse = await fetch(nextUrl, {
+        headers: SCRAPER_HEADERS,
+        signal: AbortSignal.timeout(15000)
+      });
 
-    const yearText = yearEl?.textContent?.trim() || '';
-    const citationsText = citationsEl?.textContent?.trim() || '0';
+      if (!nextResponse.ok) break;
+      const nextHtml = await nextResponse.text();
+      if (nextHtml.includes('unusual traffic') || nextHtml.includes('please show you')) break;
 
-    const year = parseInt(yearText);
-    if (!title || isNaN(year)) continue;
+      const nextDoc = parser.parseFromString(nextHtml, 'text/html');
+      const nextPubs = parsePublicationsFromHtml(nextDoc);
 
-    publications.push({
-      title,
-      authors: authors.length > 0 ? authors : ['Unknown'],
-      venue,
-      year,
-      citations: parseInt(citationsText.replace('*', '')) || 0,
-      url: url.startsWith('http') ? url : `https://scholar.google.com${url}`
-    });
+      if (nextPubs.length === 0) break;
+
+      publications = publications.concat(nextPubs);
+      cstart += nextPubs.length;
+      console.log(`[Scraper] Page ${page + 1}: ${nextPubs.length} publications (total: ${publications.length})`);
+
+      if (nextPubs.length < 100) break;
+    } catch (e) {
+      console.warn(`[Scraper] Pagination page ${page + 1} failed: ${e.message}`);
+      break;
+    }
   }
 
   if (publications.length === 0 && !name) {
