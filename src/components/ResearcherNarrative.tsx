@@ -71,6 +71,59 @@ function getMostCitedPaper(publications: Author['publications']): Author['public
   return publications.reduce((max, p) => p.citations > max.citations ? p : max, publications[0]);
 }
 
+/** Infer research methods/approaches from publication titles. */
+function inferResearchMethods(publications: Author['publications']): string[] {
+  const titleCorpus = publications.map(p => p.title.toLowerCase()).join(' ');
+
+  // Each pattern: [regex to test against joined titles, human-readable label]
+  const methodPatterns: [RegExp, string][] = [
+    [/\bmeta[- ]?analy/, 'meta-analysis'],
+    [/\brandomized|randomised|\brct\b/, 'randomized controlled trials'],
+    [/\bexperiment(?:al|s)?\b/, 'experimental methods'],
+    [/\blongitudinal\b/, 'longitudinal studies'],
+    [/\bcross[- ]?sectional\b/, 'cross-sectional analysis'],
+    [/\bsurvey(?:s|ing)?\b/, 'survey research'],
+    [/\binterview(?:s|ing)?\b/, 'interview-based research'],
+    [/\bethnograph/, 'ethnographic methods'],
+    [/\bqualitative\b/, 'qualitative methods'],
+    [/\bcase stud(?:y|ies)\b/, 'case study research'],
+    [/\bmachine learning|deep learning|\bneural net/, 'machine learning'],
+    [/\bnatural language processing|\bnlp\b/, 'natural language processing'],
+    [/\bsimulat(?:ion|ing|e)\b/, 'simulation'],
+    [/\bcomputational\b/, 'computational approaches'],
+    [/\bstatistical\b/, 'statistical analysis'],
+    [/\bregression\b/, 'regression analysis'],
+    [/\bstructural equation|(?:^|\b)sem\b/, 'structural equation modeling'],
+    [/\bgrounded theory\b/, 'grounded theory'],
+    [/\bsystematic review\b/, 'systematic reviews'],
+    [/\bliterature review\b/, 'literature reviews'],
+    [/\bempirical\b/, 'empirical analysis'],
+    [/\bfield (?:study|experiment|research)\b/, 'field research'],
+    [/\baction research\b/, 'action research'],
+    [/\bmixed[- ]?method/, 'mixed-methods research'],
+    [/\bgenome|genomic|proteomic|transcriptom/, 'genomics/proteomics'],
+    [/\bclinical trial/, 'clinical trials'],
+    [/\bcohort\b/, 'cohort studies'],
+    [/\bnetwork analysis\b/, 'network analysis'],
+    [/\btext mining|sentiment analysis/, 'text mining'],
+    [/\bbayesian\b/, 'Bayesian methods'],
+    [/\bdesign science\b/, 'design science'],
+    [/\barchival\b/, 'archival research'],
+    [/\beconometric/, 'econometric analysis'],
+    [/\bpanel data\b/, 'panel data analysis'],
+    [/\binstrumental variable/, 'instrumental variable methods'],
+    [/\bdifference[- ]?in[- ]?difference/, 'difference-in-differences'],
+  ];
+
+  const detected: string[] = [];
+  for (const [regex, label] of methodPatterns) {
+    if (regex.test(titleCorpus)) {
+      detected.push(label);
+    }
+  }
+  return detected.slice(0, 4); // Cap at 4 to keep the sentence readable
+}
+
 export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   const narrative = useMemo(() => {
     const { publications, metrics, topics, name, totalCitations } = data;
@@ -110,6 +163,19 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
     if (career.firstYear > 0) {
       careerParagraph += ` Their publication record spans ${career.years} year${career.years !== 1 ? 's' : ''}, with the earliest indexed publication dating back to ${career.firstYear}.`;
     }
+
+    // Infer research methods from publication titles
+    const methods = inferResearchMethods(publications);
+    if (methods.length > 0) {
+      let methodsText: string;
+      if (methods.length === 1) {
+        methodsText = methods[0];
+      } else {
+        methodsText = methods.slice(0, -1).join(', ') + ' and ' + methods[methods.length - 1];
+      }
+      careerParagraph += ` Based on their publication titles, their work draws on ${methodsText}.`;
+    }
+
     paragraphs.push(careerParagraph);
 
     // Impact paragraph

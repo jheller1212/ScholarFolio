@@ -78,15 +78,17 @@ async function fetchViaSerpAPI(authorId: string) {
     paperCount: 0
   }));
 
-  // Extract actual citations-per-year from SerpAPI's cited_by_graph
+  // Extract actual citations-per-year from SerpAPI's cited_by.graph
+  // The graph lives under author.cited_by.graph (NOT top-level cited_by_graph).
+  // Each entry has { year: number, citations: number|string }.
   const citationsPerYear: Record<string, number> = {};
-  if (authorData.cited_by_graph) {
-    for (const entry of authorData.cited_by_graph) {
-      if (entry.year && entry.citations != null) {
-        citationsPerYear[String(entry.year)] = entry.citations;
-      }
+  const graph = authorData.cited_by?.graph || authorData.cited_by_graph || [];
+  for (const entry of graph) {
+    if (entry.year != null && entry.citations != null) {
+      citationsPerYear[String(entry.year)] = parseInt(String(entry.citations)) || 0;
     }
   }
+  console.log(`[SerpAPI] cited_by.graph: ${graph.length} entries, citationsPerYear keys: ${Object.keys(citationsPerYear).length}`);
 
   return {
     name: authorData.author?.name || "",
@@ -581,17 +583,25 @@ Deno.serve(async (req) => {
     }
 
     if (cached?.data) {
-      console.log("Cache hit for:", normalizedUrl);
-      return new Response(
-        JSON.stringify(cached.data),
-        {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'X-Cache': 'HIT'
+      // Invalidate stale cache entries that are missing citation graph data
+      // (from before the cited_by.graph fix).
+      const hasCitationGraph = cached.data.metrics?.citationsPerYear
+        && Object.keys(cached.data.metrics.citationsPerYear).length > 0;
+      if (hasCitationGraph) {
+        console.log("Cache hit for:", normalizedUrl);
+        return new Response(
+          JSON.stringify(cached.data),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Cache': 'HIT'
+            }
           }
-        }
-      );
+        );
+      } else {
+        console.log("Cache hit but missing citationsPerYear — refetching:", normalizedUrl);
+      }
     }
 
     console.log("Cache miss, fetching fresh data");
