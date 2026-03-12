@@ -16,14 +16,29 @@ function getCareerSpan(publications: Author['publications']): { firstYear: numbe
 }
 
 function getTopVenues(publications: Author['publications'], limit: number): { name: string; count: number }[] {
-  const venueCounts = new Map<string, number>();
+  // Map from lowercased key → { displayName (most common casing), count }
+  const venueCounts = new Map<string, { displayName: string; count: number; displayCounts: Map<string, number> }>();
   publications.forEach(pub => {
     const venue = pub.venue?.trim();
     if (venue && venue.length > 0) {
       // Normalize: strip volume/issue/page info after first comma
       const baseName = venue.replace(/,.*$/, '').replace(/\s+\d+.*$/, '').trim();
       if (baseName.length > 0) {
-        venueCounts.set(baseName, (venueCounts.get(baseName) || 0) + 1);
+        const key = baseName.toLowerCase();
+        const existing = venueCounts.get(key);
+        if (existing) {
+          existing.count++;
+          existing.displayCounts.set(baseName, (existing.displayCounts.get(baseName) || 0) + 1);
+          // Use the most frequently seen casing as display name
+          let maxCount = 0;
+          for (const [name, cnt] of existing.displayCounts) {
+            if (cnt > maxCount) { maxCount = cnt; existing.displayName = name; }
+          }
+        } else {
+          const displayCounts = new Map<string, number>();
+          displayCounts.set(baseName, 1);
+          venueCounts.set(key, { displayName: baseName, count: 1, displayCounts });
+        }
       }
     }
   });
@@ -43,14 +58,14 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
     return score;
   }
 
-  return Array.from(venueCounts.entries())
+  return Array.from(venueCounts.values())
     .sort((a, b) => {
-      const prestigeDiff = prestigeScore(b[0]) - prestigeScore(a[0]);
+      const prestigeDiff = prestigeScore(b.displayName) - prestigeScore(a.displayName);
       if (prestigeDiff !== 0) return prestigeDiff;
-      return b[1] - a[1]; // Fall back to publication count
+      return b.count - a.count; // Fall back to publication count
     })
     .slice(0, limit)
-    .map(([name, count]) => ({ name, count }));
+    .map(v => ({ name: v.displayName, count: v.count }));
 }
 
 function getProductivityPhase(publications: Author['publications']): string {
@@ -147,12 +162,33 @@ function extractTitleThemes(publications: Author['publications']): string[] {
     }
   }
 
-  // Return themes that appear in at least 2 papers, sorted by frequency
-  return Array.from(bigramCounts.entries())
+  // Return themes that appear in at least 2 papers, sorted by frequency.
+  // Remove single words that are already part of a selected bigram to avoid
+  // splitting phrases like "social media" into separate "social" and "media".
+  const sorted = Array.from(bigramCounts.entries())
     .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .map(([term]) => term)
-    .slice(0, 8);
+    .sort((a, b) => b[1] - a[1]);
+
+  const selected: string[] = [];
+  for (const [term] of sorted) {
+    if (selected.length >= 8) break;
+    // If this is a single word, skip it if it's already covered by a selected bigram
+    if (!term.includes(' ')) {
+      const coveredByBigram = selected.some(s => s.includes(' ') && s.split(' ').includes(term));
+      if (coveredByBigram) continue;
+    }
+    // If this is a bigram, remove any previously selected single words it contains
+    if (term.includes(' ')) {
+      const parts = term.split(' ');
+      for (let i = selected.length - 1; i >= 0; i--) {
+        if (!selected[i].includes(' ') && parts.includes(selected[i])) {
+          selected.splice(i, 1);
+        }
+      }
+    }
+    selected.push(term);
+  }
+  return selected;
 }
 
 /** Infer research methods/approaches from publication titles. */
