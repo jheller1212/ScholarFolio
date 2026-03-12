@@ -340,6 +340,9 @@ async function fetchScholarProfile(authorId: string) {
   // Build unified response from either source
   const { name, affiliation, imageUrl, topics, publications } = rawData;
 
+  // Merge near-duplicate author names (case, middle names, initials)
+  mergeAuthorNames(publications);
+
   const totalCitations = publications.reduce((sum, pub) => sum + pub.citations, 0);
   const citations = publications.map(p => p.citations);
   const { hIndex, gIndex, i10Index } = calculateIndices(citations);
@@ -383,6 +386,65 @@ async function fetchScholarProfile(authorId: string) {
     publications,
     _source: source
   };
+}
+
+/** Merge near-duplicate author names across publications (case, middle names, initials). */
+function mergeAuthorNames(publications: any[]) {
+  const lastNamePrefixes = ['van ', 'von ', 'de ', 'del ', 'della ', 'di ', 'da ', 'dos ', 'das ', 'du ', 'den ', 'der ', 'la ', 'le ', 'el ', 'al-'];
+
+  function extractLast(fullName: string): string {
+    const parts = fullName.trim().split(' ');
+    if (parts.length <= 1) return parts[0] || '';
+    for (let i = 1; i < parts.length - 1; i++) {
+      if (lastNamePrefixes.includes(parts[i].toLowerCase() + ' ')) return parts.slice(i).join(' ');
+    }
+    return parts[parts.length - 1];
+  }
+
+  function fuzzyKey(name: string): string {
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+    const lastName = extractLast(trimmed).toLowerCase().replace(/[.,]/g, '');
+    const firstInitial = trimmed.split(/\s+/)[0]?.[0]?.toLowerCase() || '';
+    return `${lastName}|${firstInitial}`;
+  }
+
+  const nameFreq = new Map<string, number>();
+  for (const pub of publications) {
+    for (const a of (pub.authors || [])) {
+      nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
+    }
+  }
+
+  const groups = new Map<string, string[]>();
+  for (const name of nameFreq.keys()) {
+    const key = fuzzyKey(name);
+    if (!key) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(name);
+  }
+
+  const replacements = new Map<string, string>();
+  for (const variants of groups.values()) {
+    if (variants.length <= 1) continue;
+    const lastNames = new Set(variants.map(v => extractLast(v).toLowerCase().replace(/[.,]/g, '')));
+    if (lastNames.size > 1) continue;
+    const canonical = variants.sort((a, b) => {
+      const lenDiff = b.length - a.length;
+      return lenDiff !== 0 ? lenDiff : (nameFreq.get(b) || 0) - (nameFreq.get(a) || 0);
+    })[0];
+    for (const v of variants) {
+      if (v !== canonical) replacements.set(v, canonical);
+    }
+  }
+
+  if (replacements.size > 0) {
+    for (const pub of publications) {
+      if (pub.authors) {
+        pub.authors = pub.authors.map((a: string) => replacements.get(a) || a);
+      }
+    }
+  }
 }
 
 function calculateIndices(citations) {
