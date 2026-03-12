@@ -2,6 +2,7 @@ import type { Author } from '../../types/scholar';
 import { findJournalRanking } from '../../data/journalRankings';
 import { metricsCalculator } from '../metrics';
 import { ApiError } from '../../utils/api';
+import { normalizeAuthorNames } from '../../utils/names';
 import { scholarFetcher } from './fetcher';
 import { scholarParser } from './parser';
 
@@ -168,6 +169,9 @@ async function fetchViaClientScraping(normalizedUrl: string) {
     throw new ApiError('Could not parse any data from Scholar profile', 'DATA_ERROR');
   }
 
+  // Merge near-duplicate author names (case, middle names, initials)
+  normalizeAuthorNames(publications);
+
   const totalCitations = publications.reduce((sum, p) => sum + p.citations, 0);
 
   // Extract actual citations-per-year from the Google Scholar bar chart.
@@ -221,6 +225,9 @@ function buildAuthorResult(data: any): Author {
     ...pub,
     journalRanking: pub.journalRanking || findJournalRanking(pub.venue)
   }));
+
+  // Merge near-duplicate author names (case, middle names, initials)
+  normalizeAuthorNames(publications);
 
   const metrics = metricsCalculator.calculateMetrics(
     publications,
