@@ -148,8 +148,8 @@ export class ScholarScraper {
       
     const year = await element.findElement(By.css('.gsc_a_y span'))
       .getText()
-      .then(text => parseInt(text) || new Date().getFullYear())
-      .catch(() => new Date().getFullYear());
+      .then(text => parseInt(text) || 0)
+      .catch(() => 0);
       
     const citations = await element.findElement(By.css('.gsc_a_c'))
       .getText()
@@ -223,9 +223,11 @@ export class ScholarScraper {
           By.css('#gsc_a_b .gsc_a_tr')
         );
 
-        publications = await Promise.all(
+        const allPubs = await Promise.all(
           publicationElements.map(element => this.extractPublicationData(element))
         );
+        // Skip publications with no year and no citations
+        publications = allPubs.filter(p => (p.year > 0) || (p.citations > 0));
 
         // Verify we got all publications
         if (totalPublications > 0 && publications.length < totalPublications) {

@@ -82,7 +82,7 @@ export function CoAuthorCard({
             {sharedPapers.map((paper, index) => (
               <li key={index} className="text-xs text-gray-600 hover:text-gray-900">
                 <a href={paper.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                  {paper.title} ({paper.year}) - {paper.citations} citations
+                  {paper.title}{paper.year > 0 ? ` (${paper.year})` : ''} - {paper.citations} citations
                 </a>
               </li>
             ))}

@@ -101,14 +101,25 @@ async function fetchViaSerpAPI(authorId: string) {
 
   console.log(`[SerpAPI] Total articles fetched: ${allArticles.length}`);
 
-  const publications = allArticles.map(article => ({
-    title: article.title || "",
-    authors: (article.authors || "").split(", "),
-    venue: article.publication || "",
-    year: parseInt(article.year) || new Date().getFullYear(),
-    citations: parseInt(article.cited_by?.value) || 0,
-    url: article.link || ""
-  }));
+  const publications = allArticles
+    .filter(article => {
+      const year = parseInt(article.year);
+      const hasValidYear = !isNaN(year) && year > 0;
+      const hasCitations = (parseInt(article.cited_by?.value) || 0) > 0;
+      // Keep if valid year, or if no year but has citations; skip if no year and no citations
+      return hasValidYear || hasCitations;
+    })
+    .map(article => {
+      const year = parseInt(article.year);
+      return {
+        title: article.title || "",
+        authors: (article.authors || "").split(", "),
+        venue: article.publication || "",
+        year: (!isNaN(year) && year > 0) ? year : 0,
+        citations: parseInt(article.cited_by?.value) || 0,
+        url: article.link || ""
+      };
+    });
 
   const topics = (authorData.author?.interests || []).map((interest: any) => ({
     name: typeof interest === 'string' ? interest : (interest.title || ''),
@@ -163,14 +174,16 @@ function parsePublicationsFromHtml(doc: any): any[] {
     const citationsText = citationsEl?.textContent?.trim() || '0';
 
     const year = parseInt(yearText);
-    if (!title || isNaN(year)) continue;
+    const citations = parseInt(citationsText.replace('*', '')) || 0;
+    // Skip if no title, or if no valid year and no citations
+    if (!title || (isNaN(year) && citations === 0)) continue;
 
     publications.push({
       title,
       authors: authors.length > 0 ? authors : ['Unknown'],
       venue,
-      year,
-      citations: parseInt(citationsText.replace('*', '')) || 0,
+      year: (!isNaN(year) && year > 0) ? year : 0,
+      citations,
       url: url.startsWith('http') ? url : `https://scholar.google.com${url}`
     });
   }

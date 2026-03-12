@@ -46,19 +46,19 @@ export class ScholarParser {
 
           // Convert year and citations to numbers
           const year = parseInt(yearText);
-          if (isNaN(year)) {
-            console.warn(`[ScholarParser] Invalid year format for publication: ${title}`);
+          const citations = parseInt(citationsText.replace('*', '')) || 0;
+          // Skip if no valid year and no citations
+          if (isNaN(year) && citations === 0) {
+            console.warn(`[ScholarParser] Skipping publication with no year and no citations: ${title}`);
             continue;
           }
-
-          const citations = parseInt(citationsText.replace('*', '')) || 0;
 
           // Create publication object
           const publication: Publication = {
             title,
             authors: authors.length > 0 ? authors : ['Unknown'],
             venue,
-            year,
+            year: (!isNaN(year) && year > 0) ? year : 0,
             citations,
             url: url.startsWith('http') ? url : `https://scholar.google.com${url}`,
             journalRanking: findJournalRanking(venue)
