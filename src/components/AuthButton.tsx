@@ -177,7 +177,7 @@ export function AuthButton() {
 
                 {isSignUp && (
                   <p className="text-xs text-center text-gray-500">
-                    You'll receive <strong>5 free searches</strong> to get started.
+                    You'll receive <strong>5 additional free searches</strong> on top of your guest searches.
                   </p>
                 )}
 
