@@ -5,6 +5,7 @@ import { ApiError } from '../../utils/api';
 import { normalizeAuthorNames } from '../../utils/names';
 import { scholarFetcher } from './fetcher';
 import { scholarParser } from './parser';
+import { supabase } from '../../contexts/AuthContext';
 
 export interface AuthorSearchResult {
   name: string;
@@ -113,13 +114,17 @@ export const scholarService = {
 };
 
 async function fetchViaEdgeFunction(normalizedUrl: string) {
+  // Get the current session token for authenticated credit tracking
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
   const response = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ profileUrl: normalizedUrl })
     }

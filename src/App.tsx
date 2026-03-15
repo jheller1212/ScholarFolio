@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { Linkedin, Github, ExternalLink } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Linkedin, Github, ExternalLink, Coins } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
 import { ErrorModal } from './components/ErrorModal';
@@ -8,6 +8,9 @@ import { AboutPage } from './components/AboutPage';
 import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthButton } from './components/AuthButton';
+import { CreditPacks } from './components/CreditPacks';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 
@@ -94,18 +97,42 @@ function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
   );
 }
 
-function App() {
+function AppContent() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Author | null>(null);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
+  const { user, credits, refreshCredits } = useAuth();
+
+  // Handle payment success redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      refreshCredits();
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [refreshCredits]);
 
   const handleSearch = useCallback(async (url: string) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
     if (requestInProgressRef.current) {
+      return;
+    }
+
+    // Check auth and credits
+    if (!user) {
+      setError('Please sign in to search scholar profiles.');
+      setShowError(true);
+      return;
+    }
+
+    if (credits !== null && credits <= 0) {
+      setShowCreditPacks(true);
       return;
     }
 
@@ -128,6 +155,9 @@ function App() {
         setShowError(true);
         return;
       }
+
+      // Refresh credits after successful search (edge function decrements)
+      refreshCredits();
 
       // Ensure metrics exists with default values even if undefined
       const sanitizedData = {
@@ -155,7 +185,7 @@ function App() {
       requestInProgressRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [user, credits, refreshCredits]);
 
   const handleReset = useCallback(() => {
     setData(null);
@@ -195,16 +225,40 @@ function App() {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1">
-          {renderPage()}
-        </div>
-        {!(data && !error) && <Footer onNavigate={handleNavigate} />}
-        {showError && error && (
-          <ErrorModal message={error} onClose={handleReset} />
+    <div className="min-h-screen flex flex-col">
+      {/* Auth header bar */}
+      <div className="fixed top-0 right-0 z-40 p-3 flex items-center gap-2">
+        {user && credits !== null && credits <= 2 && credits > 0 && (
+          <button
+            onClick={() => setShowCreditPacks(true)}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
+          >
+            <Coins className="h-3 w-3" />
+            {credits} left
+          </button>
         )}
+        <AuthButton />
       </div>
+      <div className="flex-1">
+        {renderPage()}
+      </div>
+      {!(data && !error) && <Footer onNavigate={handleNavigate} />}
+      {showError && error && (
+        <ErrorModal message={error} onClose={handleReset} />
+      )}
+      {showCreditPacks && (
+        <CreditPacks onClose={() => setShowCreditPacks(false)} />
+      )}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
