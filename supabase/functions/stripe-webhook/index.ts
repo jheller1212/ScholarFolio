@@ -46,14 +46,36 @@ Deno.serve(async (req) => {
 
       console.log(`[Webhook] Adding ${credits} credits for user ${userId} (pack: ${packId})`);
 
+      // Idempotency check: skip if this session was already processed
+      const { data: existing } = await supabase
+        .from('credit_purchases')
+        .select('id')
+        .eq('stripe_session_id', session.id)
+        .maybeSingle();
+
+      if (existing) {
+        console.log(`[Webhook] Session ${session.id} already processed, skipping`);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       // Record the purchase
-      await supabase.from('credit_purchases').insert({
+      const { error: insertError } = await supabase.from('credit_purchases').insert({
         user_id: userId,
         stripe_session_id: session.id,
         pack: packId,
         credits,
         amount_cents: session.amount_total || 0,
       });
+
+      if (insertError) {
+        // UNIQUE constraint violation = duplicate, safe to ignore
+        console.log(`[Webhook] Insert failed (likely duplicate): ${insertError.message}`);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
 
       // Add credits to user
       const { data: current } = await supabase

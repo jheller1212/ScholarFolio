@@ -20,6 +20,40 @@ function getCorsHeaders(req: Request) {
 // In-flight request coalescing to prevent duplicate API calls
 const inflightRequests = new Map<string, Promise<any>>();
 
+// --- IP-based rate limiting (in-memory, per edge function instance) ---
+const ipRequestLog = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 3600_000; // 1 hour in ms
+const RATE_LIMIT_MAX_PROFILE = 10;  // max profile fetches per IP per hour
+const RATE_LIMIT_MAX_SEARCH = 20;   // max name searches per IP per hour
+const ANON_DAILY_LIMIT = 5;         // max profile fetches per IP per day (anonymous)
+const ANON_DAILY_WINDOW = 86400_000;
+
+function checkRateLimit(ip: string, limit: number, window: number = RATE_LIMIT_WINDOW): boolean {
+  const now = Date.now();
+  const timestamps = ipRequestLog.get(ip) || [];
+  const recent = timestamps.filter(t => t > now - window);
+  ipRequestLog.set(ip, recent);
+  if (recent.length >= limit) return false; // rate limited
+  recent.push(now);
+  return true; // allowed
+}
+
+function getRequestIp(req: Request): string {
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || req.headers.get('x-real-ip')
+    || 'unknown';
+}
+
+// Clean up old entries every 10 minutes to prevent memory leaks
+setInterval(() => {
+  const cutoff = Date.now() - ANON_DAILY_WINDOW;
+  for (const [ip, timestamps] of ipRequestLog) {
+    const recent = timestamps.filter(t => t > cutoff);
+    if (recent.length === 0) ipRequestLog.delete(ip);
+    else ipRequestLog.set(ip, recent);
+  }
+}, 600_000);
+
 const CACHE_DURATION = 259200; // 72 hours (3 days) in seconds
 const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 
@@ -717,6 +751,7 @@ Deno.serve(async (req) => {
     }
 
     const { profileUrl, action, query } = requestData;
+    const clientIp = getRequestIp(req);
 
     // --- Authenticate user via JWT ---
     const authHeader = req.headers.get('Authorization') || '';
@@ -731,8 +766,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Author search by name (no credit cost) ---
+    // --- Author search by name (no credit cost, but rate limited) ---
     if (action === 'search' && query) {
+      if (!checkRateLimit(`search:${clientIp}`, RATE_LIMIT_MAX_SEARCH)) {
+        return new Response(
+          JSON.stringify({ error: "Too many searches. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       console.log(`[Search] Searching for authors: ${query}`);
       const results = await searchAuthorsByName(query);
       return new Response(
@@ -751,8 +792,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Note: anonymous users are allowed (free tier tracked client-side).
-    // Authenticated users have server-side credit tracking.
+    // --- Rate limit profile fetches ---
+    // Per-hour limit for all users (prevents rapid-fire abuse)
+    if (!checkRateLimit(`profile:${clientIp}`, RATE_LIMIT_MAX_PROFILE)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Tighter daily limit for anonymous users (server-side enforcement)
+    if (!userId && !checkRateLimit(`anon:${clientIp}`, ANON_DAILY_LIMIT, ANON_DAILY_WINDOW)) {
+      return new Response(
+        JSON.stringify({ error: "Daily search limit reached. Sign up for more free searches." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     console.log(`Processing request for URL: ${profileUrl}`);
 
