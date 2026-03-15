@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink } from 'lucide-react';
+import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { Logo } from './Logo';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LandingPageProps {
   onSearch: (url: string) => void;
@@ -50,6 +51,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const featuresRef = useScrollReveal();
   const ctaRef = useScrollReveal();
+  const { user } = useAuth();
 
   return (
     <main className="flex-1 mesh-bg">
@@ -129,6 +131,15 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
           <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto mb-2">
             <SearchBar onSearch={onSearch} isLoading={loading} error={error} />
           </div>
+
+          {!user && (
+            <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] mb-3">
+              <span className="inline-flex items-center gap-1">
+                <User className="h-3 w-3" />
+                Sign up for <strong>3 free searches</strong> — no credit card required.
+              </span>
+            </p>
+          )}
 
           <p className="animate-fade-up animate-delay-350 text-xs text-[#94a3b8] italic mb-4">
             Numbers here are context, not verdict. Use them to tell your story.
@@ -213,7 +224,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
-              {['Instant Overview', 'Visual Insights', 'Free to Use'].map((label) => (
+              {['Instant Overview', 'Visual Insights', '3 Free Searches'].map((label) => (
                 <div key={label} className="flex items-center gap-1.5 text-xs text-white/60">
                   <CheckCircle className="h-3.5 w-3.5 text-white/40" />
                   <span>{label}</span>
