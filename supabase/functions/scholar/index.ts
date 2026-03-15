@@ -675,23 +675,23 @@ async function searchAuthorsByNameScraping(query: string) {
 
 // --- Author search with fallback ---
 async function searchAuthorsByName(query: string) {
-  // Try direct scraping first (free, no SerpAPI credits used)
-  try {
-    const results = await searchAuthorsByNameScraping(query);
-    console.log(`[Search] Scraping returned ${results.length} profiles`);
-    return results;
-  } catch (e) {
-    console.warn(`[Search] Scraping failed: ${e.message}`);
-  }
-
-  // Fallback: SerpAPI (costs credits, but more reliable)
+  // Try SerpAPI first (most reliable)
   try {
     const results = await searchAuthorsByNameSerpAPI(query);
-    console.log(`[Search] SerpAPI fallback returned ${results.length} profiles`);
+    console.log(`[Search] SerpAPI returned ${results.length} profiles`);
     return results;
   } catch (e) {
-    console.warn(`[Search] SerpAPI fallback also failed: ${e.message}`);
-    throw new Error(`Author search failed. Scraping and SerpAPI both unavailable. Last error: ${e.message}`);
+    console.warn(`[Search] SerpAPI failed: ${e.message}`);
+  }
+
+  // Fallback: scrape Google Scholar directly (server-side, no CORS issues)
+  try {
+    const results = await searchAuthorsByNameScraping(query);
+    console.log(`[Search] Scraping fallback returned ${results.length} profiles`);
+    return results;
+  } catch (e) {
+    console.warn(`[Search] Scraping fallback also failed: ${e.message}`);
+    throw new Error(`Author search failed. SerpAPI and scraping both unavailable. Last error: ${e.message}`);
   }
 }
 
