@@ -541,7 +541,8 @@ function findTopCoAuthor(publications, authorName) {
 async function logRequest(
   req: Request,
   authorId: string,
-  source: 'serpapi' | 'scraper' | 'cache'
+  source: 'serpapi' | 'scraper' | 'cache',
+  userId?: string | null
 ) {
   try {
     const ip =
@@ -557,6 +558,7 @@ async function logRequest(
       ip,
       origin,
       user_agent: userAgent,
+      user_id: userId || null,
     });
   } catch (e) {
     console.error('[logRequest] Failed to log request:', e);
@@ -716,7 +718,20 @@ Deno.serve(async (req) => {
 
     const { profileUrl, action, query } = requestData;
 
-    // --- Author search by name ---
+    // --- Authenticate user via JWT ---
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwt = authHeader.replace('Bearer ', '');
+    let userId: string | null = null;
+
+    // Try to get authenticated user from JWT
+    if (jwt && jwt !== (Deno.env.get('SUPABASE_ANON_KEY') ?? '')) {
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(jwt);
+      if (!authError && authUser) {
+        userId = authUser.id;
+      }
+    }
+
+    // --- Author search by name (no credit cost) ---
     if (action === 'search' && query) {
       console.log(`[Search] Searching for authors: ${query}`);
       const results = await searchAuthorsByName(query);
@@ -731,6 +746,17 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Profile URL is required" }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    // --- Require auth for profile lookups ---
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required. Please sign in." }),
+        {
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
@@ -777,7 +803,7 @@ Deno.serve(async (req) => {
 
       if (hasCitationGraph && !likelyTruncated) {
         console.log("Cache hit for:", normalizedUrl);
-        logRequest(req, authorId, 'cache');
+        logRequest(req, authorId, 'cache', userId);
         return new Response(
           JSON.stringify(cached.data),
           {
@@ -794,6 +820,28 @@ Deno.serve(async (req) => {
     }
 
     console.log("Cache miss, fetching fresh data");
+
+    // Check credits before making expensive API calls
+    const { data: creditData, error: creditError } = await supabase
+      .from('user_credits')
+      .select('credits_remaining')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (creditError) {
+      console.error("Credit check error:", creditError);
+    }
+
+    const creditsRemaining = creditData?.credits_remaining ?? 0;
+    if (creditsRemaining <= 0) {
+      return new Response(
+        JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
 
     // Coalesce concurrent requests for the same author
     let dataPromise = inflightRequests.get(authorId);
@@ -826,7 +874,19 @@ Deno.serve(async (req) => {
       console.log("Successfully cached data for:", normalizedUrl);
     }
 
-    logRequest(req, authorId, data._source === 'scraper' ? 'scraper' : 'serpapi');
+    logRequest(req, authorId, data._source === 'scraper' ? 'scraper' : 'serpapi', userId);
+
+    // Decrement user credits (only for fresh fetches, not cache hits)
+    if (userId) {
+      const { error: decrError } = await supabase.rpc('decrement_credits', { p_user_id: userId });
+      if (decrError) {
+        // Use raw SQL fallback if RPC not yet created
+        await supabase
+          .from('user_credits')
+          .update({ credits_remaining: Math.max(0, creditsRemaining - 1) })
+          .eq('user_id', userId);
+      }
+    }
 
     return new Response(
       JSON.stringify(data),
