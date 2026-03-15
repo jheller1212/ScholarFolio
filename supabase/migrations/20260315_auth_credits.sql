@@ -4,7 +4,7 @@
   1. New Tables
     - `user_credits`: Tracks search credits per user
       - `user_id` (uuid, PK, references auth.users)
-      - `credits_remaining` (int, default 3 for free tier)
+      - `credits_remaining` (int, default 5 for free tier)
       - `total_purchased` (int, lifetime purchased credits)
       - `created_at` / `updated_at`
     - `request_logs`: Logs every search request
@@ -32,7 +32,7 @@
 -- User credits table
 CREATE TABLE IF NOT EXISTS user_credits (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  credits_remaining int NOT NULL DEFAULT 3,
+  credits_remaining int NOT NULL DEFAULT 5,
   total_purchased int NOT NULL DEFAULT 0,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -59,7 +59,7 @@ SECURITY DEFINER
 AS $$
 BEGIN
   INSERT INTO user_credits (user_id, credits_remaining, total_purchased)
-  VALUES (NEW.id, 3, 0);
+  VALUES (NEW.id, 5, 0);
   RETURN NEW;
 END;
 $$;
