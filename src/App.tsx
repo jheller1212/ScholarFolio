@@ -118,20 +118,30 @@ function AppContent() {
     }
   }, [refreshCredits]);
 
+  // Anonymous usage tracking via localStorage
+  const getAnonSearches = () => parseInt(localStorage.getItem('sf_searches') || '0');
+  const incrementAnonSearches = () => {
+    const count = getAnonSearches() + 1;
+    localStorage.setItem('sf_searches', String(count));
+    return count;
+  };
+  const ANON_FREE_LIMIT = 3;
+
   const handleSearch = useCallback(async (url: string) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
     if (requestInProgressRef.current) {
       return;
     }
 
-    // Check auth and credits
+    // Credit/usage checks
     if (!user) {
-      setError('Please sign in to search scholar profiles.');
-      setShowError(true);
-      return;
-    }
-
-    if (credits !== null && credits <= 0) {
+      // Anonymous user — check local free limit
+      if (getAnonSearches() >= ANON_FREE_LIMIT) {
+        setError('You\'ve used your 3 free searches. Sign up for 5 more — free, no credit card needed.');
+        setShowError(true);
+        return;
+      }
+    } else if (credits !== null && credits <= 0) {
       setShowCreditPacks(true);
       return;
     }
@@ -156,8 +166,12 @@ function AppContent() {
         return;
       }
 
-      // Refresh credits after successful search (edge function decrements)
-      refreshCredits();
+      // Track usage
+      if (!user) {
+        incrementAnonSearches();
+      } else {
+        refreshCredits();
+      }
 
       // Ensure metrics exists with default values even if undefined
       const sanitizedData = {
@@ -228,6 +242,11 @@ function AppContent() {
     <div className="min-h-screen flex flex-col">
       {/* Auth header bar */}
       <div className="fixed top-0 right-0 z-40 p-3 flex items-center gap-2">
+        {!user && getAnonSearches() > 0 && (
+          <span className="text-[10px] text-gray-400">
+            {Math.max(0, ANON_FREE_LIMIT - getAnonSearches())}/{ANON_FREE_LIMIT} free searches
+          </span>
+        )}
         {user && credits !== null && credits <= 2 && credits > 0 && (
           <button
             onClick={() => setShowCreditPacks(true)}

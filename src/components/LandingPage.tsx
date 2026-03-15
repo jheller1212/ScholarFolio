@@ -136,7 +136,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] mb-3">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3 w-3" />
-                Sign up for <strong>5 free searches</strong> — no credit card required.
+                Try it free — sign up for <strong>5 extra searches</strong>.
               </span>
             </p>
           )}
@@ -224,7 +224,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
-              {['Instant Overview', 'Visual Insights', '3 Free Searches'].map((label) => (
+              {['Instant Overview', 'Visual Insights', 'No Sign-up Required'].map((label) => (
                 <div key={label} className="flex items-center gap-1.5 text-xs text-white/60">
                   <CheckCircle className="h-3.5 w-3.5 text-white/40" />
                   <span>{label}</span>

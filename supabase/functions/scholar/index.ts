@@ -751,16 +751,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Require auth for profile lookups ---
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Authentication required. Please sign in." }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
-    }
+    // Note: anonymous users are allowed (free tier tracked client-side).
+    // Authenticated users have server-side credit tracking.
 
     console.log(`Processing request for URL: ${profileUrl}`);
 
@@ -821,26 +813,29 @@ Deno.serve(async (req) => {
 
     console.log("Cache miss, fetching fresh data");
 
-    // Check credits before making expensive API calls
-    const { data: creditData, error: creditError } = await supabase
-      .from('user_credits')
-      .select('credits_remaining')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Check credits for authenticated users before making expensive API calls
+    let creditsRemaining: number | null = null;
+    if (userId) {
+      const { data: creditData, error: creditError } = await supabase
+        .from('user_credits')
+        .select('credits_remaining')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (creditError) {
-      console.error("Credit check error:", creditError);
-    }
+      if (creditError) {
+        console.error("Credit check error:", creditError);
+      }
 
-    const creditsRemaining = creditData?.credits_remaining ?? 0;
-    if (creditsRemaining <= 0) {
-      return new Response(
-        JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+      creditsRemaining = creditData?.credits_remaining ?? 0;
+      if (creditsRemaining <= 0) {
+        return new Response(
+          JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
     }
 
     // Coalesce concurrent requests for the same author
@@ -876,8 +871,8 @@ Deno.serve(async (req) => {
 
     logRequest(req, authorId, data._source === 'scraper' ? 'scraper' : 'serpapi', userId);
 
-    // Decrement user credits (only for fresh fetches, not cache hits)
-    if (userId) {
+    // Decrement user credits (only for authenticated users, only for fresh fetches)
+    if (userId && creditsRemaining !== null) {
       const { error: decrError } = await supabase.rpc('decrement_credits', { p_user_id: userId });
       if (decrError) {
         // Use raw SQL fallback if RPC not yet created
