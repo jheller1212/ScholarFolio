@@ -136,7 +136,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] mb-3">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3 w-3" />
-                Sign up for <strong>3 free searches</strong> — no credit card required.
+                Sign up for <strong>5 free searches</strong> — no credit card required.
               </span>
             </p>
           )}
