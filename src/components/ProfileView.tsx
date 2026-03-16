@@ -20,6 +20,7 @@ interface ProfileViewProps {
   onSearch: (url: string) => void;
   onReset: () => void;
   socialLinks: React.ReactNode;
+  authControls?: React.ReactNode;
 }
 
 const tabs = [
@@ -38,7 +39,8 @@ export function ProfileView({
   error,
   onSearch,
   onReset,
-  socialLinks
+  socialLinks,
+  authControls
 }: ProfileViewProps) {
   const [activeTab, setActiveTab] = useState<TabId>('metrics');
   const [imgError, setImgError] = useState(false);
@@ -74,7 +76,10 @@ export function ProfileView({
               <SearchBar onSearch={onSearch} isLoading={loading} error={error} compact={true} />
             </div>
 
-            <div className="hidden md:block">{socialLinks}</div>
+            <div className="hidden md:flex items-center gap-3">
+              {authControls}
+              {socialLinks}
+            </div>
           </div>
         </div>
       </header>

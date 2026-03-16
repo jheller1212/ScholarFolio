@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, LogOut, User, Coins, X, Eye, EyeOff } from 'lucide-react';
+import { LogIn, LogOut, User, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function AuthButton() {
@@ -12,6 +12,7 @@ export function AuthButton() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   if (loading) return null;
 
@@ -21,6 +22,11 @@ export function AuthButton() {
     setSubmitting(true);
 
     try {
+      if (isSignUp && !agreedToTerms) {
+        setError('Please agree to the Terms of Use to continue.');
+        setSubmitting(false);
+        return;
+      }
       if (isSignUp) {
         const { error } = await signUp(email, password);
         if (error) {
@@ -48,6 +54,7 @@ export function AuthButton() {
     setError(null);
     setConfirmSent(false);
     setShowPassword(false);
+    setAgreedToTerms(false);
   };
 
   const openModal = (signUp: boolean) => {
@@ -58,26 +65,18 @@ export function AuthButton() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-          <Coins className="h-4 w-4 text-[#2d7d7d]" />
-          <span className="font-medium">{credits ?? '...'}</span>
-          <span className="text-xs text-gray-400">credits</span>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <User className="h-3.5 w-3.5" />
+          <span className="max-w-[120px] truncate">{user.email}</span>
         </div>
-        <div className="h-4 w-px bg-gray-200" />
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <User className="h-3.5 w-3.5" />
-            <span className="max-w-[120px] truncate">{user.email}</span>
-          </div>
-          <button
-            onClick={signOut}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            title="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          onClick={signOut}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+          title="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     );
   }
@@ -112,9 +111,36 @@ export function AuthButton() {
               </button>
             </div>
 
+            {/* Terms agreement for sign-up */}
+            {isSignUp && (
+              <label className="flex items-start gap-2 text-xs text-gray-600 mb-1">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={e => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
+                />
+                <span>
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">
+                    Terms of Use
+                  </a>
+                  {' '}and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">
+                    Privacy Policy
+                  </a>.
+                  Scholar Folio is not intended for ranking or evaluating researchers.
+                </span>
+              </label>
+            )}
+
             {/* Google sign-in */}
             <button
               onClick={async () => {
+                if (isSignUp && !agreedToTerms) {
+                  setError('Please agree to the Terms of Use to continue.');
+                  return;
+                }
                 const { error } = await signInWithGoogle();
                 if (error) setError(error);
               }}

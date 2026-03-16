@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Linkedin, Github, ExternalLink, Coins } from 'lucide-react';
+import { Linkedin, Github, ExternalLink } from 'lucide-react';
+import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
 import { ErrorModal } from './components/ErrorModal';
@@ -10,6 +11,7 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
+import { SignUpWall } from './components/SignUpWall';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
@@ -104,9 +106,10 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
   const [showCreditPacks, setShowCreditPacks] = useState(false);
+  const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
-  const { user, credits, refreshCredits } = useAuth();
+  const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
 
   // Handle payment success redirect
   useEffect(() => {
@@ -137,8 +140,7 @@ function AppContent() {
     if (!user) {
       // Anonymous user — check local free limit
       if (getAnonSearches() >= ANON_FREE_LIMIT) {
-        setError('You\'ve used your 3 free searches. Sign up for 5 more — free, no credit card needed.');
-        setShowError(true);
+        setShowSignUpWall(true);
         return;
       }
     } else if (credits !== null && credits <= 0) {
@@ -216,6 +218,14 @@ function AppContent() {
     window.scrollTo(0, 0);
   }, []);
 
+  const authControls = (
+    <AuthHeaderControls
+      onBuyCredits={() => setShowCreditPacks(true)}
+      anonSearchesUsed={getAnonSearches()}
+      anonFreeLimit={ANON_FREE_LIMIT}
+    />
+  );
+
   const renderPage = () => {
     if (page === 'about') return <AboutPage onBack={() => handleNavigate('home')} />;
     if (page === 'terms') return <TermsPage onBack={() => handleNavigate('home')} />;
@@ -231,33 +241,29 @@ function AppContent() {
           onSearch={handleSearch}
           onReset={handleReset}
           socialLinks={<SocialLinks />}
+          authControls={authControls}
         />
       );
     }
 
-    return <LandingPage onSearch={handleSearch} loading={loading} error={error} onNavigate={handleNavigate} />;
+    return <LandingPage onSearch={handleSearch} loading={loading} error={error} onNavigate={handleNavigate} authControls={authControls} />;
   };
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Auth header bar */}
-      <div className="fixed top-0 right-0 z-40 p-3 flex items-center gap-2">
-        {!user && getAnonSearches() > 0 && (
-          <span className="text-[10px] text-gray-400">
-            {Math.max(0, ANON_FREE_LIMIT - getAnonSearches())}/{ANON_FREE_LIMIT} free searches
-          </span>
-        )}
-        {user && credits !== null && credits <= 2 && credits > 0 && (
+      {/* Welcome banner for new Google OAuth sign-ups */}
+      {showWelcome && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
+          <p className="text-sm font-medium mb-1">Welcome to Scholar Folio!</p>
+          <p className="text-xs text-gray-600">You have <strong>5 free searches</strong> to get started.</p>
           <button
-            onClick={() => setShowCreditPacks(true)}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors"
+            onClick={dismissWelcome}
+            className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
           >
-            <Coins className="h-3 w-3" />
-            {credits} left
+            Got it
           </button>
-        )}
-        <AuthButton />
-      </div>
+        </div>
+      )}
       <div className="flex-1">
         {renderPage()}
       </div>
@@ -267,6 +273,9 @@ function AppContent() {
       )}
       {showCreditPacks && (
         <CreditPacks onClose={() => setShowCreditPacks(false)} />
+      )}
+      {showSignUpWall && (
+        <SignUpWall onClose={() => setShowSignUpWall(false)} />
       )}
     </div>
   );

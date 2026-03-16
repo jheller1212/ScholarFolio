@@ -10,6 +10,7 @@ interface LandingPageProps {
   loading: boolean;
   error?: string | null;
   onNavigate?: (page: 'home' | 'about' | 'terms' | 'privacy') => void;
+  authControls?: React.ReactNode;
 }
 
 function useScrollReveal() {
@@ -46,7 +47,7 @@ function useScrollReveal() {
   return ref;
 }
 
-export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPageProps) {
+export function LandingPage({ onSearch, loading, error, onNavigate, authControls }: LandingPageProps) {
   const [showScholarSearch, setShowScholarSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const featuresRef = useScrollReveal();
@@ -83,13 +84,22 @@ export function LandingPage({ onSearch, loading, error, onNavigate }: LandingPag
             >
               GitHub <ExternalLink className="h-3 w-3" />
             </a>
+            {authControls && (
+              <>
+                <div className="h-4 w-px bg-gray-200" />
+                {authControls}
+              </>
+            )}
           </div>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="sm:hidden p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
-          </button>
+          <div className="sm:hidden flex items-center gap-2">
+            {authControls}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
+            </button>
+          </div>
         </div>
         {/* Mobile menu */}
         {mobileMenuOpen && (
