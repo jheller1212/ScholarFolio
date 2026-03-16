@@ -11,6 +11,8 @@ interface AuthState {
   session: Session | null;
   credits: number | null;
   loading: boolean;
+  showWelcome: boolean;
+  dismissWelcome: () => void;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
@@ -25,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const dismissWelcome = () => setShowWelcome(false);
 
   const fetchCredits = async (userId: string) => {
     const { data, error } = await supabase
@@ -55,11 +59,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchCredits(session.user.id);
+          // Detect new Google sign-up (user just created, signed in via OAuth)
+          if (event === 'SIGNED_IN') {
+            const createdAt = new Date(session.user.created_at).getTime();
+            const now = Date.now();
+            // If account was created within the last 30 seconds, it's a new sign-up
+            if (now - createdAt < 30000 && session.user.app_metadata?.provider === 'google') {
+              setShowWelcome(true);
+            }
+          }
         } else {
           setCredits(null);
         }
@@ -95,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, credits, loading, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, session, credits, loading, showWelcome, dismissWelcome, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );
