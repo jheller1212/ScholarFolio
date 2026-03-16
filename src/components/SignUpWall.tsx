@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { X, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -49,7 +48,7 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
     }
   };
 
-  return createPortal(
+  return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
@@ -186,7 +185,6 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
           </form>
         )}
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
