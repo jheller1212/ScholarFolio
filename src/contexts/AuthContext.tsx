@@ -13,6 +13,7 @@ interface AuthState {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshCredits: () => Promise<void>;
 }
@@ -78,13 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    return { error: error?.message ?? null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setCredits(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, credits, loading, signIn, signUp, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, session, credits, loading, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );
