@@ -111,7 +111,7 @@ class ScholarFetcher {
       }
     }
 
-    throw new ApiError('Could not reach Google Scholar. Please try again.', 'PROXY_ERROR');
+    throw new ApiError('Could not reach Google Scholar. Please try again later or contact the site administrator.', 'PROXY_ERROR');
   }
 
   public async fetch(url: string): Promise<string> {
@@ -167,7 +167,7 @@ class ScholarFetcher {
     }
 
     throw new ApiError(
-      'Could not reach Google Scholar. Please try again in a few minutes.',
+      'Could not reach Google Scholar. Please try again later or contact the site administrator.',
       'PROXY_ERROR'
     );
   }

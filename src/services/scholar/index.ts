@@ -69,7 +69,7 @@ export const scholarService = {
     }
 
     console.error('[ScholarService] All search methods failed:', errors);
-    throw new Error(`Search failed: ${errors.join('; ')}`);
+    throw new Error('Author search is temporarily unavailable. Please try again later or contact the site administrator.');
   },
 
   validateProfileUrl: (url: string) => {
@@ -103,12 +103,10 @@ export const scholarService = {
       return buildAuthorResult(data);
     } catch (scrapeError) {
       console.error('[ScholarService] Client-side scraping also failed:', scrapeError);
-      throw scrapeError instanceof ApiError
-        ? scrapeError
-        : new ApiError(
-            scrapeError instanceof Error ? scrapeError.message : 'Failed to fetch scholar profile',
-            'FETCH_ERROR'
-          );
+      throw new ApiError(
+        'Unable to fetch profile data. The service may be temporarily unavailable. Please try again later or contact the site administrator.',
+        'FETCH_ERROR'
+      );
     }
   }
 };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, X } from 'lucide-react';
 
 interface ErrorModalProps {
@@ -7,9 +8,9 @@ interface ErrorModalProps {
 }
 
 export function ErrorModal({ message, onClose }: ErrorModalProps) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div 
+      <div
         className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 transform transition-all"
         onClick={e => e.stopPropagation()}
       >
@@ -37,6 +38,7 @@ export function ErrorModal({ message, onClose }: ErrorModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

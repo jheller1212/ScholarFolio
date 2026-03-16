@@ -367,7 +367,7 @@ async function fetchScholarProfile(authorId: string) {
       console.log(`[Fetch] Successfully fetched via scraping (${rawData.publications.length} publications)`);
     } catch (scrapeError) {
       console.error("[Fetch] Scraping fallback also failed:", scrapeError.message);
-      throw new Error(`Both SerpAPI and direct scraping failed. SerpAPI: ${serpError.message}. Scraper: ${scrapeError.message}`);
+      throw new Error('Unable to fetch profile data. The service is temporarily unavailable. Please try again later or contact the site administrator.');
     }
   }
 
@@ -725,7 +725,7 @@ async function searchAuthorsByName(query: string) {
     return results;
   } catch (e) {
     console.warn(`[Search] Scraping fallback also failed: ${e.message}`);
-    throw new Error(`Author search failed. SerpAPI and scraping both unavailable. Last error: ${e.message}`);
+    throw new Error('Author search is temporarily unavailable. Please try again later or contact the site administrator.');
   }
 }
 
@@ -948,8 +948,7 @@ Deno.serve(async (req) => {
     console.error("Edge function error:", error);
     return new Response(
       JSON.stringify({
-        error: error.message || "Failed to fetch scholar profile",
-        details: error.toString()
+        error: error.message || "Unable to fetch profile data. Please try again later or contact the site administrator."
       }),
       {
         status: 500,

@@ -163,7 +163,7 @@ function AppContent() {
 
       const profileData = await scholarService.fetchProfile(url);
       if (!profileData) {
-        setError('Failed to fetch profile data. Please try again.');
+        setError('Unable to fetch profile data. Please try again later or contact the site administrator.');
         setShowError(true);
         return;
       }

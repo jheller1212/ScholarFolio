@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X, ExternalLink, ClipboardPaste, ArrowRight } from 'lucide-react';
 
 interface ScholarSearchModalProps {
@@ -40,7 +41,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] p-4">
       <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl flex flex-col">
         {/* Header */}
@@ -132,6 +133,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
