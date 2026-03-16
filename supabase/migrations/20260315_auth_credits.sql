@@ -128,3 +128,16 @@ CREATE TRIGGER user_credits_updated_at
   BEFORE UPDATE ON user_credits
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
+
+-- Decrement credits RPC (atomic, prevents going below 0)
+CREATE OR REPLACE FUNCTION decrement_credits(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE user_credits
+  SET credits_remaining = GREATEST(credits_remaining - 1, 0)
+  WHERE user_id = p_user_id;
+END;
+$$;
