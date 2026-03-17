@@ -113,16 +113,8 @@ export const scholarService = {
 
 async function fetchViaEdgeFunction(normalizedUrl: string) {
   // Get the current session token for authenticated credit tracking
-  // Fall back to anon key if session retrieval fails for any reason
-  let token = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      token = session.access_token;
-    }
-  } catch (e) {
-    console.warn('[ScholarService] Failed to get session, using anon key:', e);
-  }
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
   const response = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/scholar`,

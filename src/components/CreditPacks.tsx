@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Coins, Zap, Star, X, ExternalLink } from 'lucide-react';
 import { useAuth, supabase } from '../contexts/AuthContext';
 
@@ -47,7 +46,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
     }
   };
 
-  return createPortal(
+  return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
@@ -119,7 +118,6 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
           Secure payment via Stripe. Credits are added instantly after payment.
         </p>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
