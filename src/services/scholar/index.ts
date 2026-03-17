@@ -90,11 +90,18 @@ export const scholarService = {
     const normalizedUrl = normalizeScholarUrl(profileUrl);
 
     // Try the Supabase edge function first (SerpAPI + server-side scraping)
+    let edgeError: unknown = null;
     try {
       const data = await fetchViaEdgeFunction(normalizedUrl);
       return buildAuthorResult(data);
-    } catch (edgeError) {
-      console.warn('[ScholarService] Edge function failed, falling back to client-side scraping:', edgeError);
+    } catch (err) {
+      edgeError = err;
+      // If the edge function returned a user-actionable error (credits, rate limit),
+      // surface it directly instead of falling back to client-side scraping
+      if (err instanceof ApiError && (err.code === 'CREDITS_EXHAUSTED' || err.code === 'RATE_LIMITED')) {
+        throw err;
+      }
+      console.warn('[ScholarService] Edge function failed, falling back to client-side scraping:', err);
     }
 
     // Fallback: client-side scraping via CORS proxies
@@ -103,8 +110,10 @@ export const scholarService = {
       return buildAuthorResult(data);
     } catch (scrapeError) {
       console.error('[ScholarService] Client-side scraping also failed:', scrapeError);
+      // Surface the original edge function error if it had a specific message
+      const edgeMsg = edgeError instanceof ApiError ? edgeError.message : '';
       throw new ApiError(
-        'Unable to fetch profile data. The service may be temporarily unavailable. Please try again later or contact the site administrator.',
+        edgeMsg || 'Unable to fetch profile data. The service may be temporarily unavailable. Please try again later or contact the site administrator.',
         'FETCH_ERROR'
       );
     }
@@ -135,7 +144,11 @@ async function fetchViaEdgeFunction(normalizedUrl: string) {
     } catch {
       errorData = { error: `HTTP ${response.status}` };
     }
-    throw new ApiError(errorData.error || 'Edge function error', errorData.code || 'FETCH_ERROR');
+    // Map HTTP status codes to specific error codes for the caller
+    let code = errorData.code || 'FETCH_ERROR';
+    if (response.status === 403) code = 'CREDITS_EXHAUSTED';
+    if (response.status === 429) code = 'RATE_LIMITED';
+    throw new ApiError(errorData.error || 'Edge function error', code);
   }
 
   const data = await response.json();

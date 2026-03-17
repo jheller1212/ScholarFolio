@@ -881,7 +881,20 @@ Deno.serve(async (req) => {
         console.error("Credit check error:", creditError);
       }
 
-      creditsRemaining = creditData?.credits_remaining ?? 0;
+      if (!creditData) {
+        // Auto-create credits row for users who signed up before the migration
+        console.log(`[Credits] No credits row for user ${userId}, creating with default 5`);
+        const { error: insertError } = await supabase
+          .from('user_credits')
+          .insert({ user_id: userId, credits_remaining: 5, total_purchased: 0 });
+        if (insertError) {
+          console.error("Credit insert error:", insertError);
+        }
+        creditsRemaining = 5;
+      } else {
+        creditsRemaining = creditData.credits_remaining ?? 0;
+      }
+
       if (creditsRemaining <= 0) {
         return new Response(
           JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
