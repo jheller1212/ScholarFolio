@@ -4,7 +4,7 @@ import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-const ADMIN_EMAIL = 'jonashjeller89@gmail.com';
+const ADMIN_EMAIL = 'jonasheller89@gmail.com';
 
 interface AdminDashboardProps {
   onBack: () => void;
