@@ -1,4 +1,9 @@
-import { supabase } from '../contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+// Own Supabase client to avoid circular dependency with AuthContext
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Lightweight session ID (persists per tab, resets on close)
 const SESSION_ID =
