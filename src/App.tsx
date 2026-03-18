@@ -109,7 +109,21 @@ function AppContent() {
   const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
+  const handleSearchRef = useRef<((url: string) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
+
+  // Handle shareable profile URL (?user=AUTHOR_ID)
+  const [initialUrlHandled, setInitialUrlHandled] = useState(false);
+  useEffect(() => {
+    if (initialUrlHandled) return;
+    setInitialUrlHandled(true);
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    if (userParam && userParam.length >= 12 && handleSearchRef.current) {
+      const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
+      handleSearchRef.current(scholarUrl);
+    }
+  }, [initialUrlHandled]);
 
   // Handle payment success redirect
   useEffect(() => {
@@ -183,6 +197,11 @@ function AppContent() {
 
       setProfileUrl(url);
       setData(sanitizedData);
+
+      // Update browser URL with shareable link
+      if (userId) {
+        window.history.replaceState({}, '', `?user=${encodeURIComponent(userId)}`);
+      }
     } catch (err) {
       let errorMessage: string;
 
@@ -203,6 +222,9 @@ function AppContent() {
     }
   }, [user, credits, refreshCredits]);
 
+  // Keep ref in sync for URL-based loading
+  handleSearchRef.current = handleSearch;
+
   const handleReset = useCallback(() => {
     setData(null);
     setProfileUrl(null);
@@ -211,6 +233,7 @@ function AppContent() {
     requestInProgressRef.current = false;
     setShowError(false);
     setPage('home');
+    window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
   const handleNavigate = useCallback((newPage: Page) => {
