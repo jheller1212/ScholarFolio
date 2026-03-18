@@ -6,6 +6,7 @@ import { ApiError } from './utils/api';
 import { ErrorModal } from './components/ErrorModal';
 import { ProfileView } from './components/ProfileView';
 import { AboutPage } from './components/AboutPage';
+import { AdminDashboard } from './components/AdminDashboard';
 import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -21,7 +22,7 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
-type Page = 'home' | 'about' | 'terms' | 'privacy';
+type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin';
 
 function SocialLinks() {
   return (
@@ -118,6 +119,10 @@ function AppContent() {
     if (initialUrlHandled) return;
     setInitialUrlHandled(true);
     const params = new URLSearchParams(window.location.search);
+    if (params.get('page') === 'admin') {
+      setPage('admin');
+      return;
+    }
     const userParam = params.get('user');
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
@@ -250,6 +255,7 @@ function AppContent() {
   );
 
   const renderPage = () => {
+    if (page === 'admin') return <AdminDashboard onBack={() => handleNavigate('home')} />;
     if (page === 'about') return <AboutPage onBack={() => handleNavigate('home')} />;
     if (page === 'terms') return <TermsPage onBack={() => handleNavigate('home')} />;
     if (page === 'privacy') return <PrivacyPage onBack={() => handleNavigate('home')} />;
