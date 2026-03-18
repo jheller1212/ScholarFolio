@@ -20,8 +20,8 @@ function getCorsHeaders(req: Request) {
 }
 
 const PACKS: Record<string, { credits: number; priceInCents: number; name: string }> = {
-  starter: { credits: 15, priceInCents: 500, name: 'Starter — 15 searches' },
-  pro: { credits: 40, priceInCents: 1000, name: 'Pro — 40 searches' },
+  starter: { credits: 20, priceInCents: 500, name: 'Starter — 20 searches' },
+  pro: { credits: 50, priceInCents: 1000, name: 'Pro — 50 searches' },
 };
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {

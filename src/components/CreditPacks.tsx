@@ -6,12 +6,12 @@ const PACKS = [
   {
     id: 'starter',
     name: 'Starter',
-    credits: 15,
+    credits: 20,
     price: 500,
     label: '5.00',
-    perSearch: '0.33',
+    perSearch: '0.25',
     features: [
-      '15 profile analyses',
+      '20 profile analyses',
       'Full citation metrics',
       'Co-author network mapping',
     ],
@@ -19,14 +19,14 @@ const PACKS = [
   {
     id: 'pro',
     name: 'Pro',
-    credits: 40,
+    credits: 50,
     price: 1000,
     label: '10.00',
-    perSearch: '0.25',
+    perSearch: '0.20',
     popular: true,
-    savings: '25',
+    savings: '20',
     features: [
-      '40 profile analyses',
+      '50 profile analyses',
       'Full citation metrics',
       'Co-author network mapping',
       'Priority support',
@@ -64,7 +64,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
       }
 
       if (data.url) {
-        window.open(data.url, '_blank');
+        window.location.href = data.url;
       }
     } catch (err) {
       setError('Failed to create checkout session. Please try again.');
