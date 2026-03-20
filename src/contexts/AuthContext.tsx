@@ -40,6 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!error && data) {
       setCredits(data.credits_remaining);
+    } else if (!error && !data) {
+      // Credits row missing (trigger may have failed) — create it and retry
+      await supabase.rpc('ensure_user_credits');
+      const { data: retryData } = await supabase
+        .from('user_credits')
+        .select('credits_remaining')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (retryData) {
+        setCredits(retryData.credits_remaining);
+      }
     }
   };
 
