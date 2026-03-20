@@ -27,6 +27,7 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
         .replace(/,\s*(?:vol\.?|no\.?|pp\.?|issue|pages?|supplement)\s.*/i, '')
         .replace(/\s+\d+\s*\([\d()–\-]+\)[\s,.\d–\-]*$/, '')
         .replace(/,\s*\d[\d()–\-\s]*$/, '')
+        .replace(/\s+\d+\s*,.*$/, '')
         .replace(/\s+\d+\s*$/, '')
         .trim();
       if (baseName.length > 0) {
