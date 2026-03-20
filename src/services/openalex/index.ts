@@ -1,14 +1,113 @@
 import { ApiError } from '../../utils/api';
-import type { JournalRanking } from '../../types/scholar';
+import type { JournalRanking, OpenAccessStats } from '../../types/scholar';
 import { rateLimiter } from '../scholar/rate-limiter';
 
 export class OpenAlexService {
   private readonly API_URL = 'https://api.openalex.org';
-  private readonly EMAIL = 'research-portfolio@example.com';
+  private readonly EMAIL = 'scholarfolio@scholarfolio.org';
 
   private readonly headers = {
-    'User-Agent': `ResearchPortfolio/1.0 (${this.EMAIL})`
+    'User-Agent': `ScholarFolio/1.0 (mailto:${this.EMAIL})`
   };
+
+  /**
+   * Search OpenAlex for an author by name + affiliation, return OA stats.
+   * Non-blocking — returns null on any failure.
+   */
+  public async fetchOpenAccessStats(name: string, affiliation: string): Promise<OpenAccessStats | null> {
+    try {
+      // Step 1: Find the author in OpenAlex
+      const authorId = await this.findAuthorId(name, affiliation);
+      if (!authorId) return null;
+
+      // Step 2: Get works grouped by OA status
+      await rateLimiter.acquireToken();
+      const worksUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=0&mailto=${this.EMAIL}`;
+      const worksResponse = await fetch(worksUrl, {
+        headers: this.headers,
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!worksResponse.ok) return null;
+      const worksData = await worksResponse.json();
+
+      const groups: Record<string, number> = {};
+      let total = 0;
+      for (const g of worksData.group_by || []) {
+        groups[g.key] = g.count;
+        total += g.count;
+      }
+
+      if (total === 0) return null;
+
+      const gold = groups['gold'] || 0;
+      const green = groups['green'] || 0;
+      const hybrid = groups['hybrid'] || 0;
+      const bronze = groups['bronze'] || 0;
+      const closed = groups['closed'] || 0;
+      const oa = gold + green + hybrid + bronze;
+
+      // Step 3: Get ORCID from author record
+      await rateLimiter.acquireToken();
+      const authorResponse = await fetch(`${this.API_URL}/authors/${authorId}?mailto=${this.EMAIL}`, {
+        headers: this.headers,
+        signal: AbortSignal.timeout(10000)
+      });
+      let orcid: string | undefined;
+      if (authorResponse.ok) {
+        const authorData = await authorResponse.json();
+        if (authorData.orcid) {
+          orcid = authorData.orcid.replace('https://orcid.org/', '');
+        }
+      }
+
+      return {
+        total,
+        oa,
+        gold,
+        green,
+        hybrid,
+        bronze,
+        closed,
+        oaPercent: Math.round((oa / total) * 100),
+        orcid,
+      };
+    } catch (error) {
+      console.warn('[OpenAlex] Error fetching OA stats:', error);
+      return null;
+    }
+  }
+
+  private async findAuthorId(name: string, affiliation: string): Promise<string | null> {
+    await rateLimiter.acquireToken();
+
+    // Search by name, optionally filtered by institution
+    let searchUrl = `${this.API_URL}/authors?search=${encodeURIComponent(name)}&per_page=5&mailto=${this.EMAIL}`;
+
+    const response = await fetch(searchUrl, {
+      headers: this.headers,
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const results = data.results || [];
+
+    if (results.length === 0) return null;
+    if (results.length === 1) return results[0].id;
+
+    // Multiple results — try to match by affiliation
+    const affiliationLower = affiliation.toLowerCase();
+    for (const author of results) {
+      const lastInstitution = author.last_known_institutions?.[0]?.display_name?.toLowerCase() || '';
+      const allInstitutions = (author.affiliations || []).map((a: any) => a.institution?.display_name?.toLowerCase() || '');
+      if (lastInstitution && affiliationLower.includes(lastInstitution)) return author.id;
+      if (allInstitutions.some((inst: string) => inst && affiliationLower.includes(inst))) return author.id;
+    }
+
+    // No affiliation match — return top result (OpenAlex ranks by relevance)
+    return results[0].id;
+  }
 
   public async getJournalMetrics(issn: string): Promise<JournalRanking | null> {
     await rateLimiter.acquireToken();

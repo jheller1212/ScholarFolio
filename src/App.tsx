@@ -16,6 +16,7 @@ import { SignUpWall } from './components/SignUpWall';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
+import { openAlexService } from './services/openalex';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -202,6 +203,15 @@ function AppContent() {
 
       setProfileUrl(url);
       setData(sanitizedData);
+
+      // Fetch Open Access stats from OpenAlex (non-blocking)
+      openAlexService.fetchOpenAccessStats(sanitizedData.name, sanitizedData.affiliation)
+        .then(oaStats => {
+          if (oaStats) {
+            setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
+          }
+        })
+        .catch(() => {}); // Silently ignore — OA stats are supplementary
 
       // Update browser URL with shareable link
       if (userId) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { exportProfilePdf } from '../utils/pdfExport';
 import { SearchBar } from './SearchBar';
@@ -267,6 +267,35 @@ export function ProfileView({
                 />
               </div>
             </div>
+
+            {data.openAccess && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Unlock className="h-4 w-4 text-[#2d7d7d]" />
+                  Open Access
+                  <span className="text-[10px] font-normal text-gray-400">via OpenAlex</span>
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <MetricsCard title="Open Access" value={`${data.openAccess.oaPercent}%`} subtitle={`${data.openAccess.oa} of ${data.openAccess.total}`} icon="publications" />
+                  {data.openAccess.gold > 0 && <MetricsCard title="Gold OA" value={data.openAccess.gold} icon="publications" />}
+                  {data.openAccess.green > 0 && <MetricsCard title="Green OA" value={data.openAccess.green} icon="publications" />}
+                  {data.openAccess.hybrid > 0 && <MetricsCard title="Hybrid OA" value={data.openAccess.hybrid} icon="publications" />}
+                  {data.openAccess.closed > 0 && <MetricsCard title="Closed Access" value={data.openAccess.closed} icon="publications" />}
+                </div>
+                {data.openAccess.orcid && (
+                  <div className="mt-3">
+                    <a
+                      href={`https://orcid.org/${data.openAccess.orcid}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:underline"
+                    >
+                      ORCID: {data.openAccess.orcid}
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -439,8 +439,41 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     return paragraphs;
 }
 
+function generateOpenAccessParagraph(data: Author): string | null {
+  const oa = data.openAccess;
+  if (!oa || oa.total === 0) return null;
+
+  let pctLabel: string;
+  if (oa.oaPercent >= 90) pctLabel = 'Nearly all';
+  else if (oa.oaPercent >= 70) pctLabel = `A large majority (${oa.oaPercent}%)`;
+  else if (oa.oaPercent >= 50) pctLabel = `Over half (${oa.oaPercent}%)`;
+  else if (oa.oaPercent >= 30) pctLabel = `About a third (${oa.oaPercent}%)`;
+  else if (oa.oaPercent >= 10) pctLabel = `A smaller share (${oa.oaPercent}%)`;
+  else pctLabel = `A small fraction (${oa.oaPercent}%)`;
+
+  let paragraph = `${pctLabel} of their indexed publications are openly accessible.`;
+
+  // Add breakdown if there's meaningful variety
+  const parts: string[] = [];
+  if (oa.gold > 0) parts.push(`${oa.gold} gold`);
+  if (oa.green > 0) parts.push(`${oa.green} green`);
+  if (oa.hybrid > 0) parts.push(`${oa.hybrid} hybrid`);
+  if (oa.bronze > 0) parts.push(`${oa.bronze} bronze`);
+
+  if (parts.length > 1) {
+    paragraph += ` This includes ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} open access publications.`;
+  }
+
+  if (oa.orcid) {
+    paragraph += ` Their ORCID identifier is ${oa.orcid}.`;
+  }
+
+  return paragraph;
+}
+
 export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   const narrative = useMemo(() => generateNarrativeParagraphs(data), [data]);
+  const oaParagraph = useMemo(() => generateOpenAccessParagraph(data), [data]);
 
   return (
     <div>
@@ -452,6 +485,7 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
         {narrative.map((paragraph, i) => (
           <p key={i}>{paragraph}</p>
         ))}
+        {oaParagraph && <p>{oaParagraph}</p>}
       </div>
     </div>
   );

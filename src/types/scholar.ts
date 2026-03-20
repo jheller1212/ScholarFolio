@@ -59,6 +59,18 @@ export interface Metrics {
   topCoAuthorLastPaper: string;
 }
 
+export interface OpenAccessStats {
+  total: number;
+  oa: number;
+  gold: number;
+  green: number;
+  hybrid: number;
+  bronze: number;
+  closed: number;
+  oaPercent: number;
+  orcid?: string;
+}
+
 export interface Author {
   name: string;
   affiliation: string;
@@ -68,6 +80,7 @@ export interface Author {
   totalCitations: number;
   publications: Publication[];
   metrics: Metrics;
+  openAccess?: OpenAccessStats;
 }
 
 // Utility types
