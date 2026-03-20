@@ -1,9 +1,39 @@
 import React, { useState } from 'react';
-import { ArrowUpDown, BookOpen, Presentation as Citation, Calendar, Award, Star, TrendingUp } from 'lucide-react';
-import type { Publication, JournalRanking } from '../types/scholar';
+import { ArrowUpDown, BookOpen, Presentation as Citation, Calendar, Award, Star, TrendingUp, Unlock, Lock } from 'lucide-react';
+import type { Publication, JournalRanking, OpenAccessStats, OaStatus } from '../types/scholar';
+
+const OA_COLORS: Record<OaStatus, { bg: string; text: string; label: string; tooltip: string }> = {
+  gold: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Gold OA', tooltip: 'Published in an open access journal' },
+  green: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Green OA', tooltip: 'Available via a repository (e.g. institutional or preprint)' },
+  hybrid: { bg: 'bg-sky-100', text: 'text-sky-800', label: 'Hybrid OA', tooltip: 'Open access in a subscription journal' },
+  bronze: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Bronze OA', tooltip: 'Free to read on publisher site, but no open license' },
+  closed: { bg: 'bg-gray-100', text: 'text-gray-500', label: 'Closed', tooltip: 'Not freely available' },
+};
+
+function OaBadge({ status, oaUrl }: { status: OaStatus; oaUrl?: string }) {
+  const style = OA_COLORS[status];
+  const badge = (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${style.bg} ${style.text} cursor-help`}
+      title={style.tooltip}
+    >
+      {status === 'closed' ? <Lock className="h-3 w-3 mr-0.5" /> : <Unlock className="h-3 w-3 mr-0.5" />}
+      {style.label}
+    </span>
+  );
+  if (oaUrl && status !== 'closed') {
+    return (
+      <a href={oaUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+        {badge}
+      </a>
+    );
+  }
+  return badge;
+}
 
 interface PublicationsListProps {
   publications: Publication[];
+  openAccess?: OpenAccessStats;
 }
 
 type SortField = 'year' | 'citations' | 'title';
@@ -45,7 +75,7 @@ function JournalRankingBadge({ ranking }: { ranking: JournalRanking }) {
   );
 }
 
-export function PublicationsList({ publications }: PublicationsListProps) {
+export function PublicationsList({ publications, openAccess }: PublicationsListProps) {
   const [sortField, setSortField] = useState<SortField>('citations');
   
   const handleSort = (field: SortField) => {
@@ -120,7 +150,10 @@ export function PublicationsList({ publications }: PublicationsListProps) {
       </div>
 
       <div className="space-y-4">
-        {sortedPublications.map((pub, index) => (
+        {sortedPublications.map((pub, index) => {
+          const normalizedTitle = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const pubOaStatus = openAccess?.publicationOa?.[normalizedTitle];
+          return (
           <div key={index} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
             <a
               href={pub.url}
@@ -144,9 +177,10 @@ export function PublicationsList({ publications }: PublicationsListProps) {
                     <span className="text-gray-400">{pub.venue}</span>
                   )}
                 </div>
-                {pub.journalRanking && (
-                  <div className="mt-2">
-                    <JournalRankingBadge ranking={pub.journalRanking} />
+                {(pub.journalRanking || pubOaStatus) && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {pubOaStatus && <OaBadge status={pubOaStatus.status} oaUrl={pubOaStatus.oaUrl} />}
+                    {pub.journalRanking && <JournalRankingBadge ranking={pub.journalRanking} />}
                   </div>
                 )}
               </div>
@@ -156,7 +190,8 @@ export function PublicationsList({ publications }: PublicationsListProps) {
               </div>
             </a>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

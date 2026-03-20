@@ -59,6 +59,8 @@ export interface Metrics {
   topCoAuthorLastPaper: string;
 }
 
+export type OaStatus = 'gold' | 'green' | 'hybrid' | 'bronze' | 'closed';
+
 export interface OpenAccessStats {
   total: number;
   oa: number;
@@ -69,6 +71,8 @@ export interface OpenAccessStats {
   closed: number;
   oaPercent: number;
   orcid?: string;
+  /** Per-publication OA status, keyed by normalized title */
+  publicationOa?: Record<string, { status: OaStatus; oaUrl?: string }>;
 }
 
 export interface Author {

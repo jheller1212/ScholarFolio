@@ -25,8 +25,8 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
       // but preserve commas that are part of journal names
       const baseName = venue
         .replace(/,\s*(?:vol\.?|no\.?|pp\.?|issue|pages?|supplement)\s.*/i, '')
+        .replace(/\s+\d+\s*\([\d()–\-]+\)[\s,.\d–\-]*$/, '')
         .replace(/,\s*\d[\d()–\-\s]*$/, '')
-        .replace(/\s+\d+\s*\([\d–\-]+\)\s*$/, '')
         .replace(/\s+\d+\s*$/, '')
         .trim();
       if (baseName.length > 0) {
@@ -464,8 +464,39 @@ function generateOpenAccessParagraph(data: Author): string | null {
     paragraph += ` This includes ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} open access publications.`;
   }
 
-  if (oa.orcid) {
-    paragraph += ` Their ORCID identifier is ${oa.orcid}.`;
+  // Analyze OA trend over time
+  if (oa.publicationOa && data.publications.length > 0) {
+    const yearMap: Record<number, { total: number; oa: number }> = {};
+    for (const pub of data.publications) {
+      if (pub.year <= 0) continue;
+      const normalized = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const oaInfo = oa.publicationOa[normalized];
+      if (!yearMap[pub.year]) yearMap[pub.year] = { total: 0, oa: 0 };
+      yearMap[pub.year].total++;
+      if (oaInfo && oaInfo.status !== 'closed') yearMap[pub.year].oa++;
+    }
+
+    const years = Object.entries(yearMap)
+      .map(([y, d]) => ({ year: parseInt(y), pct: d.total > 0 ? d.oa / d.total : 0 }))
+      .filter(d => d.year > 0)
+      .sort((a, b) => a.year - b.year);
+
+    if (years.length >= 4) {
+      const half = Math.floor(years.length / 2);
+      const earlyAvg = years.slice(0, half).reduce((s, d) => s + d.pct, 0) / half;
+      const lateAvg = years.slice(half).reduce((s, d) => s + d.pct, 0) / (years.length - half);
+      const diff = lateAvg - earlyAvg;
+
+      if (diff > 0.15) {
+        paragraph += ` There is a notable trend toward increased open access publishing in recent years.`;
+      } else if (diff > 0.05) {
+        paragraph += ` Open access publishing has been gradually increasing over their career.`;
+      } else if (diff < -0.15) {
+        paragraph += ` Interestingly, the share of open access publications has decreased in recent years.`;
+      } else {
+        paragraph += ` The proportion of open access publications has remained relatively stable over time.`;
+      }
+    }
   }
 
   return paragraph;

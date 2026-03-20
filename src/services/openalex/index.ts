@@ -1,5 +1,5 @@
 import { ApiError } from '../../utils/api';
-import type { JournalRanking, OpenAccessStats } from '../../types/scholar';
+import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
 import { rateLimiter } from '../scholar/rate-limiter';
 
 export class OpenAlexService {
@@ -61,6 +61,37 @@ export class OpenAlexService {
         }
       }
 
+      // Step 4: Fetch per-publication OA status (paginated, up to 200 works per page)
+      const publicationOa: Record<string, { status: OaStatus; oaUrl?: string }> = {};
+      let page = 1;
+      const maxPages = 10; // Up to 2000 works
+      while (page <= maxPages) {
+        await rateLimiter.acquireToken();
+        const pubsUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year&per_page=200&page=${page}&mailto=${this.EMAIL}`;
+        const pubsResponse = await fetch(pubsUrl, {
+          headers: this.headers,
+          signal: AbortSignal.timeout(15000)
+        });
+        if (!pubsResponse.ok) break;
+        const pubsData = await pubsResponse.json();
+        const results = pubsData.results || [];
+        if (results.length === 0) break;
+
+        for (const work of results) {
+          if (work.title) {
+            const normalizedTitle = work.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const status: OaStatus = work.open_access?.oa_status === 'diamond' ? 'gold' : (work.open_access?.oa_status || 'closed');
+            publicationOa[normalizedTitle] = {
+              status,
+              oaUrl: work.open_access?.oa_url || undefined,
+            };
+          }
+        }
+
+        if (results.length < 200) break;
+        page++;
+      }
+
       return {
         total,
         oa,
@@ -71,6 +102,7 @@ export class OpenAlexService {
         closed,
         oaPercent: Math.round((oa / total) * 100),
         orcid,
+        publicationOa,
       };
     } catch (error) {
       console.warn('[OpenAlex] Error fetching OA stats:', error);
