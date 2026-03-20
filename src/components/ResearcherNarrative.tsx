@@ -21,8 +21,14 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
   publications.forEach(pub => {
     const venue = pub.venue?.trim();
     if (venue && venue.length > 0) {
-      // Normalize: strip volume/issue/page info after first comma
-      const baseName = venue.replace(/,.*$/, '').replace(/\s+\d+.*$/, '').trim();
+      // Normalize: strip volume/issue/page info (e.g. ", vol. 15", ", 34(2)")
+      // but preserve commas that are part of journal names
+      const baseName = venue
+        .replace(/,\s*(?:vol\.?|no\.?|pp\.?|issue|pages?|supplement)\s.*/i, '')
+        .replace(/,\s*\d[\d()–\-\s]*$/, '')
+        .replace(/\s+\d+\s*\([\d–\-]+\)\s*$/, '')
+        .replace(/\s+\d+\s*$/, '')
+        .trim();
       if (baseName.length > 0) {
         const key = baseName.toLowerCase();
         const existing = venueCounts.get(key);
