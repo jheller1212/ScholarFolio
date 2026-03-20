@@ -24,7 +24,9 @@ import {
   Activity,
   Hourglass,
   PieChart,
-  Timer
+  Timer,
+  Unlock,
+  Lock
 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { metricInfo } from '../data/metricInfo';
@@ -33,10 +35,11 @@ interface MetricsCardProps {
   title: string;
   value: number | string;
   subtitle?: string;
-  icon: 'citations' | 'hIndex' | 'gIndex' | 'publications' | 'i10Index' | 'scr' | 'hpIndex' | 
-        'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' | 
+  icon: 'citations' | 'hIndex' | 'gIndex' | 'publications' | 'i10Index' | 'scr' | 'hpIndex' |
+        'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' |
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
-        'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized';
+        'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
+        'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess';
 }
 
 export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) {
@@ -81,7 +84,15 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'scr': return <Workflow className="h-3.5 w-3.5" />;
       case 'sIndex': return <Zap className="h-3.5 w-3.5" />;
       case 'hpIndex': return <Award className="h-3.5 w-3.5" />;
-      
+
+      // Open Access metrics
+      case 'oaPercent': return <Unlock className="h-3.5 w-3.5" />;
+      case 'goldOa': return <Unlock className="h-3.5 w-3.5" />;
+      case 'greenOa': return <Unlock className="h-3.5 w-3.5" />;
+      case 'hybridOa': return <Unlock className="h-3.5 w-3.5" />;
+      case 'bronzeOa': return <Unlock className="h-3.5 w-3.5" />;
+      case 'closedAccess': return <Lock className="h-3.5 w-3.5" />;
+
       default: return <Citation className="h-3.5 w-3.5" />;
     }
   };
@@ -114,6 +125,12 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'halfLife': return 'halfLife';
       case 'gini': return 'gini';
       case 'ageNormalized': return 'ageNormalized';
+      case 'oaPercent': return 'oaPercent';
+      case 'goldOa': return 'goldOa';
+      case 'greenOa': return 'greenOa';
+      case 'hybridOa': return 'hybridOa';
+      case 'bronzeOa': return 'bronzeOa';
+      case 'closedAccess': return 'closedAccess';
       default: return 'citations';
     }
   };

@@ -124,5 +124,41 @@ export const metricInfo = {
     pros: "Shows research productivity consistency and output level throughout career.",
     cons: "Doesn't reflect publication quality or account for varying career stage demands.",
     link: "https://en.wikipedia.org/wiki/Academic_publishing"
+  },
+  oaPercent: {
+    description: "Percentage of publications that are freely accessible (gold, green, hybrid, or bronze open access) according to OpenAlex.",
+    pros: "Indicates commitment to open science and research accessibility. Higher OA rates increase visibility and citation potential.",
+    cons: "OpenAlex coverage may not be complete. Bronze OA (free to read but no open license) is included in the OA count.",
+    link: "https://en.wikipedia.org/wiki/Open_access"
+  },
+  goldOa: {
+    description: "Publications in fully open access journals where the publisher makes all articles freely available (e.g. PLOS ONE, Nature Communications).",
+    pros: "Highest level of guaranteed permanent access. Articles are immediately and permanently free.",
+    cons: "Often requires article processing charges (APCs) paid by the author or their institution.",
+    link: "https://en.wikipedia.org/wiki/Open_access#Gold_OA"
+  },
+  greenOa: {
+    description: "Publications deposited in a repository (institutional or preprint server like SSRN, arXiv) that may differ from the published version.",
+    pros: "No cost to the author. Repositories provide long-term preservation and often broader discoverability.",
+    cons: "May be a preprint or accepted manuscript rather than the final published version. Some embargo periods apply.",
+    link: "https://en.wikipedia.org/wiki/Open_access#Green_OA"
+  },
+  hybridOa: {
+    description: "Open access articles published in subscription journals, typically made OA through an APC or a transformative agreement.",
+    pros: "Combines the prestige of established journals with open access. Increasingly supported by institutional agreements.",
+    cons: "Can result in 'double dipping' where publishers charge both subscriptions and APCs.",
+    link: "https://en.wikipedia.org/wiki/Hybrid_open-access_journal"
+  },
+  bronzeOa: {
+    description: "Publications free to read on the publisher's website but without a formal open license. Access may be temporary.",
+    pros: "Provides free readability without any cost to the author.",
+    cons: "No guarantee of permanent access. Cannot be legally redistributed or archived. Publisher may revoke access.",
+    link: "https://en.wikipedia.org/wiki/Open_access#Bronze_OA"
+  },
+  closedAccess: {
+    description: "Publications behind a paywall, accessible only through subscriptions or individual purchase.",
+    pros: "Traditional publishing model with established peer review processes.",
+    cons: "Limits research accessibility and may reduce citation potential and societal impact.",
+    link: "https://en.wikipedia.org/wiki/Paywall#Academic_publishing"
   }
 };
