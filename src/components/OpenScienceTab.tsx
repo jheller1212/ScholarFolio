@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Unlock, ExternalLink } from 'lucide-react';
 import { MetricsCard } from './MetricsCard';
 import type { Author, OaStatus } from '../types/scholar';
@@ -8,16 +8,22 @@ interface OpenScienceTabProps {
 }
 
 function OaTrend({ publications, publicationOa }: { publications: Author['publications']; publicationOa?: Record<string, { status: OaStatus }> }) {
+  const [hoveredYear, setHoveredYear] = useState<number | null>(null);
+
   const yearlyOa = useMemo(() => {
     if (!publicationOa) return [];
-    const yearMap: Record<number, { total: number; oa: number }> = {};
+    const yearMap: Record<number, { total: number; oa: number; closed: number }> = {};
     for (const pub of publications) {
       if (pub.year <= 0) continue;
       const normalized = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
       const oaInfo = publicationOa[normalized];
-      if (!yearMap[pub.year]) yearMap[pub.year] = { total: 0, oa: 0 };
+      if (!yearMap[pub.year]) yearMap[pub.year] = { total: 0, oa: 0, closed: 0 };
       yearMap[pub.year].total++;
-      if (oaInfo && oaInfo.status !== 'closed') yearMap[pub.year].oa++;
+      if (oaInfo && oaInfo.status !== 'closed') {
+        yearMap[pub.year].oa++;
+      } else {
+        yearMap[pub.year].closed++;
+      }
     }
     return Object.entries(yearMap)
       .map(([year, data]) => ({ year: parseInt(year), ...data, pct: Math.round((data.oa / data.total) * 100) }))
@@ -28,19 +34,40 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
   if (yearlyOa.length < 2) return null;
 
   const maxTotal = Math.max(...yearlyOa.map(d => d.total));
+  const hoveredData = yearlyOa.find(d => d.year === hoveredYear);
 
   return (
     <div>
       <h3 className="text-sm font-semibold text-gray-900 mb-3">Open Access Over Time</h3>
       <div className="bg-white rounded-xl border border-gray-100 shadow-card p-6">
+        {/* Hover detail panel */}
+        <div className="h-10 mb-3">
+          {hoveredData ? (
+            <div className="flex items-center gap-4 text-sm animate-in fade-in duration-150">
+              <span className="font-semibold text-gray-900">{hoveredData.year}</span>
+              <span className="text-[#2d7d7d] font-medium">{hoveredData.oa} open access</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-500">{hoveredData.closed} closed</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-500">{hoveredData.total} total</span>
+              <span className="text-gray-400">·</span>
+              <span className="font-medium text-gray-700">{hoveredData.pct}% OA</span>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Hover over a bar to see the breakdown</p>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           {yearlyOa.map(({ year, total, oa, pct }) => (
-            <div key={year} className="flex items-center gap-3 text-sm">
-              <span className="text-gray-500 w-12 text-xs shrink-0">{year}</span>
-              <div
-                className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative cursor-help"
-                title={`${oa} of ${total} publications are open access (${pct}%)`}
-              >
+            <div
+              key={year}
+              className={`flex items-center gap-3 text-sm rounded-lg px-1 -mx-1 py-0.5 transition-colors ${hoveredYear === year ? 'bg-gray-50' : ''}`}
+              onMouseEnter={() => setHoveredYear(year)}
+              onMouseLeave={() => setHoveredYear(null)}
+            >
+              <span className={`w-12 text-xs shrink-0 transition-colors ${hoveredYear === year ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{year}</span>
+              <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative cursor-pointer">
                 <div
                   className="absolute inset-y-0 left-0 bg-gray-200 rounded-full transition-all duration-300"
                   style={{ width: `${(total / maxTotal) * 100}%` }}
@@ -50,10 +77,7 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
                   style={{ width: `${(oa / maxTotal) * 100}%` }}
                 />
               </div>
-              <span
-                className="text-xs text-gray-500 w-16 text-right shrink-0 cursor-help"
-                title={`${oa} of ${total} open access`}
-              >
+              <span className={`text-xs w-16 text-right shrink-0 transition-colors ${hoveredYear === year ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
                 {pct}% OA
               </span>
             </div>
@@ -66,7 +90,7 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
           </span>
           <span className="flex items-center gap-1">
             <span className="w-3 h-2 rounded bg-gray-200 inline-block" />
-            Total publications
+            Closed
           </span>
         </div>
       </div>
