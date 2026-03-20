@@ -5,8 +5,6 @@ const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
   'https://www.scholarfolio.org',
   'https://scholarfolio.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
 ];
 
 function getCorsHeaders(req: Request) {
@@ -870,41 +868,47 @@ Deno.serve(async (req) => {
 
     console.log("Cache miss, fetching fresh data");
 
-    // Check credits for authenticated users before making expensive API calls
-    let creditsRemaining: number | null = null;
+    // Atomically check and decrement credits for authenticated users
+    let creditDeducted = false;
     if (userId) {
-      const { data: creditData, error: creditError } = await supabase
+      // Ensure credits row exists
+      const { data: creditData } = await supabase
         .from('user_credits')
         .select('credits_remaining')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (creditError) {
-        console.error("Credit check error:", creditError);
-      }
-
       if (!creditData) {
-        // Auto-create credits row for users who signed up before the migration
         console.log(`[Credits] No credits row for user ${userId}, creating with default 5`);
-        const { error: insertError } = await supabase
+        await supabase
           .from('user_credits')
           .insert({ user_id: userId, credits_remaining: 5, total_purchased: 0 });
-        if (insertError) {
-          console.error("Credit insert error:", insertError);
-        }
-        creditsRemaining = 5;
-      } else {
-        creditsRemaining = creditData.credits_remaining ?? 0;
       }
 
-      if (creditsRemaining <= 0) {
+      // Atomic decrement — returns false if no credits available
+      const { data: success, error: decrError } = await supabase.rpc('decrement_credits', { p_user_id: userId });
+
+      if (decrError) {
+        console.error("Credit decrement error:", decrError);
+        // Fallback: check credits manually
+        const { data: fallback } = await supabase
+          .from('user_credits')
+          .select('credits_remaining')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if ((fallback?.credits_remaining ?? 0) <= 0) {
+          return new Response(
+            JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (success === false) {
         return new Response(
           JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      } else {
+        creditDeducted = true;
       }
     }
 
@@ -941,17 +945,7 @@ Deno.serve(async (req) => {
 
     logRequest(req, authorId, data._source === 'scraper' ? 'scraper' : 'serpapi', userId);
 
-    // Decrement user credits (only for authenticated users, only for fresh fetches)
-    if (userId && creditsRemaining !== null) {
-      const { error: decrError } = await supabase.rpc('decrement_credits', { p_user_id: userId });
-      if (decrError) {
-        // Use raw SQL fallback if RPC not yet created
-        await supabase
-          .from('user_credits')
-          .update({ credits_remaining: Math.max(0, creditsRemaining - 1) })
-          .eq('user_id', userId);
-      }
-    }
+    // Credits already deducted atomically before the API call
 
     return new Response(
       JSON.stringify(data),
@@ -963,7 +957,7 @@ Deno.serve(async (req) => {
     console.error("Edge function error:", error);
     return new Response(
       JSON.stringify({
-        error: error.message || "Unable to fetch profile data. Please try again later or contact the site administrator."
+        error: "Unable to fetch profile data. Please try again later or contact the site administrator."
       }),
       {
         status: 500,

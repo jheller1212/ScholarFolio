@@ -5,8 +5,6 @@ const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
   'https://www.scholarfolio.org',
   'https://scholarfolio.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
 ];
 
 function getCorsHeaders(req: Request) {
