@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
+import { ClaimProfileModal } from './ClaimProfileModal';
 import { exportProfilePdf } from '../utils/pdfExport';
 import { SearchBar } from './SearchBar';
 import { TopicsList } from './TopicsList';
@@ -11,6 +12,8 @@ import { CitationNetwork } from './CitationNetwork';
 import { OpenScienceTab } from './OpenScienceTab';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import type { Author } from '../types/scholar';
 import { extractLastName } from '../utils/names';
 import packageJson from '../../package.json';
@@ -48,16 +51,76 @@ export function ProfileView({
   authControls,
   onSupport
 }: ProfileViewProps) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('metrics');
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
+  const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
 
   // Extract scholar ID from URL params or profileUrl
   const scholarId = new URLSearchParams(window.location.search).get('user')
     || (profileUrl ? new URL(profileUrl).searchParams.get('user') : null)
     || '';
+
+  // Check if this profile has been claimed
+  useEffect(() => {
+    if (!scholarId) return;
+    const checkClaim = async () => {
+      const { data: claim } = await supabase
+        .from('claimed_profiles')
+        .select('slug, user_id')
+        .eq('author_id', scholarId)
+        .maybeSingle();
+      if (claim) {
+        setClaimedSlug(claim.slug);
+        setClaimedByCurrentUser(user?.id === claim.user_id);
+      } else {
+        setClaimedSlug(null);
+        setClaimedByCurrentUser(false);
+      }
+    };
+    checkClaim();
+  }, [scholarId, user?.id]);
+
+  // Update document title and OG meta tags for link previews
+  useEffect(() => {
+    if (!data) return;
+    const title = `${data.name} — Scholar Folio`;
+    const description = `${data.affiliation} · ${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex} · ${data.publications.length} publications`;
+    const url = claimedSlug
+      ? `https://scholarfolio.org/${claimedSlug}`
+      : `https://scholarfolio.org/?user=${scholarId}`;
+
+    document.title = title;
+
+    const setMeta = (attr: string, key: string, value: string) => {
+      let el = document.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;
+      if (el) {
+        el.setAttribute('content', value);
+      }
+    };
+
+    setMeta('name', 'description', description);
+    setMeta('property', 'og:title', title);
+    setMeta('property', 'og:description', description);
+    setMeta('property', 'og:url', url);
+    setMeta('name', 'twitter:title', title);
+    setMeta('name', 'twitter:description', description);
+
+    return () => {
+      document.title = 'Scholar Folio — Your research, at a glance';
+    };
+  }, [data, claimedSlug, scholarId]);
+
+  const handleClaimed = (slug: string) => {
+    setClaimedSlug(slug);
+    setClaimedByCurrentUser(true);
+    setShowClaimModal(false);
+  };
 
   const handleShare = () => {
     const url = window.location.href;
@@ -167,6 +230,24 @@ export function ProfileView({
                     <Download className="h-3 w-3" />
                     PDF
                   </button>
+                  {claimedSlug ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      {claimedByCurrentUser ? (
+                        <a href={`/${claimedSlug}`} className="hover:underline">scholarfolio.org/{claimedSlug}</a>
+                      ) : (
+                        'Verified profile'
+                      )}
+                    </span>
+                  ) : user && scholarId ? (
+                    <button
+                      onClick={() => setShowClaimModal(true)}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                    >
+                      <Link className="h-3 w-3" />
+                      Claim profile
+                    </button>
+                  ) : null}
                   {data.openAccess?.orcid && (
                     <a
                       href={`https://orcid.org/${data.openAccess.orcid}`}
@@ -337,6 +418,15 @@ export function ProfileView({
           isOpen={showEmbed}
           onClose={() => setShowEmbed(false)}
           scholarId={scholarId}
+        />
+      )}
+
+      {showClaimModal && scholarId && data && (
+        <ClaimProfileModal
+          onClose={() => setShowClaimModal(false)}
+          authorId={scholarId}
+          authorName={data.name}
+          onClaimed={handleClaimed}
         />
       )}
     </div>
