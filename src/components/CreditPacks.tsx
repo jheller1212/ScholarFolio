@@ -1,36 +1,33 @@
 import React, { useState } from 'react';
-import { Zap, Star, X, Shield, Clock, TrendingUp, Check, Sparkles } from 'lucide-react';
+import { Zap, X, Shield, Clock, Check, Sparkles, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { AuthButton } from './AuthButton';
 
 const PACKS = [
   {
     id: 'starter',
-    name: 'Starter',
-    credits: 20,
+    name: 'Supporter',
+    credits: 25,
     price: 500,
     label: '5.00',
-    perSearch: '0.25',
     features: [
-      '20 profile analyses',
-      'Full citation metrics',
-      'Co-author network mapping',
+      'Help cover paid Scholar data access',
+      '25 additional profile refreshes',
+      'All portfolio tools stay available',
     ],
   },
   {
     id: 'pro',
-    name: 'Pro',
-    credits: 50,
+    name: 'Open Science Supporter',
+    credits: 75,
     price: 1000,
     label: '10.00',
-    perSearch: '0.20',
     popular: true,
-    savings: '20',
     features: [
-      '50 profile analyses',
-      'Full citation metrics',
-      'Co-author network mapping',
-      'Priority support',
+      'Cover a larger share of monthly costs',
+      '75 additional profile refreshes',
+      'Support an open, non-ranking research tool',
+      'Credits never expire',
     ],
   },
 ] as const;
@@ -89,14 +86,14 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
             <X className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-5 w-5 text-amber-300" />
-            <span className="text-xs font-medium uppercase tracking-wider text-white/80">Unlock more insights</span>
+            <Heart className="h-5 w-5 text-amber-300" />
+            <span className="text-xs font-medium uppercase tracking-wider text-white/80">Support Scholar Folio</span>
           </div>
           <h2 className="text-xl font-bold">
-            You're out of searches
+            Keep this open-science tool running
           </h2>
           <p className="text-sm text-white/80 mt-1">
-            Top up to keep analyzing scholar profiles with full metrics.
+            Scholar data access is paid. Small contributions help cover the monthly SerpAPI cost without turning the app into a ranking product.
           </p>
           {credits !== null && credits <= 0 && (
             <div className="mt-3 inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs font-medium">
@@ -106,9 +103,18 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
+        {!user && (
+          <div className="mx-6 mt-4 bg-[#f8fafc] border border-gray-100 rounded-xl p-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-600">
+              Sign in first so Stripe can attach the support credits to your account.
+            </p>
+            <AuthButton />
+          </div>
+        )}
+
         {/* Packs - side by side */}
-        <div className="px-6 -mt-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className={`px-6 ${user ? '-mt-4' : 'mt-4'}`}>
+          <div className={`grid grid-cols-2 gap-3 ${!user ? 'opacity-60' : ''}`}>
             {PACKS.map(pack => (
               <div
                 key={pack.id}
@@ -134,12 +140,12 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
                     <span className="text-3xl font-bold text-gray-900">€{pack.label}</span>
                   </div>
                   <div className="mt-1 text-xs text-gray-500">
-                    €{pack.perSearch} per search
+                    Includes {pack.credits} refreshes
                   </div>
                   {pack.popular && (
                     <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">
-                      <TrendingUp className="h-3 w-3" />
-                      Save {pack.savings}%
+                      <Sparkles className="h-3 w-3" />
+                      Most helpful
                     </div>
                   )}
                 </div>
@@ -160,7 +166,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
                 {/* CTA button */}
                 <button
                   onClick={() => handlePurchase(pack.id)}
-                  disabled={loading !== null}
+                  disabled={loading !== null || !user}
                   className={`w-full mt-4 py-2.5 text-sm font-semibold rounded-lg transition-all ${
                     pack.popular
                       ? 'bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] shadow-md shadow-[#2d7d7d]/20 hover:shadow-lg hover:shadow-[#2d7d7d]/30'
@@ -176,7 +182,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
                       Processing...
                     </span>
                   ) : (
-                    `Get ${pack.credits} searches`
+                    `Support with €${pack.label}`
                   )}
                 </button>
               </div>
@@ -197,11 +203,11 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
-              Credits never expire
+              No subscription
             </span>
             <span className="flex items-center gap-1">
               <Zap className="h-3.5 w-3.5" />
-              Instant delivery
+              Instant credits
             </span>
           </div>
           <div className="flex items-center justify-center gap-2 mt-2">

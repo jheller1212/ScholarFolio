@@ -18,8 +18,8 @@ function getCorsHeaders(req: Request) {
 }
 
 const PACKS: Record<string, { credits: number; priceInCents: number; name: string }> = {
-  starter: { credits: 20, priceInCents: 500, name: 'Starter — 20 searches' },
-  pro: { credits: 50, priceInCents: 1000, name: 'Pro — 50 searches' },
+  starter: { credits: 25, priceInCents: 500, name: 'Supporter — helps keep ScholarFolio running' },
+  pro: { credits: 75, priceInCents: 1000, name: 'Open Science Supporter — covers Scholar data access' },
 };
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
           currency: 'eur',
           product_data: {
             name: `ScholarFolio ${pack.name}`,
-            description: `${pack.credits} scholar profile searches`,
+            description: `Support ScholarFolio and receive ${pack.credits} profile refreshes`,
           },
           unit_amount: pack.priceInCents,
         },

@@ -190,7 +190,9 @@ function AppContent() {
 
       // Track usage
       if (!user) {
-        incrementAnonSearches();
+        if (profileData.cacheStatus !== 'hit') {
+          incrementAnonSearches();
+        }
       } else {
         refreshCredits();
       }
@@ -282,6 +284,7 @@ function AppContent() {
           onReset={handleReset}
           socialLinks={<SocialLinks />}
           authControls={authControls}
+          onSupport={() => setShowCreditPacks(true)}
         />
       );
     }

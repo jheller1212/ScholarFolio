@@ -152,6 +152,7 @@ async function fetchViaEdgeFunction(normalizedUrl: string) {
   }
 
   const data = await response.json();
+  data.cacheStatus = response.headers.get('X-Cache') === 'HIT' ? 'hit' : 'miss';
   if (!data || !data.name) {
     throw new ApiError('Invalid profile data received', 'DATA_ERROR');
   }
@@ -264,7 +265,8 @@ function buildAuthorResult(data: any): Author {
     hIndex: data.hIndex || 0,
     totalCitations: data.totalCitations || 0,
     publications,
-    metrics
+    metrics,
+    cacheStatus: data.cacheStatus
   };
 }
 

@@ -90,27 +90,26 @@ export function AboutPage({ onBack }: AboutPageProps) {
               <strong>5 more when you create an account</strong>.
             </p>
 
-            <p className="mb-4">After that, credit packs cover the API costs:</p>
+            <p className="mb-4">After that, supporter packs help cover the API costs:</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-white rounded-xl border border-gray-100 shadow-card p-5">
-                <p className="font-semibold text-[#1e293b] mb-1">Starter</p>
+                <p className="font-semibold text-[#1e293b] mb-1">Supporter</p>
                 <p className="text-2xl font-bold text-[#2d7d7d]">&euro;5</p>
-                <p className="text-sm text-[#64748b] mt-1">20 searches</p>
+                <p className="text-sm text-[#64748b] mt-1">25 profile refreshes</p>
               </div>
               <div className="bg-white rounded-xl border border-gray-100 shadow-card p-5">
-                <p className="font-semibold text-[#1e293b] mb-1">Pro</p>
+                <p className="font-semibold text-[#1e293b] mb-1">Open Science Supporter</p>
                 <p className="text-2xl font-bold text-[#2d7d7d]">&euro;10</p>
-                <p className="text-sm text-[#64748b] mt-1">50 searches</p>
+                <p className="text-sm text-[#64748b] mt-1">75 profile refreshes</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <p>
                 <strong>Why it is not completely free:</strong> Every profile lookup requires an API call to
-                retrieve Google Scholar data, and that API charges per request. The credit packs exist to
-                cover this cost. There are no subscriptions, no feature gating between free and paid users,
-                and no data monetization.
+                retrieve Google Scholar data, and that API charges per request. The supporter packs exist to
+                cover this cost. There are no subscriptions, no ranking tools, and no data monetization.
               </p>
               <p>
                 <strong>Cached profiles</strong> (searched by anyone in the last 72 hours) are always free

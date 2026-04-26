@@ -923,7 +923,27 @@ Deno.serve(async (req) => {
       console.log("Coalescing with in-flight request for:", authorId);
     }
 
-    const data = await dataPromise;
+    let data;
+    try {
+      data = await dataPromise;
+    } catch (fetchError) {
+      if (creditDeducted && userId) {
+        console.log(`[Credits] Refunding deducted credit after failed fetch for user ${userId}`);
+        const { data: currentCredits } = await supabase
+          .from('user_credits')
+          .select('credits_remaining')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (currentCredits) {
+          await supabase
+            .from('user_credits')
+            .update({ credits_remaining: currentCredits.credits_remaining + 1 })
+            .eq('user_id', userId);
+        }
+      }
+      throw fetchError;
+    }
 
     // Cache the result
     const expiresAt = new Date();

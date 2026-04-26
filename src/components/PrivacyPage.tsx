@@ -23,18 +23,21 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-10">Privacy Policy</h1>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
-          <p>Scholar Folio does not collect personal data.</p>
+          <p>Scholar Folio collects the minimum data needed to run the service and prevent abuse.</p>
 
           <p>
             It does not use cookies beyond what is strictly necessary for the app to function.
           </p>
 
           <p>
-            Google Scholar profile URLs entered are not stored or logged.
+            Google Scholar profile IDs may be cached for a limited time so repeated profile refreshes are faster
+            and do not create unnecessary paid API requests.
           </p>
 
           <p>
-            No analytics tracking beyond anonymous page view counts (if applicable).
+            Search requests may be logged with technical metadata such as timestamp, profile ID, IP address,
+            origin, and user agent. These logs are used for rate limiting, abuse prevention, debugging, and
+            basic service analytics.
           </p>
 
           <p>

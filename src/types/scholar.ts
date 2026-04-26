@@ -85,6 +85,7 @@ export interface Author {
   publications: Publication[];
   metrics: Metrics;
   openAccess?: OpenAccessStats;
+  cacheStatus?: 'hit' | 'miss';
 }
 
 // Utility types

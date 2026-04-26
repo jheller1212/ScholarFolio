@@ -21,6 +21,6 @@ describe('g-index calculations', () => {
 
   test('should handle large citation counts', () => {
     const citations = [100, 90, 80, 70, 60];
-    expect(calculateGIndex(citations)).toBe(12); // sqrt(400) = 20
+    expect(calculateGIndex(citations)).toBe(5);
   });
 });
