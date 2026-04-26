@@ -14,6 +14,7 @@ import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
 import { SignUpWall } from './components/SignUpWall';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { supabase } from './lib/supabase';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService } from './services/openalex';
@@ -114,7 +115,7 @@ function AppContent() {
   const handleSearchRef = useRef<((url: string) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
 
-  // Handle shareable profile URL (?user=AUTHOR_ID)
+  // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
   const [initialUrlHandled, setInitialUrlHandled] = useState(false);
   useEffect(() => {
     if (initialUrlHandled) return;
@@ -128,6 +129,23 @@ function AppContent() {
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
       handleSearchRef.current(scholarUrl);
+      return;
+    }
+
+    // Check for vanity slug in the path (e.g. /jonas-heller)
+    const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+    if (pathSlug && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(pathSlug)) {
+      supabase
+        .from('claimed_profiles')
+        .select('author_id')
+        .eq('slug', pathSlug)
+        .maybeSingle()
+        .then(({ data: claim }) => {
+          if (claim?.author_id && handleSearchRef.current) {
+            const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(claim.author_id)}`;
+            handleSearchRef.current(scholarUrl);
+          }
+        });
     }
   }, [initialUrlHandled]);
 
