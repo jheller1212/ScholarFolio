@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { FileText, TrendingUp, Users, BookOpen, Award } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import type { Author } from '../types/scholar';
 import { findJournalRanking } from '../data/journalRankings';
 
@@ -506,13 +507,100 @@ function generateOpenAccessParagraph(data: Author): string | null {
 export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   const narrative = useMemo(() => generateNarrativeParagraphs(data), [data]);
   const oaParagraph = useMemo(() => generateOpenAccessParagraph(data), [data]);
+  const [showReport, setShowReport] = useState(false);
+  const [reportMsg, setReportMsg] = useState('');
+  const [reportEmail, setReportEmail] = useState('');
+  const [reportStatus, setReportStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  const scholarId = new URLSearchParams(window.location.search).get('user')
+    || window.location.pathname.replace(/^\//, '').replace(/\/$/, '')
+    || '';
+
+  const handleReport = async () => {
+    if (!reportMsg.trim()) return;
+    setReportStatus('sending');
+    await supabase.from('profile_reports').insert({
+      author_id: scholarId,
+      author_name: data.name,
+      reporter_email: reportEmail || null,
+      message: reportMsg.trim(),
+      page_url: window.location.href,
+    });
+    setReportStatus('sent');
+    setTimeout(() => {
+      setShowReport(false);
+      setReportMsg('');
+      setReportEmail('');
+      setReportStatus('idle');
+    }, 2000);
+  };
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-900 flex items-center mb-3">
-        <FileText className="h-4 w-4 text-[#2d7d7d] mr-2" />
-        Research Profile
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+          <FileText className="h-4 w-4 text-[#2d7d7d] mr-2" />
+          Research Profile
+        </h3>
+        <button
+          onClick={() => setShowReport(!showReport)}
+          className="inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
+          title="Report an error in this profile"
+        >
+          <Flag className="h-3 w-3" />
+          Report error
+        </button>
+      </div>
+
+      {showReport && (
+        <div className="mb-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          {reportStatus === 'sent' ? (
+            <div className="flex items-center gap-2 text-sm text-emerald-600">
+              <Check className="h-4 w-4" />
+              Thanks! We'll review this.
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 mb-2">
+                Spotted something wrong? Let us know and we'll fix it.
+              </p>
+              <textarea
+                value={reportMsg}
+                onChange={e => setReportMsg(e.target.value)}
+                placeholder="Describe the error (e.g., 'Wrong affiliation', 'Missing publications'...)"
+                rows={2}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none resize-none mb-2"
+                maxLength={1000}
+              />
+              <input
+                type="email"
+                value={reportEmail}
+                onChange={e => setReportEmail(e.target.value)}
+                placeholder="Your email (optional, for follow-up)"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none mb-2"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleReport}
+                  disabled={!reportMsg.trim() || reportStatus === 'sending'}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg disabled:opacity-50 transition-colors"
+                >
+                  {reportStatus === 'sending' ? (
+                    <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Sending...</span>
+                  ) : 'Submit report'}
+                </button>
+                <button
+                  onClick={() => { setShowReport(false); setReportMsg(''); setReportEmail(''); }}
+                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
         {narrative.map((paragraph, i) => (
           <p key={i}>{paragraph}</p>
