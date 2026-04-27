@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User } from 'lucide-react';
+import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { Logo } from './Logo';
@@ -128,13 +128,13 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       <section className="relative pt-16 pb-6 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] mb-4 leading-[1.05]">
-            Know your
+            Claim your
             <br />
-            <span className="gradient-text">research story</span>
+            <span className="gradient-text">research profile</span>
           </h1>
 
           <p className="animate-fade-up animate-delay-250 text-base md:text-lg text-[#64748b] max-w-xl mx-auto mb-8 leading-relaxed">
-            Paste your Google Scholar profile URL to see your publication history, collaboration network, and research reach — on one page.
+            Get a shareable portfolio page for your research — your publications, citations, and collaboration network at a memorable URL like <span className="font-medium text-[#2d7d7d]">scholarfolio.org/your-name</span>.
           </p>
 
           {/* Search area */}
@@ -146,7 +146,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] mb-3">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3 w-3" />
-                Try it free — sign up for <strong>5 extra searches</strong>.
+                Sign up to <strong>claim your profile</strong> and get a permanent URL.
               </span>
             </p>
           )}
@@ -171,15 +171,20 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 scroll-reveal">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] mb-3">
-              Everything you need to understand your research
+              Your research, one link away
             </h2>
             <p className="text-sm text-[#64748b] max-w-lg mx-auto">
-              A clear, honest picture of your research — built from your Google Scholar profile.
+              A clear, honest picture of your research — built from your Google Scholar profile, shareable in one click.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
+              {
+                icon: Link,
+                title: "Your Profile, Your URL",
+                description: "Claim a vanity URL like scholarfolio.org/your-name. Add it to your CV, email signature, or LinkedIn — a verified, always-up-to-date research page."
+              },
               {
                 icon: BarChart,
                 title: "Research Reach",
@@ -189,11 +194,6 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
                 icon: Network,
                 title: "Collaboration Network",
                 description: "Co-authorship visualization, collaboration patterns, and research network mapping."
-              },
-              {
-                icon: BookOpen,
-                title: "Publication History",
-                description: "Where you have published, how your output has evolved, and which venues your work calls home."
               }
             ].map((feature, index) => (
               <div
@@ -216,13 +216,13 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
         <div className="max-w-3xl mx-auto scroll-reveal">
           <div className="bg-[#1e293b] rounded-2xl p-8 md:p-10 text-center">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
-              Ready to explore?
+              Claim your profile
             </h2>
             <p className="text-sm text-white/60 mb-3 font-serif italic">
-              Explore your research portfolio
+              Your research deserves its own page
             </p>
             <p className="text-sm text-white/50 mb-6 max-w-md mx-auto">
-              Enter your Google Scholar profile URL below for an overview of your research portfolio.
+              Search your Google Scholar profile to get started. Claim your vanity URL and share your research with the world.
             </p>
 
             <div className="max-w-xl mx-auto mb-3">
@@ -234,7 +234,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
 
             <div className="flex flex-wrap justify-center gap-6">
-              {['Instant Overview', 'Visual Insights', 'No Sign-up Required'].map((label) => (
+              {['Permanent URL', 'Verified Badge', 'Share Anywhere'].map((label) => (
                 <div key={label} className="flex items-center gap-1.5 text-xs text-white/60">
                   <CheckCircle className="h-3.5 w-3.5 text-white/40" />
                   <span>{label}</span>
