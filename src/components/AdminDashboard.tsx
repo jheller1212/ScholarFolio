@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -49,6 +49,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('week');
+  const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string }>>([]);
 
   const userEmail = user?.email || user?.user_metadata?.email || '';
   const isAdmin = userEmail === ADMIN_EMAIL;
@@ -61,10 +62,11 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     async function fetchData() {
       try {
-        const [searchesRes, usersRes, purchasesRes] = await Promise.all([
+        const [searchesRes, usersRes, purchasesRes, reportsRes] = await Promise.all([
           supabase.from('request_logs').select('id,source,created_at,user_id,author_id').order('created_at', { ascending: false }).limit(5000),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
+          supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
         ]);
 
         if (searchesRes.error) throw searchesRes.error;
@@ -76,6 +78,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           users: usersRes.data || [],
           purchases: purchasesRes.data || [],
         });
+        if (reportsRes.data) setReports(reportsRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load stats');
       } finally {
@@ -304,6 +307,45 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             )}
           </div>
         ) : null}
+
+        {/* Error Reports */}
+        {reports.length > 0 && (
+          <div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-card p-5">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <Flag className="h-4 w-4 text-red-500" />
+              Profile Error Reports ({reports.length})
+            </h3>
+            <div className="space-y-3">
+              {reports.map(report => (
+                <div key={report.id} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 font-medium">
+                        {report.author_name || report.author_id}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">{report.message}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                        <span>{new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        {report.reporter_email && <span>{report.reporter_email}</span>}
+                      </div>
+                    </div>
+                    {report.page_url && (
+                      <a
+                        href={report.page_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2d7d7d] hover:text-[#1f5c5c] flex-shrink-0"
+                        title="View profile"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
