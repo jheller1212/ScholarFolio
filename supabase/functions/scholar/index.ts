@@ -750,7 +750,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { profileUrl, action, query } = requestData;
+    const { profileUrl, action, query, cacheOnly } = requestData;
     const clientIp = getRequestIp(req);
 
     // --- Authenticate user via JWT ---
@@ -828,13 +828,18 @@ Deno.serve(async (req) => {
 
     const normalizedUrl = `https://scholar.google.com/citations?user=${authorId}`;
 
-    // Check cache
-    const { data: cached, error: cacheError } = await supabase
+    // Check cache (for claimed profiles / cacheOnly, also serve expired cache)
+    const cacheQuery = supabase
       .from('scholar_cache')
       .select('data')
-      .eq('url', normalizedUrl)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
+      .eq('url', normalizedUrl);
+
+    // Only filter by expiry for normal requests, not cacheOnly
+    if (!cacheOnly) {
+      cacheQuery.gt('expires_at', new Date().toISOString());
+    }
+
+    const { data: cached, error: cacheError } = await cacheQuery.maybeSingle();
 
     if (cacheError) {
       console.error("Cache lookup error:", cacheError);
@@ -847,6 +852,22 @@ Deno.serve(async (req) => {
       // (exactly 100 publications is suspicious — likely truncated)
       const pubCount = cached.data.publications?.length || 0;
       const likelyTruncated = pubCount === 100;
+
+      // For cacheOnly (claimed profile views), always serve cache if it exists
+      if (cacheOnly && hasCitationGraph) {
+        console.log("Cache-only hit (claimed profile) for:", normalizedUrl);
+        logRequest(req, authorId, 'cache', userId);
+        return new Response(
+          JSON.stringify({ ...cached.data, cacheStatus: 'hit' }),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Cache': 'HIT-STALE'
+            }
+          }
+        );
+      }
 
       if (hasCitationGraph && !likelyTruncated) {
         console.log("Cache hit for:", normalizedUrl);

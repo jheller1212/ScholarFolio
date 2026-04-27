@@ -112,7 +112,7 @@ function AppContent() {
   const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
-  const handleSearchRef = useRef<((url: string, bypassCredits?: boolean) => void) | null>(null);
+  const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
@@ -143,7 +143,7 @@ function AppContent() {
         .then(({ data: claim }) => {
           if (claim?.author_id && handleSearchRef.current) {
             const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(claim.author_id)}`;
-            handleSearchRef.current(scholarUrl, true);
+            handleSearchRef.current(scholarUrl, true, true);
           }
         });
     }
@@ -168,7 +168,7 @@ function AppContent() {
   };
   const ANON_FREE_LIMIT = 3;
 
-  const handleSearch = useCallback(async (url: string, bypassCredits = false) => {
+  const handleSearch = useCallback(async (url: string, bypassCredits = false, cacheOnly = false) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
     if (requestInProgressRef.current) {
       return;
@@ -201,7 +201,7 @@ function AppContent() {
         return;
       }
 
-      const profileData = await scholarService.fetchProfile(url);
+      const profileData = await scholarService.fetchProfile(url, cacheOnly ? { cacheOnly: true } : undefined);
       if (!profileData) {
         setError('Unable to fetch profile data. Please try again later or contact the site administrator.');
         setShowError(true);
