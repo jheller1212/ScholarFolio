@@ -86,13 +86,13 @@ export const scholarService = {
     }
   },
 
-  fetchProfile: async (profileUrl: string): Promise<Author> => {
+  fetchProfile: async (profileUrl: string, options?: { cacheOnly?: boolean }): Promise<Author> => {
     const normalizedUrl = normalizeScholarUrl(profileUrl);
 
     // Try the Supabase edge function first (SerpAPI + server-side scraping)
     let edgeError: unknown = null;
     try {
-      const data = await fetchViaEdgeFunction(normalizedUrl);
+      const data = await fetchViaEdgeFunction(normalizedUrl, options?.cacheOnly);
       return buildAuthorResult(data);
     } catch (err) {
       edgeError = err;
@@ -120,7 +120,7 @@ export const scholarService = {
   }
 };
 
-async function fetchViaEdgeFunction(normalizedUrl: string) {
+async function fetchViaEdgeFunction(normalizedUrl: string, cacheOnly?: boolean) {
   // Get the current session token for authenticated credit tracking
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -133,7 +133,7 @@ async function fetchViaEdgeFunction(normalizedUrl: string) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ profileUrl: normalizedUrl })
+      body: JSON.stringify({ profileUrl: normalizedUrl, ...(cacheOnly ? { cacheOnly: true } : {}) })
     }
   );
 
