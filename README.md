@@ -2,7 +2,7 @@
 
 **Claim your research profile. Share it with one link.**
 
-[Live App](https://scholarfolio.org/) | [LinkedIn](https://www.linkedin.com/in/hellerjonas/) | [Report an Issue](https://github.com/JonasHeller1212/ResearchFolio/issues)
+[Live App](https://scholarfolio.org/) | [Report an Issue](https://github.com/jheller1212/ScholarFolio/issues)
 
 Scholar Folio turns a Google Scholar profile into a shareable research portfolio page — citation metrics, collaboration network, open access stats, and a plain-language research narrative. Claim a permanent vanity URL like `scholarfolio.org/your-name` and put it in your email signature, CV, or LinkedIn.
 
@@ -122,8 +122,8 @@ Row-level security is enabled on all tables.
 ### Setup
 
 ```bash
-git clone https://github.com/JonasHeller1212/ResearchFolio.git
-cd ResearchFolio
+git clone https://github.com/jheller1212/ScholarFolio.git
+cd ScholarFolio
 npm install
 ```
 
@@ -170,7 +170,7 @@ npm run build
 
 ## Built By
 
-[Jonas Heller](https://www.linkedin.com/in/hellerjonas/) — Assistant Professor of Marketing, Maastricht University.
+[Jonas Heller](https://jonasheller.info) — Assistant Professor of Marketing, Maastricht University.
 
 ---
 
