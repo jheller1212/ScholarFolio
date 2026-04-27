@@ -166,7 +166,7 @@ function AppContent() {
     localStorage.setItem('sf_searches', String(count));
     return count;
   };
-  const ANON_FREE_LIMIT = 3;
+  const ANON_FREE_LIMIT = 5;
 
   const handleSearch = useCallback(async (url: string, bypassCredits = false, cacheOnly = false) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
@@ -322,7 +322,7 @@ function AppContent() {
       {showWelcome && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
           <p className="text-sm font-medium mb-1">Welcome to Scholar Folio!</p>
-          <p className="text-xs text-gray-600">You have <strong>5 free searches</strong> to get started.</p>
+          <p className="text-xs text-gray-600">You have <strong>5 free profile refreshes</strong> to get started.</p>
           <button
             onClick={dismissWelcome}
             className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
