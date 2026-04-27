@@ -448,7 +448,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           const value = showCitations
             ? (d as any).valueCitations
             : (d as any).valuePublications;
-          return 200 / Math.sqrt(value);
+          return 250 / Math.sqrt(value);
         })
       )
       .force('charge', d3.forceManyBody()
@@ -463,8 +463,9 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .radius(d => {
           const node = d as Node;
           const value = showCitations ? node.sharedCitations : node.sharedPublications;
-          return Math.sqrt(value) * 2 + 30;
+          return Math.sqrt(value) * 2 + 45;
         })
+        .strength(0.8)
       );
 
     // Container for all zoomable content
@@ -830,28 +831,29 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           ref={svgRef}
           className="w-full h-full"
         />
-        <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
-          <div className="flex items-start space-x-2">
-            <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
-              <ul className="space-y-1 text-[#64748b]">
-                <li>• Node size represents {viewMode === 'citations' ? 'shared citations' : 'shared publications'}</li>
-                <li>• Line thickness shows collaboration strength{viewMode === 'citations' ? ' (citation flow)' : ''}</li>
-                {viewMode === 'temporal' && (
-                  <li>• Edge color indicates recency: red (oldest) → green (most recent collaboration)</li>
-                )}
-                {viewMode === 'clusters' && (
-                  <>
-                    <li>• <strong>Clusters</strong> are groups of co-authors who frequently publish together — they likely represent distinct research topics, labs, or projects</li>
-                    <li>• Same-color nodes share a research community; dashed gray lines cross between groups</li>
-                    <li>• <strong>Bridge authors</strong> (amber outline) connect different groups and may be key interdisciplinary collaborators</li>
-                  </>
-                )}
-                <li>• Click a node to highlight its connections</li>
-                <li>• Drag nodes to explore • Mouse wheel to zoom</li>
-              </ul>
-            </div>
+      </div>
+
+      <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
+        <div className="flex items-start space-x-2">
+          <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
+            <ul className="space-y-1 text-[#64748b]">
+              <li>• Node size represents {viewMode === 'citations' ? 'shared citations' : 'shared publications'}</li>
+              <li>• Line thickness shows collaboration strength{viewMode === 'citations' ? ' (citation flow)' : ''}</li>
+              {viewMode === 'temporal' && (
+                <li>• Edge color indicates recency: red (oldest) → green (most recent collaboration)</li>
+              )}
+              {viewMode === 'clusters' && (
+                <>
+                  <li>• <strong>Clusters</strong> are groups of co-authors who frequently publish together — they likely represent distinct research topics, labs, or projects</li>
+                  <li>• Same-color nodes share a research community; dashed gray lines cross between groups</li>
+                  <li>• <strong>Bridge authors</strong> (amber outline) connect different groups and may be key interdisciplinary collaborators</li>
+                </>
+              )}
+              <li>• Click a node to highlight its connections</li>
+              <li>• Drag nodes to explore • Mouse wheel to zoom</li>
+            </ul>
           </div>
         </div>
       </div>
