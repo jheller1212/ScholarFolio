@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints } from 'lucide-react';
+import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
 import type { Publication } from '../types/scholar';
 import { extractLastName } from '../utils/names';
 
@@ -640,7 +640,66 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     };
   }, [publications, fullScreen, viewMode, connectionLimit]);
 
-  // This variable is no longer needed but leaving a placeholder for the component structure
+  // Compute network insights from publications
+  const insights = useMemo(() => {
+    if (!publications.length) return null;
+
+    // Find main author
+    const freq = new Map<string, number>();
+    publications.forEach(pub => pub.authors.forEach(a => freq.set(a, (freq.get(a) || 0) + 1)));
+    const mainAuth = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (!mainAuth) return null;
+
+    // Solo papers
+    const soloPapers = publications.filter(p => p.authors.length === 1 && p.authors[0] === mainAuth);
+    const collabPapers = publications.filter(p => p.authors.length > 1);
+
+    // Co-author stats
+    const coAuthors = new Map<string, { papers: number; citations: number; years: number[] }>();
+    publications.forEach(pub => {
+      pub.authors.filter(a => a !== mainAuth).forEach(a => {
+        const existing = coAuthors.get(a) || { papers: 0, citations: 0, years: [] };
+        existing.papers++;
+        existing.citations += pub.citations;
+        if (pub.year > 0) existing.years.push(pub.year);
+        coAuthors.set(a, existing);
+      });
+    });
+
+    const sorted = [...coAuthors.entries()].sort((a, b) => b[1].papers - a[1].papers);
+    const topByPapers = sorted[0];
+    const topByCitations = [...coAuthors.entries()].sort((a, b) => b[1].citations - a[1].citations)[0];
+
+    // One-time collaborators with high impact
+    const oneTimers = [...coAuthors.entries()]
+      .filter(([, d]) => d.papers === 1)
+      .sort((a, b) => b[1].citations - a[1].citations);
+    const oneTimeCitations = oneTimers.reduce((sum, [, d]) => sum + d.citations, 0);
+
+    // Avg authors per paper
+    const avgAuthors = publications.reduce((sum, p) => sum + p.authors.length, 0) / publications.length;
+
+    // New collaborators per year
+    const firstCollabYear = new Map<string, number>();
+    publications.sort((a, b) => a.year - b.year).forEach(pub => {
+      pub.authors.filter(a => a !== mainAuth).forEach(a => {
+        if (!firstCollabYear.has(a) && pub.year > 0) firstCollabYear.set(a, pub.year);
+      });
+    });
+
+    return {
+      totalCoAuthors: coAuthors.size,
+      soloPapers: soloPapers.length,
+      collabPapers: collabPapers.length,
+      soloPercent: publications.length > 0 ? Math.round((soloPapers.length / publications.length) * 100) : 0,
+      avgAuthors: avgAuthors.toFixed(1),
+      topByPapers: topByPapers ? { name: topByPapers[0], papers: topByPapers[1].papers, citations: topByPapers[1].citations } : null,
+      topByCitations: topByCitations ? { name: topByCitations[0], papers: topByCitations[1].papers, citations: topByCitations[1].citations } : null,
+      oneTimeCollaborators: oneTimers.length,
+      oneTimeCitations,
+      topOneTimer: oneTimers[0] ? { name: oneTimers[0][0], citations: oneTimers[0][1].citations } : null,
+    };
+  }, [publications]);
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-xl border border-primary-start/10 p-6 hover:shadow-lg transition-all ${
@@ -796,6 +855,89 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           </div>
         </div>
       </div>
+
+      {/* Network Insights */}
+      {insights && (
+        <div className="mt-6 border-t border-gray-100 pt-6">
+          <h4 className="text-sm font-semibold text-[#1e293b] mb-4 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#2d7d7d]" />
+            Collaboration Insights
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+              <p className="text-2xl font-bold text-[#2d7d7d]">{insights.totalCoAuthors}</p>
+              <p className="text-xs text-gray-500">Unique co-authors</p>
+            </div>
+            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+              <p className="text-2xl font-bold text-[#2d7d7d]">{insights.avgAuthors}</p>
+              <p className="text-xs text-gray-500">Avg. authors per paper</p>
+            </div>
+            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+              <p className="text-2xl font-bold text-[#2d7d7d]">{insights.collabPapers}</p>
+              <p className="text-xs text-gray-500">Collaborative papers</p>
+            </div>
+            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+              <p className="text-2xl font-bold text-[#2d7d7d]">{insights.soloPapers}</p>
+              <p className="text-xs text-gray-500">Solo papers ({insights.soloPercent}%)</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {insights.topByPapers && (
+              <div className="flex items-start gap-3 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Users className="h-3.5 w-3.5 text-[#2d7d7d]" />
+                </div>
+                <div>
+                  <p className="text-gray-900">
+                    <span className="font-medium">{insights.topByPapers.name}</span> is your most frequent collaborator
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {insights.topByPapers.papers} shared papers · {insights.topByPapers.citations.toLocaleString()} shared citations
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {insights.topByCitations && insights.topByCitations.name !== insights.topByPapers?.name && (
+              <div className="flex items-start gap-3 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-[#2d7d7d]" />
+                </div>
+                <div>
+                  <p className="text-gray-900">
+                    <span className="font-medium">{insights.topByCitations.name}</span> is your highest-impact collaborator
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {insights.topByCitations.papers} shared papers · {insights.topByCitations.citations.toLocaleString()} shared citations
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {insights.oneTimeCollaborators > 0 && (
+              <div className="flex items-start gap-3 text-sm">
+                <div className="w-7 h-7 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <UserCheck className="h-3.5 w-3.5 text-[#2d7d7d]" />
+                </div>
+                <div>
+                  <p className="text-gray-900">
+                    <span className="font-medium">{insights.oneTimeCollaborators}</span> one-time collaborators
+                    {insights.oneTimeCitations > 0 && (
+                      <> — together they account for <span className="font-medium">{insights.oneTimeCitations.toLocaleString()}</span> citations</>
+                    )}
+                  </p>
+                  {insights.topOneTimer && insights.topOneTimer.citations > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Highest impact: {insights.topOneTimer.name} ({insights.topOneTimer.citations.toLocaleString()} citations from 1 paper)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
