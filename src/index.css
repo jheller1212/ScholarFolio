@@ -174,6 +174,115 @@ body {
   width: 100%;
 }
 
+/* ===== Skeleton shimmer ===== */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ===== Modal animations ===== */
+@keyframes modalOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalCardIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-overlay {
+  animation: modalOverlayIn 200ms ease-out;
+}
+
+.modal-card {
+  animation: modalCardIn 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== Tab slide indicator ===== */
+.tab-indicator {
+  transition: left 300ms cubic-bezier(0.16, 1, 0.3, 1), width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== Tab content transition ===== */
+@keyframes tabContentIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content-enter {
+  animation: tabContentIn 300ms ease-out;
+}
+
+/* ===== Confetti ===== */
+@keyframes confettiFall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFall 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ===== Search bar glow ===== */
+.search-focus-glow:focus-within {
+  box-shadow: 0 0 0 4px rgba(45, 125, 125, 0.08);
+  border-color: var(--teal) !important;
+}
+
+/* ===== Progress shimmer ===== */
+@keyframes progressShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.progress-shimmer {
+  background: linear-gradient(90deg, var(--teal) 25%, var(--teal-light) 50%, var(--teal) 75%);
+  background-size: 200% 100%;
+  animation: progressShimmer 1.5s ease-in-out infinite;
+}
+
+/* ===== Dark mode ===== */
+.dark {
+  color-scheme: dark;
+}
+
+.dark .mesh-bg {
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(at 20% 20%, rgba(45, 125, 125, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 80%, rgba(30, 41, 59, 0.06) 0px, transparent 50%);
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+/* ===== Page transitions ===== */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: pageIn 400ms ease-out;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

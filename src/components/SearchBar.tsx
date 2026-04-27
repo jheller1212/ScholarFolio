@@ -125,7 +125,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="relative">
+      <div className="relative search-focus-glow rounded-lg transition-all">
         {error && (
           <div className="absolute -top-6 left-0 right-0 text-xs text-[#64748b] flex items-center">
             <AlertCircle className="h-3.5 w-3.5 mr-1" />
@@ -178,7 +178,7 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
         <div className="mt-3">
           <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary-start to-primary-end rounded-full transition-all duration-300 ease-out"
+              className="h-full progress-shimmer rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>

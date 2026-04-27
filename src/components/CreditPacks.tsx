@@ -72,9 +72,9 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden modal-card"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

@@ -119,9 +119,21 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
     }
 
     setSuccess(true);
+    // Confetti burst
+    const colors = ['#2d7d7d', '#3d9494', '#f59e0b', '#10b981', '#6366f1', '#ec4899'];
+    for (let i = 0; i < 40; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = `${Math.random() * 100}vw`;
+      el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      el.style.animationDelay = `${Math.random() * 0.5}s`;
+      el.style.animationDuration = `${1.5 + Math.random() * 1.5}s`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
     setTimeout(() => {
       onClaimed(slug);
-    }, 1500);
+    }, 2500);
   };
 
   const slugStatusIndicator = () => {
@@ -158,9 +170,9 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
 
   if (existingClaim) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden modal-card"
           onClick={e => e.stopPropagation()}
         >
           <div className="p-8 text-center">
