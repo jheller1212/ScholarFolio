@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   TrendingUp,
   Users,
@@ -42,7 +42,55 @@ interface MetricsCardProps {
         'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess';
 }
 
+function useCountUp(target: number | string, duration = 600) {
+  const [display, setDisplay] = useState<string>('0');
+  const hasRun = useRef(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (hasRun.current) return;
+    const numericTarget = typeof target === 'string' ? parseFloat(target.replace(/,/g, '')) : target;
+    if (isNaN(numericTarget)) {
+      setDisplay(String(target));
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || hasRun.current) return;
+      hasRun.current = true;
+      observer.disconnect();
+
+      const isDecimal = String(target).includes('.');
+      const start = performance.now();
+
+      const animate = (now: number) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = numericTarget * eased;
+
+        if (isDecimal) {
+          setDisplay(current.toFixed(1));
+        } else if (typeof target === 'string' && target.includes(',')) {
+          setDisplay(Math.round(current).toLocaleString());
+        } else {
+          setDisplay(String(Math.round(current)));
+        }
+
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }, { threshold: 0.3 });
+
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return { display, ref };
+}
+
 export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) {
+  const { display, ref: countRef } = useCountUp(value);
   const getIcon = () => {
     switch (icon) {
       // Impact metrics
@@ -138,14 +186,14 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
   const tooltipInfo = metricInfo[getMetricKey()];
 
   const cardContent = (
-    <div className={`bg-white p-3 rounded-xl border border-gray-100 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 ${tooltipInfo ? 'cursor-help' : ''}`}>
+    <div ref={countRef} className={`bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
       <div className="flex items-start gap-2.5">
         <div className="p-1.5 bg-gradient-to-br from-primary-start to-primary-end rounded-lg text-white mt-0.5 flex-shrink-0">
           {getIcon()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium text-gray-400 leading-none">{title}</p>
-          <p className="text-sm font-bold text-gray-900 mt-1.5 truncate">{value}</p>
+          <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 leading-none">{title}</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1.5 truncate">{display}</p>
           {subtitle && (
             <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">{subtitle}</p>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Linkedin, Github, ExternalLink } from 'lucide-react';
+import { Linkedin, Github, ExternalLink, Moon, Sun } from 'lucide-react';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
@@ -13,6 +13,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
 import { SignUpWall } from './components/SignUpWall';
+import { ProfileSkeleton } from './components/ProfileSkeleton';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
 import type { Author } from './types/scholar';
@@ -28,7 +29,8 @@ type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin';
 
 function SocialLinks() {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
+      <DarkModeToggle />
       <a
         href={SOCIAL_LINKS.linkedin}
         target="_blank"
@@ -42,7 +44,7 @@ function SocialLinks() {
         href={SOCIAL_LINKS.github}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-gray-400 hover:text-gray-900 transition-colors"
+        className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         title="GitHub"
       >
         <Github className="h-4 w-4" />
@@ -52,11 +54,23 @@ function SocialLinks() {
 }
 
 function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
+  const [claimedCount, setClaimedCount] = useState(0);
+
+  useEffect(() => {
+    supabase.from('claimed_profiles').select('id', { count: 'exact', head: true })
+      .then(({ count }) => { if (count) setClaimedCount(count); });
+  }, []);
+
   return (
     <footer className="bg-[#1e293b] text-white py-10 px-6">
       <div className="max-w-5xl mx-auto text-center">
         <p className="text-sm text-white/80 mb-4">
           Scholar Folio — Built for researchers, not institutions.
+          {claimedCount > 0 && (
+            <span className="block text-xs text-white/50 mt-1">
+              {claimedCount} {claimedCount === 1 ? 'profile' : 'profiles'} claimed by researchers
+            </span>
+          )}
         </p>
         <div className="flex flex-wrap justify-center gap-6 mb-4">
           <a
@@ -99,6 +113,36 @@ function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
         </p>
       </div>
     </footer>
+  );
+}
+
+function DarkModeToggle() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('sf_theme', next ? 'dark' : 'light');
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sf_theme');
+    if (saved === 'dark') {
+      setDark(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  return (
+    <button
+      onClick={toggle}
+      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+      aria-label="Toggle dark mode"
+      title={dark ? 'Light mode' : 'Dark mode'}
+    >
+      {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-gray-400" />}
+    </button>
   );
 }
 
@@ -292,24 +336,30 @@ function AppContent() {
   );
 
   const renderPage = () => {
-    if (page === 'admin') return <AdminDashboard onBack={() => handleNavigate('home')} />;
-    if (page === 'about') return <AboutPage onBack={() => handleNavigate('home')} />;
-    if (page === 'terms') return <TermsPage onBack={() => handleNavigate('home')} />;
-    if (page === 'privacy') return <PrivacyPage onBack={() => handleNavigate('home')} />;
+    if (page === 'admin') return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;
+
+    if (loading && !data) {
+      return <ProfileSkeleton />;
+    }
 
     if (data && !error) {
       return (
-        <ProfileView
-          data={data}
-          profileUrl={profileUrl}
-          loading={loading}
-          error={error}
-          onSearch={handleSearch}
-          onReset={handleReset}
-          socialLinks={<SocialLinks />}
-          authControls={authControls}
-          onSupport={() => setShowCreditPacks(true)}
-        />
+        <div className="page-enter">
+          <ProfileView
+            data={data}
+            profileUrl={profileUrl}
+            loading={loading}
+            error={error}
+            onSearch={handleSearch}
+            onReset={handleReset}
+            socialLinks={<SocialLinks />}
+            authControls={authControls}
+            onSupport={() => setShowCreditPacks(true)}
+          />
+        </div>
       );
     }
 

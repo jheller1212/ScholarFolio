@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
@@ -58,6 +58,23 @@ export function ProfileView({
   const [showEmbed, setShowEmbed] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [tabKey, setTabKey] = useState(0);
+  const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  const updateIndicator = useCallback(() => {
+    const idx = tabs.findIndex(t => t.id === activeTab);
+    const el = tabsRef.current[idx];
+    if (el) {
+      setIndicatorStyle({ left: el.offsetLeft, width: el.offsetWidth });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    updateIndicator();
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [updateIndicator]);
   const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
 
@@ -135,7 +152,7 @@ export function ProfileView({
   return (
     <div className="min-h-screen mesh-bg">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-100/80">
+      <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-100/80 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-2.5">
           <div className="flex items-center gap-4">
             <button
@@ -171,7 +188,7 @@ export function ProfileView({
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Profile summary card */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-card p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4 flex-1 min-w-0">
               {data.imageUrl && !imgError ? (
@@ -313,14 +330,20 @@ export function ProfileView({
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="flex gap-1 p-1 bg-gray-100/80 rounded-xl w-fit">
-            {tabs.map((tab) => (
+          <div className="relative flex gap-1 p-1 bg-gray-100/80 dark:bg-slate-800 rounded-xl w-fit">
+            {/* Sliding indicator */}
+            <div
+              className="tab-indicator absolute top-1 h-[calc(100%-8px)] bg-white dark:bg-slate-700 rounded-lg shadow-sm z-0"
+              style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+            />
+            {tabs.map((tab, i) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-all ${
+                ref={el => { tabsRef.current[i] = el; }}
+                onClick={() => { setActiveTab(tab.id); setTabKey(k => k + 1); }}
+                className={`relative z-10 flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-white text-gray-900 shadow-sm'
+                    ? 'text-gray-900'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -332,6 +355,7 @@ export function ProfileView({
         </div>
 
         {/* Tab content */}
+        <div key={tabKey} className="tab-content-enter">
         {activeTab === 'metrics' && (
           <div className="space-y-6">
             <div>
@@ -411,6 +435,7 @@ export function ProfileView({
         {activeTab === 'publications' && (
           <PublicationsList publications={data.publications} openAccess={data.openAccess} />
         )}
+        </div>
       </main>
 
       {scholarId && (
