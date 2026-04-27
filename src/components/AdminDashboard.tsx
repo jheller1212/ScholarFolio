@@ -49,7 +49,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('week');
-  const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string }>>([]);
+  const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string; resolved: boolean; resolved_note: string | null }>>([]);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolveNote, setResolveNote] = useState('');
 
   const userEmail = user?.email || user?.user_metadata?.email || '';
   const isAdmin = userEmail === ADMIN_EMAIL;
@@ -317,30 +319,60 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             </h3>
             <div className="space-y-3">
               {reports.map(report => (
-                <div key={report.id} className="border border-gray-100 rounded-xl p-4">
+                <div key={report.id} className={`border rounded-xl p-4 ${report.resolved ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900 font-medium">
                         {report.author_name || report.author_id}
+                        {report.resolved && <span className="ml-2 text-xs text-emerald-600 font-normal">resolved</span>}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">{report.message}</p>
+                      {report.resolved_note && (
+                        <p className="text-xs text-emerald-700 mt-1 italic">Fix: {report.resolved_note}</p>
+                      )}
                       <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
                         <span>{new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         {report.reporter_email && <span>{report.reporter_email}</span>}
                       </div>
                     </div>
-                    {report.page_url && (
-                      <a
-                        href={report.page_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#2d7d7d] hover:text-[#1f5c5c] flex-shrink-0"
-                        title="View profile"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {report.page_url && (
+                        <a href={report.page_url} target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:text-[#1f5c5c]" title="View profile">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                      {!report.resolved && (
+                        <button
+                          onClick={() => { setResolvingId(resolvingId === report.id ? null : report.id); setResolveNote(''); }}
+                          className="text-xs text-gray-500 hover:text-emerald-600 transition-colors"
+                        >
+                          Resolve
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  {resolvingId === report.id && (
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        type="text"
+                        value={resolveNote}
+                        onChange={e => setResolveNote(e.target.value)}
+                        placeholder="What was fixed? (optional)"
+                        className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
+                      />
+                      <button
+                        onClick={async () => {
+                          await supabase.from('profile_reports').update({ resolved: true, resolved_note: resolveNote || null }).eq('id', report.id);
+                          setReports(prev => prev.map(r => r.id === report.id ? { ...r, resolved: true, resolved_note: resolveNote || null } : r));
+                          setResolvingId(null);
+                          setResolveNote('');
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
