@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Link, Check, AlertCircle, Loader2, User, FileText } from 'lucide-react';
+import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -187,22 +187,94 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
     );
   }
 
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  const profileUrl = `https://scholarfolio.org/${slug}`;
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedSnippet(id);
+      setTimeout(() => setCopiedSnippet(null), 2000);
+    });
+  };
+
   if (success) {
+    const emailSigHtml = `<a href="${profileUrl}">${authorName} — Research Profile</a>`;
+    const linkedInText = `I just claimed my research portfolio on Scholar Folio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${profileUrl}`;
+
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
-          <div className="p-8 text-center">
+          <div className="p-6 text-center border-b border-gray-100">
             <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="h-7 w-7 text-emerald-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Profile Claimed</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Profile Claimed!</h2>
             <p className="text-sm text-gray-600">
-              Your profile is now live at{' '}
-              <span className="font-medium text-[#2d7d7d]">scholarfolio.org/{slug}</span>
+              Your profile is live at{' '}
+              <a href={`/${slug}`} className="font-medium text-[#2d7d7d] hover:underline">scholarfolio.org/{slug}</a>
             </p>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <p className="text-sm font-semibold text-gray-900">Share your profile</p>
+
+            {/* Copy URL */}
+            <button
+              onClick={() => copyToClipboard(profileUrl, 'url')}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#2d7d7d]/30 hover:bg-[#eaf4f4]/30 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
+                <Copy className="h-4 w-4 text-[#2d7d7d]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">Copy profile link</p>
+                <p className="text-xs text-gray-500 truncate">{profileUrl}</p>
+              </div>
+              {copiedSnippet === 'url' && <span className="text-xs text-emerald-600 font-medium">Copied!</span>}
+            </button>
+
+            {/* Email signature */}
+            <button
+              onClick={() => copyToClipboard(emailSigHtml, 'email')}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#2d7d7d]/30 hover:bg-[#eaf4f4]/30 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
+                <Mail className="h-4 w-4 text-[#2d7d7d]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">Email signature snippet</p>
+                <p className="text-xs text-gray-500">HTML link for your email signature</p>
+              </div>
+              {copiedSnippet === 'email' && <span className="text-xs text-emerald-600 font-medium">Copied!</span>}
+            </button>
+
+            {/* LinkedIn post */}
+            <button
+              onClick={() => copyToClipboard(linkedInText, 'linkedin')}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-[#2d7d7d]/30 hover:bg-[#eaf4f4]/30 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
+                <Linkedin className="h-4 w-4 text-[#2d7d7d]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">LinkedIn post</p>
+                <p className="text-xs text-gray-500">Ready-to-post text with your link</p>
+              </div>
+              {copiedSnippet === 'linkedin' && <span className="text-xs text-emerald-600 font-medium">Copied!</span>}
+            </button>
+          </div>
+
+          <div className="px-6 pb-6">
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Done
+            </button>
           </div>
         </div>
       </div>
