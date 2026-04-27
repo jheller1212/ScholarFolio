@@ -237,8 +237,10 @@ function AppContent() {
         })
         .catch(() => {}); // Silently ignore — OA stats are supplementary
 
-      // Update browser URL with shareable link
-      if (userId) {
+      // Update browser URL with shareable link (preserve vanity URL if loaded via slug)
+      const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+      const isVanityUrl = pathSlug && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(pathSlug);
+      if (!isVanityUrl && userId) {
         window.history.replaceState({}, '', `?user=${encodeURIComponent(userId)}`);
       }
     } catch (err) {

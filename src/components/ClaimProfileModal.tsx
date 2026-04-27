@@ -33,7 +33,21 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [existingClaim, setExistingClaim] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Check if user already claimed a profile
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('claimed_profiles')
+      .select('slug')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setExistingClaim(data.slug);
+      });
+  }, [user]);
 
   const checkSlugAvailability = useCallback(async (value: string) => {
     if (!isValidSlug(value)) {
@@ -141,6 +155,37 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
         return null;
     }
   };
+
+  if (existingClaim) {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="p-8 text-center">
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-7 w-7 text-amber-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Already claimed a profile</h2>
+            <p className="text-sm text-gray-600 mb-3">
+              You already have a claimed profile at{' '}
+              <a href={`/${existingClaim}`} className="font-medium text-[#2d7d7d] hover:underline">
+                scholarfolio.org/{existingClaim}
+              </a>
+            </p>
+            <p className="text-xs text-gray-400">Each account can claim one profile.</p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
