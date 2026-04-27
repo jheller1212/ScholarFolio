@@ -112,7 +112,7 @@ function AppContent() {
   const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
-  const handleSearchRef = useRef<((url: string) => void) | null>(null);
+  const handleSearchRef = useRef<((url: string, bypassCredits?: boolean) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
@@ -128,7 +128,7 @@ function AppContent() {
     const userParam = params.get('user');
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
-      handleSearchRef.current(scholarUrl);
+      handleSearchRef.current(scholarUrl, true);
       return;
     }
 
@@ -143,7 +143,7 @@ function AppContent() {
         .then(({ data: claim }) => {
           if (claim?.author_id && handleSearchRef.current) {
             const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(claim.author_id)}`;
-            handleSearchRef.current(scholarUrl);
+            handleSearchRef.current(scholarUrl, true);
           }
         });
     }
@@ -168,22 +168,24 @@ function AppContent() {
   };
   const ANON_FREE_LIMIT = 3;
 
-  const handleSearch = useCallback(async (url: string) => {
+  const handleSearch = useCallback(async (url: string, bypassCredits = false) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
     if (requestInProgressRef.current) {
       return;
     }
 
-    // Credit/usage checks
-    if (!user) {
-      // Anonymous user — check local free limit
-      if (getAnonSearches() >= ANON_FREE_LIMIT) {
-        setShowSignUpWall(true);
+    // Credit/usage checks (skip for direct profile links and vanity URLs)
+    if (!bypassCredits) {
+      if (!user) {
+        // Anonymous user — check local free limit
+        if (getAnonSearches() >= ANON_FREE_LIMIT) {
+          setShowSignUpWall(true);
+          return;
+        }
+      } else if (credits !== null && credits <= 0) {
+        setShowCreditPacks(true);
         return;
       }
-    } else if (credits !== null && credits <= 0) {
-      setShowCreditPacks(true);
-      return;
     }
 
     try {
@@ -206,13 +208,15 @@ function AppContent() {
         return;
       }
 
-      // Track usage
-      if (!user) {
-        if (profileData.cacheStatus !== 'hit') {
-          incrementAnonSearches();
+      // Track usage (skip for direct profile links)
+      if (!bypassCredits) {
+        if (!user) {
+          if (profileData.cacheStatus !== 'hit') {
+            incrementAnonSearches();
+          }
+        } else {
+          refreshCredits();
         }
-      } else {
-        refreshCredits();
       }
 
       // Ensure metrics exists with default values even if undefined
