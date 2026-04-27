@@ -1,51 +1,58 @@
 # Scholar Folio
 
-**Your research, at a glance.**
+**Claim your research profile. Share it with one link.**
 
 [Live App](https://scholarfolio.org/) | [LinkedIn](https://www.linkedin.com/in/hellerjonas/) | [Report an Issue](https://github.com/JonasHeller1212/ResearchFolio/issues)
 
-Scholar Folio turns a Google Scholar profile URL into a clean, single-page research portfolio. It surfaces your publication history, collaboration network, citation trends, and key impact metrics — without requiring manual data entry.
+Scholar Folio turns a Google Scholar profile into a shareable research portfolio page — citation metrics, collaboration network, open access stats, and a plain-language research narrative. Claim a permanent vanity URL like `scholarfolio.org/your-name` and put it in your email signature, CV, or LinkedIn.
 
 > Numbers here are context, not verdict. Use them to tell your story.
 
 ---
 
-## What It Shows
+## Features
+
+### Claim Your Profile
+Sign in, pick a slug, and get a permanent URL. Claimed profiles are always public and free to view — no login needed for visitors. Each claimed profile is served from cache, so it costs nothing to host.
 
 ### Research Reach
-Citation counts, h-index, g-index, i10-index, growth trends, and per-year citation breakdowns. Metrics are calculated directly from your Google Scholar data.
+Citation counts, h-index, g-index, i10-index, h5-index, growth trends, and per-year citation breakdowns. Metrics animate into view with count-up effects.
 
 ### Collaboration Network
-Interactive co-authorship graph built with D3.js. See who you've worked with, how often, and how your network has evolved over time.
+Interactive co-authorship graph (D3.js) with four view modes: publications, citations, temporal, and cluster detection. Includes collaboration insights — most frequent collaborator, highest-impact collaborator, one-time collaborator analysis, and bridge author detection.
+
+### Open Science
+Open access stats via OpenAlex — gold, green, hybrid, bronze breakdown with per-publication OA badges and ORCID linking.
 
 ### Citation Trends
-Year-by-year citation charts showing your research trajectory — when your work started gaining traction, which periods saw the most growth.
+Year-by-year citation charts with interactive hover breakdown.
 
 ### Publication History
-Sortable, filterable table of all your publications with venue, year, and citation counts. See where you've published and how your output has evolved.
+Sortable, filterable table with venue, year, citation counts, and journal rankings (FT50, ABS, SJR).
 
 ### Researcher Narrative
-An auto-generated plain-language summary of your research profile — career stage, collaboration patterns, and impact trajectory.
+Auto-generated plain-language summary of career stage, collaboration patterns, publication venues, and impact trajectory. Users can report errors directly from the profile.
 
 ---
 
 ## How It Works
 
 1. Paste a Google Scholar profile URL (or search by author name)
-2. Scholar Folio fetches your profile data via SerpAPI (with a direct scraping fallback)
-3. Results are cached for 72 hours so repeat visits are instant
-4. Data is visualized across four tabs: Impact Metrics, Citation Trends, Co-author Network, and Publications
+2. Scholar Folio fetches profile data via SerpAPI (with direct scraping fallback)
+3. Results are cached for 72 hours; claimed profiles serve from cache indefinitely
+4. Data is visualized across five tabs: Impact Metrics, Citation Trends, Co-author Network, Open Science, and Publications
+5. After viewing, sign in to claim the profile with a vanity URL
 
 ### Usage Model
 
-| Tier | Searches | Cost |
-|------|----------|------|
-| Guest | 3 | Free |
-| Signed-up | 5 | Free |
-| Starter pack | 15 | EUR 5 |
-| Pro pack | 40 | EUR 10 |
+| Tier | Refreshes | Cost |
+|------|-----------|------|
+| Guest | 5 | Free |
+| Signed-up | 5 more | Free |
+| Supporter | 25 | EUR 5 |
+| Open Science Supporter | 75 | EUR 10 |
 
-Cache hits don't consume credits. Credits never expire.
+Cache hits and claimed profile views don't consume credits. Credits never expire. This is an open science project — supporter packs cover SerpAPI costs, not profit.
 
 ---
 
@@ -58,9 +65,9 @@ Cache hits don't consume credits. Credits never expire.
 | Backend | Supabase Edge Functions (Deno) |
 | Database | Supabase PostgreSQL |
 | Auth | Supabase Auth (email/password + Google OAuth) |
-| Payments | Stripe Checkout |
-| Data Source | SerpAPI (primary), direct Google Scholar scraping (fallback) |
-| Hosting | Netlify |
+| Payments | Stripe Checkout (EUR) |
+| Data Sources | SerpAPI (primary), OpenAlex (OA stats), direct scraping (fallback) |
+| Hosting | Netlify (auto-deploy on push to main) |
 
 ---
 
@@ -68,14 +75,14 @@ Cache hits don't consume credits. Credits never expire.
 
 ```
 src/
-  components/         UI components (27 total)
+  components/         UI components
   contexts/           Auth context (Supabase session + credits)
   services/
-    scholar/           Profile fetching, parsing, caching, rate limiting
+    scholar/           Profile fetching, parsing, caching
+    openalex/          Open access stats
     metrics/           h-index, g-index, i10-index, collaboration scores
-    journal/           Journal ranking lookups
   types/              TypeScript type definitions
-  utils/              Name normalization, URL validation, API helpers
+  utils/              Name normalization, URL validation, PDF export
   data/               Journal rankings, metric descriptions
 
 supabase/
@@ -83,8 +90,23 @@ supabase/
     scholar/           Main data-fetching edge function
     create-checkout/   Stripe checkout session creation
     stripe-webhook/    Payment webhook handler
-  migrations/          Database schema (cache, credits, purchases, logs)
 ```
+
+---
+
+## Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `scholar_cache` | Cached profile data with 72-hour TTL |
+| `user_credits` | Per-user credit balance (5 free on signup) |
+| `credit_purchases` | Stripe purchase records |
+| `request_logs` | Usage analytics (user, source, IP, timestamp) |
+| `claimed_profiles` | Vanity URL claims (slug, author_id, user_id) |
+| `profile_reports` | User-submitted error reports with resolve status |
+| `analytics_events` | Page view tracking |
+
+Row-level security is enabled on all tables.
 
 ---
 
@@ -95,7 +117,7 @@ supabase/
 - Node.js 18+
 - A [Supabase](https://supabase.com) project
 - A [SerpAPI](https://serpapi.com) key (optional — falls back to direct scraping)
-- A [Stripe](https://stripe.com) account (only needed for paid credit packs)
+- A [Stripe](https://stripe.com) account (only needed for supporter packs)
 
 ### Setup
 
@@ -105,7 +127,7 @@ cd ResearchFolio
 npm install
 ```
 
-Create a `.env` file in the project root:
+Create a `.env` file:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -132,66 +154,23 @@ npm run dev
 npm run build
 ```
 
-### Tests
-
-```bash
-npm test                # Run once
-npm run test:watch      # Watch mode
-npm run test:coverage   # With coverage report
-```
-
-Tests cover the core metric calculations: h-index, g-index, i10-index, growth metrics, and trend analysis.
-
----
-
-## Database Schema
-
-The app uses four tables in Supabase PostgreSQL:
-
-- **`scholar_cache`** — Cached profile data with 72-hour TTL
-- **`user_credits`** — Per-user credit balance (auto-created on signup with 5 free credits)
-- **`credit_purchases`** — Stripe purchase records (idempotent via `stripe_session_id`)
-- **`request_logs`** — Usage analytics (user, source, IP, timestamp)
-
-Row-level security is enabled on all tables. Users can only read their own data.
-
----
-
-## Authentication
-
-- **Email/password** — Requires email confirmation before sign-in
-- **Google OAuth** — Instant sign-in, welcome banner shown on first login
-- **Terms of Use** — Required checkbox before any sign-up method
-
-New accounts receive 5 free searches. Additional credits can be purchased via Stripe at any time from the credit display in the navbar.
-
----
-
-## Edge Functions
-
-### `scholar`
-Fetches and processes Google Scholar profiles. Handles SerpAPI integration, fallback scraping, caching, rate limiting (10 profiles/hour per IP), credit deduction, and request logging. Supports both profile URL lookups and author name search.
-
-### `create-checkout`
-Creates Stripe Checkout sessions for credit pack purchases. Requires JWT authentication.
-
-### `stripe-webhook`
-Processes `checkout.session.completed` events. Adds credits to the user's balance with idempotency protection.
-
 ---
 
 ## Key Design Decisions
 
-- **Cache hits are free** — Only fresh API calls consume credits. This rewards repeat visitors.
-- **No institutional use** — The Terms of Use explicitly prohibit using Scholar Folio for ranking, comparing, or evaluating researchers for employment or promotion.
-- **Fallback scraping** — If SerpAPI is unavailable or the key isn't set, the app falls back to direct HTML scraping of Google Scholar.
-- **Author name normalization** — Handles initials, prefixes (van, de, von), suffixes (Jr., III), and nickname variations to accurately merge co-author data.
+- **Not a ranking tool** — Terms of Use prohibit using Scholar Folio for evaluating researchers for employment or promotion.
+- **Cache hits are free** — Only fresh API calls consume credits. Claimed profiles always serve from cache.
+- **One claim per user** — Each account can claim one profile to prevent abuse.
+- **Vanity URLs are public** — No login needed to view a claimed profile.
+- **Error reporting** — Users can flag inaccuracies in auto-generated narratives. Reports appear in the admin dashboard.
+- **Fallback scraping** — If SerpAPI is unavailable, the app falls back to direct HTML scraping.
+- **Open science commitment** — Any surplus after costs is donated to open science initiatives. Transparency report published quarterly.
 
 ---
 
 ## Built By
 
-[Jonas Heller](https://www.linkedin.com/in/hellerjonas/) — Assistant Professor of Marketing, Maastricht University. Research focus: consumer decision-making in emerging technologies (AR, VR, AI).
+[Jonas Heller](https://www.linkedin.com/in/hellerjonas/) — Assistant Professor of Marketing, Maastricht University.
 
 ---
 
