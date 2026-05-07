@@ -54,23 +54,11 @@ function SocialLinks() {
 }
 
 function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
-  const [claimedCount, setClaimedCount] = useState(0);
-
-  useEffect(() => {
-    supabase.from('claimed_profiles').select('id', { count: 'exact', head: true })
-      .then(({ count }) => { if (count) setClaimedCount(count); });
-  }, []);
-
   return (
     <footer className="bg-[#1e293b] text-white py-10 px-6">
       <div className="max-w-5xl mx-auto text-center">
         <p className="text-sm text-white/80 mb-4">
           Scholar Folio — Built for researchers, not institutions.
-          {claimedCount > 0 && (
-            <span className="block text-xs text-white/50 mt-1">
-              {claimedCount} {claimedCount === 1 ? 'profile' : 'profiles'} claimed by researchers
-            </span>
-          )}
         </p>
         <div className="flex flex-wrap justify-center gap-6 mb-4">
           <a
