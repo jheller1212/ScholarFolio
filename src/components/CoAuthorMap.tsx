@@ -266,7 +266,8 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#2d7d7d] border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-500">Locating co-authors...</p>
+              <p className="text-sm text-gray-500">Locating co-authors via OpenAlex...</p>
+              <p className="text-xs text-gray-400">This may take 10–15 seconds — we're looking up institutions for your top co-authors.</p>
             </div>
           </div>
         )}
