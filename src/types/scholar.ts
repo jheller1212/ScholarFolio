@@ -88,6 +88,16 @@ export interface Author {
   cacheStatus?: 'hit' | 'miss';
 }
 
+export interface CoAuthorGeoData {
+  name: string;
+  institution: string;
+  countryCode: string;
+  lat: number;
+  lng: number;
+  sharedPapers: number;
+  sharedCitations: number;
+}
+
 // Utility types
 export type SortField = 'year' | 'citations' | 'title';
 export type SortDirection = 'asc' | 'desc';
