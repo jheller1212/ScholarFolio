@@ -1,8 +1,11 @@
 import type { Publication, CoAuthorGeoData } from '../../types/scholar';
-import { rateLimiter } from '../scholar/rate-limiter';
+import { RateLimiter } from '../scholar/rate-limiter';
 
 const API_URL = 'https://api.openalex.org';
 const EMAIL = 'scholarfolio@scholarfolio.org';
+
+// Dedicated limiter: OpenAlex polite pool allows ~10 req/sec with mailto
+const geoRateLimiter = new RateLimiter(5000, 10);
 const HEADERS = {
   'User-Agent': `ScholarFolio/1.0 (mailto:${EMAIL})`
 };
@@ -26,7 +29,7 @@ async function resolveAuthorGeo(
   sharedCitations: number
 ): Promise<CoAuthorGeoData | null> {
   try {
-    await rateLimiter.acquireToken();
+    await geoRateLimiter.acquireToken();
     const url = `${API_URL}/authors?search=${encodeURIComponent(name)}&per_page=1&mailto=${EMAIL}`;
     const response = await fetch(url, {
       headers: HEADERS,
