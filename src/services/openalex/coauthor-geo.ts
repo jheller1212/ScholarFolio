@@ -52,12 +52,23 @@ export async function fetchCoAuthorGeoData(
   _authorAffiliation: string,
   publications: Publication[]
 ): Promise<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] }> {
-  // Step 1: Find the main author's OpenAlex ID
-  const authorSearch = await fetchJson<{ results: Array<{ id: string }> }>(
-    `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=1&select=id&mailto=${EMAIL}`
+  // Step 1: Find the main author's OpenAlex ID and current institution
+  const authorSearch = await fetchJson<{ results: Array<{
+    id: string;
+    last_known_institutions?: Array<{
+      id: string;
+      display_name: string;
+      country_code: string;
+    }>;
+  }> }>(
+    `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=1&select=id,last_known_institutions&mailto=${EMAIL}`
   );
-  const mainAuthorOaId = authorSearch?.results?.[0]?.id;
+  const mainAuthorResult = authorSearch?.results?.[0];
+  const mainAuthorOaId = mainAuthorResult?.id;
   if (!mainAuthorOaId) return { mainAuthor: null, coAuthors: [] };
+
+  // Use last_known_institutions for the main author's CURRENT affiliation
+  const mainCurrentInst = mainAuthorResult?.last_known_institutions?.[0];
 
   const shortId = mainAuthorOaId.replace('https://openalex.org/', '');
 
@@ -107,8 +118,11 @@ export async function fetchCoAuthorGeoData(
   }
 
   const coAuthorInstitutions = new Map<string, CoAuthorInfo>();
+  const mainNameLower = authorName.toLowerCase().trim();
   for (const authorship of allAuthorships) {
+    // Skip the main author — by ID and by name (handles duplicate OA profiles)
     if (authorship.author.id === mainAuthorOaId) continue;
+    if (authorship.author.display_name.toLowerCase().trim() === mainNameLower) continue;
     const inst = authorship.institutions[0];
     if (!inst?.id || !inst.display_name || !inst.country_code) continue;
 
@@ -173,21 +187,10 @@ export async function fetchCoAuthorGeoData(
   matched.sort((a, b) => b.papers - a.papers);
   const top20 = matched.slice(0, 20);
 
-  // Also find main author's institution from OpenAlex authorships
-  let mainInstitutionId: string | null = null;
-  let mainInstitutionName: string | null = null;
-  let mainCountryCode: string | null = null;
-  for (const authorship of allAuthorships) {
-    if (authorship.author.id === mainAuthorOaId && authorship.institutions.length > 0) {
-      const inst = authorship.institutions[0];
-      if (inst.id && inst.display_name && inst.country_code) {
-        mainInstitutionId = inst.id;
-        mainInstitutionName = inst.display_name;
-        mainCountryCode = inst.country_code;
-        break;
-      }
-    }
-  }
+  // Use the main author's current institution from their profile
+  const mainInstitutionId = mainCurrentInst?.id ?? null;
+  const mainInstitutionName = mainCurrentInst?.display_name ?? null;
+  const mainCountryCode = mainCurrentInst?.country_code ?? null;
 
   // Step 4: Collect unique institution IDs and batch-fetch their geo
   const uniqueInstIds = new Set<string>();
