@@ -67,10 +67,16 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
     // Zoom behaviour
     const zoomGroup = svg.append('g');
 
+    let currentScale = 1;
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 8])
+      .scaleExtent([0.5, 20])
       .on('zoom', event => {
         zoomGroup.attr('transform', event.transform);
+        currentScale = event.transform.k;
+        // Scale dots inversely so they stay the same visual size when zoomed
+        zoomGroup.selectAll<SVGCircleElement, unknown>('.geo-dot')
+          .attr('r', function() { return +(this.getAttribute('data-base-r') ?? '4') / currentScale; })
+          .attr('stroke-width', 1 / currentScale);
       });
 
     svg.call(zoom);
@@ -137,12 +143,14 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
               };
 
               zoomGroup.append('path')
+                .attr('class', 'geo-arc')
                 .datum(arcGeoJson)
                 .attr('d', pathGen as unknown as (d: GeoJSON.Feature<GeoJSON.LineString>) => string)
                 .attr('fill', 'none')
                 .attr('stroke', '#2d7d7d')
                 .attr('stroke-width', 1)
-                .attr('stroke-opacity', 0.25 + Math.min(0.5, coAuthor.sharedPapers / 10));
+                .attr('stroke-opacity', 0.15 + Math.min(0.35, coAuthor.sharedPapers / 20))
+                .style('vector-effect', 'non-scaling-stroke');
             });
         }
 
@@ -151,12 +159,14 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
           const pt = project(coAuthor.lng, coAuthor.lat);
           if (!pt) return;
 
-          const r = Math.sqrt(coAuthor.sharedPapers) * 4 + 4;
+          const r = Math.sqrt(coAuthor.sharedPapers) * 1.5 + 3;
 
           zoomGroup.append('circle')
+            .attr('class', 'geo-dot')
             .attr('cx', pt[0])
             .attr('cy', pt[1])
             .attr('r', r)
+            .attr('data-base-r', r)
             .attr('fill', '#2d7d7d')
             .attr('fill-opacity', 0.7)
             .attr('stroke', 'white')
@@ -189,12 +199,14 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
           const mainPt = project(geoData.mainAuthor.lng, geoData.mainAuthor.lat);
           if (mainPt) {
             zoomGroup.append('circle')
+              .attr('class', 'geo-dot')
               .attr('cx', mainPt[0])
               .attr('cy', mainPt[1])
-              .attr('r', 8)
+              .attr('r', 5)
+              .attr('data-base-r', 5)
               .attr('fill', '#0d9488')
               .attr('stroke', 'white')
-              .attr('stroke-width', 2)
+              .attr('stroke-width', 1.5)
               .style('cursor', 'pointer')
               .on('mouseenter', (event: MouseEvent) => {
                 const rect = svgRef.current!.getBoundingClientRect();
