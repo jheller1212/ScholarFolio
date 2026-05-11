@@ -113,38 +113,37 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
           return pt ?? null;
         };
 
-        // Draw arcs from main author to each co-author
+        // Draw arcs from main author to each co-author using GeoJSON LineStrings
+        // This handles wrapping correctly — D3 geoPath clips arcs at the projection boundary
         if (geoData.mainAuthor) {
-          const mainPt = project(geoData.mainAuthor.lng, geoData.mainAuthor.lat);
-          if (mainPt) {
             geoData.coAuthors.forEach(coAuthor => {
-              const coPt = project(coAuthor.lng, coAuthor.lat);
-              if (!coPt) return;
+              const arcGeoJson: GeoJSON.Feature<GeoJSON.LineString> = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: (() => {
+                    const interp = d3.geoInterpolate(
+                      [geoData.mainAuthor!.lng, geoData.mainAuthor!.lat],
+                      [coAuthor.lng, coAuthor.lat]
+                    );
+                    const pts: [number, number][] = [];
+                    for (let t = 0; t <= 1; t += 0.02) {
+                      pts.push(interp(t) as [number, number]);
+                    }
+                    return pts;
+                  })()
+                }
+              };
 
-              // d3.geoInterpolate great-circle arc as SVG path
-              const interpolate = d3.geoInterpolate(
-                [geoData.mainAuthor!.lng, geoData.mainAuthor!.lat],
-                [coAuthor.lng, coAuthor.lat]
-              );
-              const arcPoints: [number, number][] = [];
-              for (let t = 0; t <= 1; t += 0.02) {
-                const [lng2, lat2] = interpolate(t);
-                const pt = project(lng2, lat2);
-                if (pt) arcPoints.push(pt);
-              }
-
-              if (arcPoints.length > 1) {
-                const lineGen = d3.line<[number, number]>().x(d => d[0]).y(d => d[1]).curve(d3.curveCatmullRom);
-                zoomGroup.append('path')
-                  .datum(arcPoints)
-                  .attr('d', lineGen)
-                  .attr('fill', 'none')
-                  .attr('stroke', '#2d7d7d')
-                  .attr('stroke-width', 1)
-                  .attr('stroke-opacity', 0.25 + Math.min(0.5, coAuthor.sharedPapers / 10));
-              }
+              zoomGroup.append('path')
+                .datum(arcGeoJson)
+                .attr('d', pathGen as unknown as (d: GeoJSON.Feature<GeoJSON.LineString>) => string)
+                .attr('fill', 'none')
+                .attr('stroke', '#2d7d7d')
+                .attr('stroke-width', 1)
+                .attr('stroke-opacity', 0.25 + Math.min(0.5, coAuthor.sharedPapers / 10));
             });
-          }
         }
 
         // Draw co-author dots
