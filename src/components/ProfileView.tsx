@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 import { exportProfilePdf } from '../utils/pdfExport';
@@ -9,6 +9,7 @@ import { PublicationsList } from './PublicationsList';
 import { CitationsChart } from './CitationsChart';
 import { MetricsCard } from './MetricsCard';
 import { CitationNetwork } from './CitationNetwork';
+import { CoAuthorMap } from './CoAuthorMap';
 import { OpenScienceTab } from './OpenScienceTab';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
@@ -34,6 +35,7 @@ const tabs = [
   { id: 'metrics', label: 'Impact Metrics', icon: ChartBar },
   { id: 'trends', label: 'Citation Trends', icon: LineChart },
   { id: 'network', label: 'Co-author Network', icon: Network },
+  { id: 'worldmap', label: 'World Map', icon: Globe },
   { id: 'openscience', label: 'Open Science', icon: Unlock },
   { id: 'publications', label: 'Publications', icon: BookOpen },
 ] as const;
@@ -426,6 +428,14 @@ export function ProfileView({
           <div className="w-full">
             <CitationNetwork publications={data.publications} fullScreen={true} />
           </div>
+        )}
+
+        {activeTab === 'worldmap' && (
+          <CoAuthorMap
+            publications={data.publications}
+            authorName={data.name}
+            authorAffiliation={data.affiliation}
+          />
         )}
 
         {activeTab === 'openscience' && (
