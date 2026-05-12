@@ -54,7 +54,7 @@ setInterval(() => {
   }
 }, 600_000);
 
-const CACHE_DURATION = 259200; // 72 hours (3 days) in seconds
+const CACHE_DURATION = 604800; // 7 days in seconds
 const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 
 const supabase = createClient(
@@ -267,9 +267,10 @@ async function fetchViaDirectScraping(authorId: string) {
   const affiliationEl = doc.querySelector('.gsc_prf_il');
   const affiliation = affiliationEl?.textContent?.trim() || "";
 
-  // Parse profile image
+  // Parse profile image (Scholar uses srcset instead of src)
   const imageEl = doc.querySelector('#gsc_prf_pup-img');
-  const imageUrl = imageEl?.getAttribute('src') || "";
+  const srcset = imageEl?.getAttribute('srcset') || '';
+  const imageUrl = srcset.split(/\s+/)[0] || imageEl?.getAttribute('src') || "";
 
   // Parse topics/interests
   const topicEls = doc.querySelectorAll('#gsc_prf_int a');
@@ -340,7 +341,12 @@ async function fetchViaDirectScraping(authorId: string) {
     }
   }
 
-  return { name, affiliation, imageUrl, topics, publications, citationsPerYear };
+  // Parse h-index and i10-index from stats table (6 cells: citations/h/i10 × all/recent)
+  const statCells = doc.querySelectorAll('#gsc_rsb_st .gsc_rsb_std');
+  const scrapedHIndex = statCells.length >= 4 ? parseInt(statCells[2]?.textContent?.trim() || '0') || 0 : 0;
+  const scrapedI10Index = statCells.length >= 6 ? parseInt(statCells[4]?.textContent?.trim() || '0') || 0 : 0;
+
+  return { name, affiliation, imageUrl, topics, publications, citationsPerYear, scrapedHIndex, scrapedI10Index };
 }
 
 // --- Main fetch with fallback ---
@@ -349,7 +355,7 @@ async function fetchScholarProfile(authorId: string) {
     throw new Error("Invalid author ID format");
   }
 
-  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[]; citationsPerYear?: Record<string, number> };
+  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[]; citationsPerYear?: Record<string, number>; scrapedHIndex?: number; scrapedI10Index?: number };
   let source = 'serpapi';
 
   try {
@@ -379,7 +385,11 @@ async function fetchScholarProfile(authorId: string) {
 
   const totalCitations = publications.reduce((sum, pub) => sum + pub.citations, 0);
   const citations = publications.map(p => p.citations);
-  const { hIndex, gIndex, i10Index } = calculateIndices(citations);
+  const calculated = calculateIndices(citations);
+  // Prefer Google's own h-index/i10 from the stats table when scraped
+  const hIndex = rawData.scrapedHIndex || calculated.hIndex;
+  const gIndex = calculated.gIndex;
+  const i10Index = rawData.scrapedI10Index || calculated.i10Index;
 
   // Use actual citations-per-year graph from SerpAPI cited_by_graph or scraped
   // from the profile page. These match the Google Scholar bar chart exactly.
