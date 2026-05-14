@@ -89,18 +89,34 @@ export async function fetchCoAuthorGeoData(
 
   // Step 3: Build co-author map with their most recent institution
   // Match OpenAlex names to ScholarFolio publication names
+  const normalize = (name: string) => name.toLowerCase().trim();
+  const getLastName = (name: string) => {
+    const parts = name.split(/\s+/);
+    return normalize(parts[parts.length - 1]);
+  };
+
   const mainAuthorFreq = new Map<string, number>();
   for (const pub of publications) {
-    for (const a of pub.authors) {
+    for (const a of (pub.authors || []).filter(n => n && n.trim())) {
       mainAuthorFreq.set(a, (mainAuthorFreq.get(a) || 0) + 1);
     }
   }
   const mainAuthorKey = [...mainAuthorFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? authorName;
 
+  // Build a set of name variants that likely refer to the main author
+  const mainLastName = getLastName(mainAuthorKey);
+  const mainNameVariants = new Set<string>();
+  mainNameVariants.add(mainAuthorKey);
+  for (const [name] of mainAuthorFreq) {
+    if (getLastName(name) === mainLastName && name !== mainAuthorKey) {
+      mainNameVariants.add(name);
+    }
+  }
+
   // Count shared papers/citations from ScholarFolio data
   const coAuthorStats = new Map<string, { papers: number; citations: number }>();
   for (const pub of publications) {
-    for (const a of pub.authors.filter(a => a !== mainAuthorKey)) {
+    for (const a of (pub.authors || []).filter(a => a && a.trim() && !mainNameVariants.has(a))) {
       const existing = coAuthorStats.get(a) ?? { papers: 0, citations: 0 };
       coAuthorStats.set(a, { papers: existing.papers + 1, citations: existing.citations + pub.citations });
     }
@@ -141,12 +157,6 @@ export async function fetchCoAuthorGeoData(
   }
 
   // Match OpenAlex display names to ScholarFolio co-author names (fuzzy last-name match)
-  const normalize = (name: string) => name.toLowerCase().trim();
-  const getLastName = (name: string) => {
-    const parts = name.split(/\s+/);
-    return normalize(parts[parts.length - 1]);
-  };
-
   interface MatchedCoAuthor {
     sfName: string;
     oaInfo: CoAuthorInfo;
@@ -157,8 +167,11 @@ export async function fetchCoAuthorGeoData(
   const matched: MatchedCoAuthor[] = [];
   const usedOaIds = new Set<string>();
 
+  // Helper: extract all name tokens for fuzzy matching
+  const getNameTokens = (name: string) => new Set(normalize(name).split(/\s+/).filter(t => t.length > 1));
+
   for (const [sfName, stats] of coAuthorStats) {
-    // Try exact match first, then last-name match
+    // Try exact match first, then last-name match, then token overlap
     let bestMatch: CoAuthorInfo | null = null;
     for (const info of coAuthorInstitutions.values()) {
       if (usedOaIds.has(info.oaId)) continue;
@@ -174,6 +187,20 @@ export async function fetchCoAuthorGeoData(
         if (getLastName(info.displayName) === sfLast) {
           bestMatch = info;
           break;
+        }
+      }
+    }
+    // Fallback: token overlap (handles reordered compound names like "Easthope Awai" vs "Awai Easthope")
+    if (!bestMatch) {
+      const sfTokens = getNameTokens(sfName);
+      let bestOverlap = 0;
+      for (const info of coAuthorInstitutions.values()) {
+        if (usedOaIds.has(info.oaId)) continue;
+        const oaTokens = getNameTokens(info.displayName);
+        const overlap = [...sfTokens].filter(t => oaTokens.has(t)).length;
+        if (overlap >= 2 && overlap > bestOverlap) {
+          bestOverlap = overlap;
+          bestMatch = info;
         }
       }
     }
