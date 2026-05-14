@@ -432,7 +432,7 @@ async function fetchScholarProfile(authorId: string) {
   };
 }
 
-/** Merge near-duplicate author names across publications (case, middle names, initials). */
+/** Merge near-duplicate author names across publications (case, middle names, initials, prefix variations). */
 function mergeAuthorNames(publications: any[]) {
   const lastNamePrefixes = ['van ', 'von ', 'de ', 'del ', 'della ', 'di ', 'da ', 'dos ', 'das ', 'du ', 'den ', 'der ', 'la ', 'le ', 'el ', 'al-'];
 
@@ -445,18 +445,43 @@ function mergeAuthorNames(publications: any[]) {
     return parts[parts.length - 1];
   }
 
+  /** Strip common surname prefixes for fuzzy matching: "de Ruyter" → "Ruyter" */
+  function stripPrefix(lastName: string): string {
+    let s = lastName;
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const lower = s.toLowerCase();
+      for (const prefix of lastNamePrefixes) {
+        const p = prefix.trim();
+        if (lower.startsWith(p + ' ')) {
+          s = s.substring(p.length).trim();
+          changed = true;
+          break;
+        }
+        if (p.endsWith('-') && lower.startsWith(p)) {
+          s = s.substring(p.length);
+          changed = true;
+          break;
+        }
+      }
+    }
+    return s;
+  }
+
   function fuzzyKey(name: string): string {
     const trimmed = name.trim();
     if (!trimmed) return '';
-    const lastName = extractLast(trimmed).toLowerCase().replace(/[.,]/g, '');
+    const lastName = extractLast(trimmed);
+    const baseLast = stripPrefix(lastName).toLowerCase().replace(/[.,]/g, '');
     const firstInitial = trimmed.split(/\s+/)[0]?.[0]?.toLowerCase() || '';
-    return `${lastName}|${firstInitial}`;
+    return `${baseLast}|${firstInitial}`;
   }
 
   const nameFreq = new Map<string, number>();
   for (const pub of publications) {
     for (const a of (pub.authors || [])) {
-      nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
+      if (a && a.trim()) nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
     }
   }
 
@@ -471,8 +496,8 @@ function mergeAuthorNames(publications: any[]) {
   const replacements = new Map<string, string>();
   for (const variants of groups.values()) {
     if (variants.length <= 1) continue;
-    const lastNames = new Set(variants.map(v => extractLast(v).toLowerCase().replace(/[.,]/g, '')));
-    if (lastNames.size > 1) continue;
+    const baseLastNames = new Set(variants.map(v => stripPrefix(extractLast(v)).toLowerCase().replace(/[.,]/g, '')));
+    if (baseLastNames.size > 1) continue;
     const canonical = variants.sort((a, b) => {
       const lenDiff = b.length - a.length;
       return lenDiff !== 0 ? lenDiff : (nameFreq.get(b) || 0) - (nameFreq.get(a) || 0);
