@@ -35,15 +35,47 @@ export function extractLastName(fullName: string): string {
   return nameParts[nameParts.length - 1];
 }
 
+const LAST_NAME_PREFIXES = ['van ', 'von ', 'de ', 'del ', 'della ', 'di ', 'da ', 'dos ', 'das ', 'du ', 'den ', 'der ', 'la ', 'le ', 'el ', 'al-'];
+
+/**
+ * Strips common surname prefixes (de, van, von, etc.) to get a base last name
+ * for fuzzy matching. "de Ruyter" → "Ruyter", "van der Berg" → "Berg".
+ */
+function stripLastNamePrefix(lastName: string): string {
+  let s = lastName;
+  // Repeatedly strip leading prefixes (handles "van der" = "van " + "der ")
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const lower = s.toLowerCase();
+    for (const prefix of LAST_NAME_PREFIXES) {
+      const p = prefix.trim();
+      if (lower.startsWith(p + ' ')) {
+        s = s.substring(p.length).trim();
+        changed = true;
+        break;
+      }
+      // Handle hyphenated prefix like "al-"
+      if (p.endsWith('-') && lower.startsWith(p)) {
+        s = s.substring(p.length);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return s;
+}
+
 /**
  * Normalize author names across a list of publications so that near-duplicates
- * (differing only by case, missing middle names/initials, or minor spelling)
- * are merged into one canonical form.
+ * (differing only by case, missing middle names/initials, prefix variations
+ * like "de Ruyter" vs "De Ruyter" vs "Ruyter") are merged into one canonical form.
  *
  * Strategy:
- *   1. Group names by a fuzzy key: lowercased last name + first initial.
- *   2. Within each group, pick the most complete/most frequent form as canonical.
- *   3. Replace all variants with the canonical form in-place on the publications.
+ *   1. Group names by a fuzzy key: base last name (prefix-stripped) + first initial.
+ *   2. Safety-check that all variants share the same base last name.
+ *   3. Within each group, pick the most complete/most frequent form as canonical.
+ *   4. Replace all variants with the canonical form in-place on the publications.
  *
  * Returns the mutated publications array (same reference) for convenience.
  */
@@ -52,18 +84,19 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
   const nameFreq = new Map<string, number>();
   for (const pub of publications) {
     for (const a of pub.authors) {
-      nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
+      if (a && a.trim()) nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
     }
   }
 
-  // Build a fuzzy key for each name: "lastname|firstinitial" (lowercased)
+  // Build a fuzzy key for each name: "baselastname|firstinitial" (lowercased, prefix-stripped)
   function fuzzyKey(name: string): string {
     const trimmed = name.trim();
     if (!trimmed) return '';
-    const lastName = extractLastName(trimmed).toLowerCase().replace(/[.,]/g, '');
+    const lastName = extractLastName(trimmed);
+    const baseLast = stripLastNamePrefix(lastName).toLowerCase().replace(/[.,]/g, '');
     const firstPart = trimmed.split(/\s+/)[0];
     const firstInitial = firstPart ? firstPart[0].toLowerCase() : '';
-    return `${lastName}|${firstInitial}`;
+    return `${baseLast}|${firstInitial}`;
   }
 
   // Group names by fuzzy key
@@ -80,9 +113,11 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
   for (const variants of groups.values()) {
     if (variants.length <= 1) continue;
 
-    // Additional check: all variants must have same last name (case-insensitive)
-    const lastNames = new Set(variants.map(v => extractLastName(v).toLowerCase().replace(/[.,]/g, '')));
-    if (lastNames.size > 1) continue;
+    // Safety check: all variants must have same base last name (prefix-stripped, case-insensitive)
+    const baseLastNames = new Set(variants.map(v =>
+      stripLastNamePrefix(extractLastName(v)).toLowerCase().replace(/[.,]/g, '')
+    ));
+    if (baseLastNames.size > 1) continue;
 
     // Pick canonical: prefer longest name (most complete), break ties by frequency
     const canonical = variants.sort((a, b) => {
