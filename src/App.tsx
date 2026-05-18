@@ -54,7 +54,7 @@ function SocialLinks() {
   );
 }
 
-function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
+function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; onSupport?: () => void }) {
   return (
     <footer className="bg-[#1e293b] text-white py-10 px-6">
       <div className="max-w-5xl mx-auto text-center">
@@ -96,6 +96,14 @@ function Footer({ onNavigate }: { onNavigate: (page: Page) => void }) {
           >
             LinkedIn <ExternalLink className="h-3 w-3" />
           </a>
+          {onSupport && (
+            <button
+              onClick={onSupport}
+              className="text-sm text-[#3d9494] hover:text-white transition-colors"
+            >
+              Support ScholarFolio
+            </button>
+          )}
         </div>
         <p className="text-xs text-white/40">
           &copy; 2025 Jonas Heller. Open source. Made with intent.
@@ -382,7 +390,7 @@ function AppContent() {
       <div className="flex-1">
         {renderPage()}
       </div>
-      {!(data && !error) && <Footer onNavigate={handleNavigate} />}
+      <Footer onNavigate={handleNavigate} onSupport={() => setShowCreditPacks(true)} />
       {showError && error && (
         <ErrorModal message={error} onClose={handleReset} />
       )}

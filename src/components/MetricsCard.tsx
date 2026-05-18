@@ -187,10 +187,34 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
 
   const tooltipInfo = metricInfo[getMetricKey()];
 
+  const getIconGradient = () => {
+    switch (icon) {
+      // Impact / citation metrics → amber
+      case 'citations': case 'hIndex': case 'gIndex': case 'i10Index': case 'h5Index':
+      case 'avgCitationsPerPaper': case 'citationsPerYear': case 'peak': case 'acc5':
+      case 'ageNormalized': case 'halfLife': case 'gini':
+        return 'from-cat-impact-from to-cat-impact-to';
+      // Trend metrics → blue
+      case 'citationGrowth': case 'trend': case 'publications': case 'pubsPerYear':
+        return 'from-cat-trend-from to-cat-trend-to';
+      // Collaboration metrics → teal (brand)
+      case 'network': case 'coAuthors': case 'avgAuthors': case 'soloAuthor': case 'topCoAuthor':
+        return 'from-cat-collab-from to-cat-collab-to';
+      // Field-normalized → indigo
+      case 'fwci': case 'rcr': case 'meanIF':
+        return 'from-cat-field-from to-cat-field-to';
+      // Open access → green
+      case 'oaPercent': case 'goldOa': case 'greenOa': case 'hybridOa': case 'bronzeOa': case 'closedAccess':
+        return 'from-cat-oa-from to-cat-oa-to';
+      default:
+        return 'from-primary-start to-primary-end';
+    }
+  };
+
   const cardContent = (
     <div ref={countRef} className={`bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
       <div className="flex items-start gap-2.5">
-        <div className="p-1.5 bg-gradient-to-br from-primary-start to-primary-end rounded-lg text-white mt-0.5 flex-shrink-0">
+        <div className={`p-1.5 bg-gradient-to-br ${getIconGradient()} rounded-lg text-white mt-0.5 flex-shrink-0`}>
           {getIcon()}
         </div>
         <div className="min-w-0 flex-1">

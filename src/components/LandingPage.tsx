@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck } from 'lucide-react';
+import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck, Globe, Gauge, TrendingUp, Unlock } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { Logo } from './Logo';
@@ -178,33 +178,61 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               {
                 icon: Link,
                 title: "Your Profile, Your URL",
-                description: "Claim a vanity URL like scholarfolio.org/your-name. Add it to your CV, email signature, or LinkedIn — a verified, always-up-to-date research page."
+                description: "Claim a vanity URL like scholarfolio.org/your-name. Add it to your CV, email signature, or LinkedIn.",
+                color: '#2d7d7d',
+                bg: '#eaf4f4',
               },
               {
                 icon: BarChart,
-                title: "Research Reach",
-                description: "How far your work has travelled — citations, growth trends, and the conversations your research has opened."
+                title: "Impact Metrics",
+                description: "h-index, g-index, i10, citation growth, Gini coefficient, and age-normalized rates — all computed automatically.",
+                color: '#b08d57',
+                bg: '#faf6ef',
               },
               {
-                icon: Network,
-                title: "Collaboration Network",
-                description: "Co-authorship visualization, collaboration patterns, and research network mapping."
-              }
+                icon: Gauge,
+                title: "Field-Normalized Impact",
+                description: "FWCI and Mean Journal Impact via OpenAlex. Compare your citation performance to the world average in your field.",
+                color: '#6b5b8a',
+                bg: '#f3f0f8',
+              },
+              {
+                icon: TrendingUp,
+                title: "Citation Trends",
+                description: "Year-by-year citation charts, cumulative growth, publication output, and momentum analysis.",
+                color: '#4a6fa5',
+                bg: '#eef3fa',
+              },
+              {
+                icon: Globe,
+                title: "Co-Author World Map",
+                description: "See where your collaborators are — an interactive map of co-author institutions across the globe.",
+                color: '#2d7d7d',
+                bg: '#eaf4f4',
+              },
+              {
+                icon: Unlock,
+                title: "Open Access Profile",
+                description: "Gold, green, hybrid, and bronze OA breakdown. See how accessible your research is to the world.",
+                color: '#4a8c6f',
+                bg: '#eef7f2',
+              },
             ].map((feature, index) => (
               <div
                 key={index}
-                className="scroll-reveal group relative bg-white rounded-2xl p-6 border border-gray-100 border-l-[3px] border-l-[#2d7d7d] shadow-card hover-lift"
+                className="scroll-reveal group relative bg-white rounded-2xl p-5 border border-gray-100 shadow-card hover-lift"
+                style={{ borderLeftWidth: '3px', borderLeftColor: feature.color }}
               >
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-[#eaf4f4] mb-3">
-                  <feature.icon className="h-5 w-5 text-[#2d7d7d]" />
+                <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg mb-2.5" style={{ backgroundColor: feature.bg }}>
+                  <feature.icon className="h-4 w-4" style={{ color: feature.color }} />
                 </div>
-                <h3 className="text-base font-semibold text-[#1e293b] mb-2">{feature.title}</h3>
-                <p className="text-sm text-[#64748b] leading-relaxed">{feature.description}</p>
+                <h3 className="text-sm font-semibold text-[#1e293b] mb-1.5">{feature.title}</h3>
+                <p className="text-xs text-[#64748b] leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
