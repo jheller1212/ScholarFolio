@@ -1,4 +1,4 @@
-import { ApiError } from '../../utils/api';
+import { ApiError, timeoutSignal } from '../../utils/api';
 
 class ScholarFetcher {
   private readonly CORS_PROXIES = [
@@ -39,7 +39,7 @@ class ScholarFetcher {
         'Accept-Language': 'en-US,en;q=0.5',
         'Cache-Control': 'no-cache'
       },
-      signal: AbortSignal.timeout(this.TIMEOUT_MS)
+      signal: timeoutSignal(this.TIMEOUT_MS)
     });
 
     if (!response.ok) {

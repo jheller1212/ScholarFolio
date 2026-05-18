@@ -1,4 +1,4 @@
-import { ApiError } from '../../utils/api';
+import { ApiError, timeoutSignal } from '../../utils/api';
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
 import { rateLimiter } from '../scholar/rate-limiter';
 
@@ -25,7 +25,7 @@ export class OpenAlexService {
       const worksUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${this.EMAIL}`;
       const worksResponse = await fetch(worksUrl, {
         headers: this.headers,
-        signal: AbortSignal.timeout(10000)
+        signal: timeoutSignal(10000)
       });
 
       if (!worksResponse.ok) return null;
@@ -51,7 +51,7 @@ export class OpenAlexService {
       await rateLimiter.acquireToken();
       const authorResponse = await fetch(`${this.API_URL}/authors/${authorId}?mailto=${this.EMAIL}`, {
         headers: this.headers,
-        signal: AbortSignal.timeout(10000)
+        signal: timeoutSignal(10000)
       });
       let orcid: string | undefined;
       if (authorResponse.ok) {
@@ -70,7 +70,7 @@ export class OpenAlexService {
         const pubsUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year&per_page=200&page=${page}&mailto=${this.EMAIL}`;
         const pubsResponse = await fetch(pubsUrl, {
           headers: this.headers,
-          signal: AbortSignal.timeout(15000)
+          signal: timeoutSignal(15000)
         });
         if (!pubsResponse.ok) break;
         const pubsData = await pubsResponse.json();
@@ -118,7 +118,7 @@ export class OpenAlexService {
 
     const response = await fetch(searchUrl, {
       headers: this.headers,
-      signal: AbortSignal.timeout(10000)
+      signal: timeoutSignal(10000)
     });
 
     if (!response.ok) return null;
