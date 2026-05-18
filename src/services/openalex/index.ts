@@ -1,30 +1,24 @@
-import { ApiError, timeoutSignal } from '../../utils/api';
+import { timeoutSignal } from '../../utils/api';
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
-import { rateLimiter } from '../scholar/rate-limiter';
+import { findOpenAlexAuthor, oaFetchJson, oaRateLimiter, OA_HEADERS, OA_API_URL, OA_EMAIL } from './author-lookup';
 
 export class OpenAlexService {
-  private readonly API_URL = 'https://api.openalex.org';
-  private readonly EMAIL = 'scholarfolio@scholarfolio.org';
-
-  private readonly headers = {
-    'User-Agent': `ScholarFolio/1.0 (mailto:${this.EMAIL})`
-  };
-
   /**
    * Search OpenAlex for an author by name + affiliation, return OA stats.
    * Non-blocking — returns null on any failure.
    */
   public async fetchOpenAccessStats(name: string, affiliation: string): Promise<OpenAccessStats | null> {
     try {
-      // Step 1: Find the author in OpenAlex
-      const authorId = await this.findAuthorId(name, affiliation);
-      if (!authorId) return null;
+      // Use shared author lookup (cached across services)
+      const author = await findOpenAlexAuthor(name, affiliation);
+      if (!author) return null;
+      const authorId = author.id;
 
-      // Step 2: Get works grouped by OA status
-      await rateLimiter.acquireToken();
-      const worksUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${this.EMAIL}`;
+      // Get works grouped by OA status
+      await oaRateLimiter.acquireToken();
+      const worksUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${OA_EMAIL}`;
       const worksResponse = await fetch(worksUrl, {
-        headers: this.headers,
+        headers: OA_HEADERS,
         signal: timeoutSignal(10000)
       });
 
@@ -47,29 +41,18 @@ export class OpenAlexService {
       const closed = groups['closed'] || 0;
       const oa = gold + green + hybrid + bronze;
 
-      // Step 3: Get ORCID from author record
-      await rateLimiter.acquireToken();
-      const authorResponse = await fetch(`${this.API_URL}/authors/${authorId}?mailto=${this.EMAIL}`, {
-        headers: this.headers,
-        signal: timeoutSignal(10000)
-      });
-      let orcid: string | undefined;
-      if (authorResponse.ok) {
-        const authorData = await authorResponse.json();
-        if (authorData.orcid) {
-          orcid = authorData.orcid.replace('https://orcid.org/', '');
-        }
-      }
+      // ORCID is already fetched by shared author lookup
+      const orcid = author.orcid;
 
-      // Step 4: Fetch per-publication OA status (paginated, up to 200 works per page)
+      // Fetch per-publication OA status (paginated, up to 200 works per page)
       const publicationOa: Record<string, { status: OaStatus; oaUrl?: string }> = {};
       let page = 1;
-      const maxPages = 10; // Up to 2000 works
+      const maxPages = 10;
       while (page <= maxPages) {
-        await rateLimiter.acquireToken();
-        const pubsUrl = `${this.API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year&per_page=200&page=${page}&mailto=${this.EMAIL}`;
+        await oaRateLimiter.acquireToken();
+        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
         const pubsResponse = await fetch(pubsUrl, {
-          headers: this.headers,
+          headers: OA_HEADERS,
           signal: timeoutSignal(15000)
         });
         if (!pubsResponse.ok) break;
@@ -110,53 +93,12 @@ export class OpenAlexService {
     }
   }
 
-  private async findAuthorId(name: string, affiliation: string): Promise<string | null> {
-    await rateLimiter.acquireToken();
-
-    // Search by name, optionally filtered by institution
-    let searchUrl = `${this.API_URL}/authors?search=${encodeURIComponent(name)}&per_page=5&mailto=${this.EMAIL}`;
-
-    const response = await fetch(searchUrl, {
-      headers: this.headers,
-      signal: timeoutSignal(10000)
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    const results = data.results || [];
-
-    if (results.length === 0) return null;
-    if (results.length === 1) return results[0].id;
-
-    // Multiple results — try to match by affiliation
-    const affiliationLower = affiliation.toLowerCase();
-    for (const author of results) {
-      const lastInstitution = author.last_known_institutions?.[0]?.display_name?.toLowerCase() || '';
-      const allInstitutions = (author.affiliations || []).map((a: any) => a.institution?.display_name?.toLowerCase() || '');
-      if (lastInstitution && affiliationLower.includes(lastInstitution)) return author.id;
-      if (allInstitutions.some((inst: string) => inst && affiliationLower.includes(inst))) return author.id;
-    }
-
-    // No affiliation match — return top result (OpenAlex ranks by relevance)
-    return results[0].id;
-  }
-
   public async getJournalMetrics(issn: string): Promise<JournalRanking | null> {
-    await rateLimiter.acquireToken();
-
     try {
-      const response = await fetch(
-        `${this.API_URL}/venues?filter=issn:${issn}`,
-        { headers: this.headers }
+      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; impact_factor?: number }> }>(
+        `${OA_API_URL}/venues?filter=issn:${issn}`
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const venue = data.results?.[0];
-      
+      const venue = data?.results?.[0];
       if (!venue) return null;
 
       return {
@@ -171,21 +113,11 @@ export class OpenAlexService {
   }
 
   public async searchJournal(name: string): Promise<JournalRanking | null> {
-    await rateLimiter.acquireToken();
-
     try {
-      const response = await fetch(
-        `${this.API_URL}/venues?search=${encodeURIComponent(name)}&per-page=1`,
-        { headers: this.headers }
+      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; impact_factor?: number }> }>(
+        `${OA_API_URL}/venues?search=${encodeURIComponent(name)}&per-page=1`
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const venue = data.results?.[0];
-      
+      const venue = data?.results?.[0];
       if (!venue) return null;
 
       return {
