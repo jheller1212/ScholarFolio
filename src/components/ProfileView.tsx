@@ -399,6 +399,38 @@ export function ProfileView({
               </div>
             </div>
 
+            {data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null) && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Field-Normalized Metrics</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {data.fieldMetrics.fwci !== null && (
+                    <MetricsCard
+                      title="FWCI"
+                      value={data.fieldMetrics.fwci}
+                      subtitle={data.fieldMetrics.fwci >= 1.5 ? 'Well above average' : data.fieldMetrics.fwci >= 1.0 ? 'Above world average' : 'Below world average'}
+                      icon="fwci"
+                    />
+                  )}
+                  {data.fieldMetrics.meanCitedness !== null && (
+                    <MetricsCard
+                      title="Mean Journal Impact"
+                      value={data.fieldMetrics.meanCitedness}
+                      subtitle="Avg venue citedness"
+                      icon="meanIF"
+                    />
+                  )}
+                  {data.fieldMetrics.rcrMean !== null && (
+                    <MetricsCard
+                      title="RCR"
+                      value={data.fieldMetrics.rcrMean}
+                      subtitle={`${data.fieldMetrics.rcrPaperCount} PubMed paper${data.fieldMetrics.rcrPaperCount !== 1 ? 's' : ''}`}
+                      icon="rcr"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Collaboration Metrics</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">

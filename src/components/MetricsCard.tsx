@@ -39,7 +39,7 @@ interface MetricsCardProps {
         'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' |
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
         'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
-        'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess';
+        'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF';
 }
 
 function useCountUp(target: number | string, duration = 600) {
@@ -110,6 +110,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       // Field metrics
       case 'rcr': return <Scale className="h-3.5 w-3.5" />;
       case 'fwci': return <Gauge className="h-3.5 w-3.5" />;
+      case 'meanIF': return <TrendingUp className="h-3.5 w-3.5" />;
       
       // Publication metrics
       case 'publications': return <BookOpen className="h-3.5 w-3.5" />;
@@ -160,6 +161,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'sIndex': return 'sIndex';
       case 'rcr': return 'rcr';
       case 'fwci': return 'fwci';
+      case 'meanIF': return 'meanIF';
       case 'pubsPerYear': return 'pubsPerYear';
       case 'network': return 'collaborationScore';
       case 'coAuthors': return 'coAuthors';
