@@ -19,6 +19,7 @@ import { supabase } from './lib/supabase';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService } from './services/openalex';
+import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -268,6 +269,15 @@ function AppContent() {
           }
         })
         .catch(() => {}); // Silently ignore — OA stats are supplementary
+
+      // Fetch field-normalized metrics from OpenAlex + iCite (non-blocking)
+      fetchFieldNormalizedMetrics(sanitizedData.name, sanitizedData.affiliation)
+        .then(fieldMetrics => {
+          if (fieldMetrics) {
+            setData(prev => prev ? { ...prev, fieldMetrics } : prev);
+          }
+        })
+        .catch(() => {}); // Silently ignore — field metrics are supplementary
 
       // Update browser URL with shareable link (preserve vanity URL if loaded via slug)
       const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');

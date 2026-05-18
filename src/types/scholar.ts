@@ -75,6 +75,14 @@ export interface OpenAccessStats {
   publicationOa?: Record<string, { status: OaStatus; oaUrl?: string }>;
 }
 
+export interface FieldNormalizedMetrics {
+  fwci: number | null;
+  meanCitedness: number | null;
+  paperCount: number;
+  rcrMean: number | null;
+  rcrPaperCount: number;
+}
+
 export interface Author {
   name: string;
   affiliation: string;
@@ -85,6 +93,7 @@ export interface Author {
   publications: Publication[];
   metrics: Metrics;
   openAccess?: OpenAccessStats;
+  fieldMetrics?: FieldNormalizedMetrics;
   cacheStatus?: 'hit' | 'miss';
 }
 

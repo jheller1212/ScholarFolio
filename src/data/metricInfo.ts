@@ -155,6 +155,24 @@ export const metricInfo = {
     cons: "No guarantee of permanent access. Cannot be legally redistributed or archived. Publisher may revoke access.",
     link: "https://en.wikipedia.org/wiki/Open_access#Bronze_OA"
   },
+  fwci: {
+    description: "Field-Weighted Citation Impact — a normalized measure of citation impact relative to the world average for the same field and publication year. Calculated from OpenAlex citation percentiles.\n\nA value of 1.0 means the researcher's papers are cited at the world average for their fields. Values above 1.0 indicate above-average impact.",
+    pros: "Accounts for field-specific citation norms, making it meaningful to compare researchers across disciplines. Based on per-paper percentiles, not raw counts.",
+    cons: "Depends on OpenAlex field classification accuracy. May differ from Elsevier's proprietary FWCI calculation in Scopus/SciVal.",
+    link: "https://en.wikipedia.org/wiki/Field-weighted_citation_impact"
+  },
+  rcr: {
+    description: "Relative Citation Ratio — developed by NIH, measures how a paper's citation rate compares to the average for its field and age. An RCR of 1.0 means average; 2.0 means twice the expected citations.\n\nData sourced from NIH's iCite database. Only available for papers indexed in PubMed.",
+    pros: "Rigorous field normalization using co-citation networks rather than journal categories. Peer-reviewed methodology. Free and transparent.",
+    cons: "Only covers PubMed-indexed publications (primarily biomedical/health sciences). Not available for humanities, social sciences, or recent papers.",
+    link: "https://icite.od.nih.gov/help"
+  },
+  meanIF: {
+    description: "Mean Journal Impact — the average 2-year citation rate of the journals where this researcher publishes, based on OpenAlex source statistics.\n\nThis is analogous to the Journal Impact Factor but uses OpenAlex's open data rather than Clarivate's proprietary JCR.",
+    pros: "Indicates the quality tier of journals the researcher targets. Higher values suggest publications in more impactful venues.",
+    cons: "Journal-level metric applied to individual researchers. Publishing in high-IF journals doesn't guarantee individual paper impact.",
+    link: "https://en.wikipedia.org/wiki/Impact_factor"
+  },
   closedAccess: {
     description: "Publications behind a paywall, accessible only through subscriptions or individual purchase.",
     pros: "Traditional publishing model with established peer review processes.",

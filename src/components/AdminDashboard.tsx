@@ -247,9 +247,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               <h3 className="text-sm font-semibold text-gray-900 mb-6">Conversion Funnel</h3>
               <FunnelChart
                 steps={[
-                  { label: 'Total Searches', value: stats.searchesAllTime, color: '#e0f2f1' },
-                  { label: 'Unique Searchers', value: stats.totalUsers + stats.anonSearches, color: '#b2dfdb' },
-                  { label: 'Signed Up', value: stats.totalUsers, color: '#4db6ac' },
+                  { label: 'Total Searches', value: stats.searches, color: '#e0f2f1' },
+                  { label: 'Unique Searchers', value: stats.newUsers + stats.anonSearches, color: '#b2dfdb' },
+                  { label: 'Signed Up', value: stats.newUsers, color: '#4db6ac' },
                   { label: 'Purchased Credits', value: stats.purchasingUsers, color: '#2d7d7d' },
                 ]}
               />

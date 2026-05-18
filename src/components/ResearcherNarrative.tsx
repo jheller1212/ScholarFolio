@@ -519,13 +519,18 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   const handleReport = async () => {
     if (!reportMsg.trim()) return;
     setReportStatus('sending');
-    await supabase.from('profile_reports').insert({
+    const { error } = await supabase.from('profile_reports').insert({
       author_id: scholarId,
       author_name: data.name,
       reporter_email: reportEmail || null,
       message: reportMsg.trim(),
       page_url: window.location.href,
     });
+    if (error) {
+      console.error('[Report] Insert failed:', error);
+      setReportStatus('idle');
+      return;
+    }
     setReportStatus('sent');
     setTimeout(() => {
       setShowReport(false);
