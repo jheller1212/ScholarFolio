@@ -169,7 +169,7 @@ export function ProfileView({
               <Logo size={24} />
               <span className="font-semibold text-sm text-gray-900 hidden sm:inline">Scholar Folio</span>
               <span className="text-[10px] font-medium text-primary-start bg-primary-start/8 px-1.5 py-0.5 rounded hidden sm:inline">
-                v{packageJson.version}
+                v{packageJson.version.replace('-beta', '')} <span className="text-[8px] opacity-60">beta</span>
               </span>
               <span className="text-[9px] text-transparent hidden sm:inline select-all" title="Build time">
                 {new Date(__BUILD_TIME__).toLocaleString()}
