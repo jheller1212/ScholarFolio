@@ -5,6 +5,7 @@ import type { Topology, GeometryCollection } from 'topojson-specification';
 import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import type { Publication, CoAuthorGeoData } from '../types/scholar';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
+import { timeoutSignal } from '../utils/api';
 
 interface CoAuthorMapProps {
   publications: Publication[];
@@ -107,7 +108,8 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
     if (!region) return;
 
     const width = container.clientWidth;
-    const height = Math.max(360, Math.round(width * 0.5));
+    const isMobile = width < 640;
+    const height = isMobile ? Math.max(280, Math.round(width * 0.65)) : Math.max(360, Math.round(width * 0.5));
     const pt = projection(region.center);
     if (!pt) return;
 
@@ -141,7 +143,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
 
     const container = containerRef.current;
     const width = container.clientWidth;
-    const height = Math.max(360, Math.round(width * 0.5));
+    if (width === 0) return; // Container not yet laid out (hidden tab on mobile)
+    const isMobile = width < 640;
+    const height = isMobile ? Math.max(280, Math.round(width * 0.65)) : Math.max(360, Math.round(width * 0.5));
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -171,8 +175,13 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
     zoomRef.current = zoom;
     svg.call(zoom);
 
+    // Dismiss tooltip when tapping empty map area on mobile
+    svg.on('touchstart', () => {
+      setTooltip(prev => ({ ...prev, visible: false }));
+    }, { passive: true } as unknown as boolean);
+
     // Load world TopoJSON
-    fetch('https://unpkg.com/world-atlas@2/countries-110m.json')
+    fetch('https://unpkg.com/world-atlas@2/countries-110m.json', { signal: timeoutSignal(15000) })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -281,7 +290,18 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
             })
             .on('mouseleave', () => {
               setTooltip(prev => ({ ...prev, visible: false }));
-            });
+            })
+            .on('touchstart', (event: TouchEvent) => {
+              event.stopPropagation();
+              const touch = event.touches[0];
+              const rect = svgRef.current!.getBoundingClientRect();
+              setTooltip({
+                visible: true,
+                x: touch.clientX - rect.left + 12,
+                y: touch.clientY - rect.top - 8,
+                data: coAuthor
+              });
+            }, { passive: true });
         });
 
         // Draw main author dot (on top)
@@ -317,7 +337,18 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
               })
               .on('mouseleave', () => {
                 setTooltip(prev => ({ ...prev, visible: false }));
-              });
+              })
+              .on('touchstart', (event: TouchEvent) => {
+                event.stopPropagation();
+                const touch = event.touches[0];
+                const rect = svgRef.current!.getBoundingClientRect();
+                setTooltip({
+                  visible: true,
+                  x: touch.clientX - rect.left + 12,
+                  y: touch.clientY - rect.top - 8,
+                  data: geoData.mainAuthor
+                });
+              }, { passive: true });
           }
         }
       })
@@ -418,7 +449,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
 
         {!loading && !isEmpty && !mapError && (
           <div className="relative">
-            <svg ref={svgRef} className="w-full block" />
+            <svg ref={svgRef} className="w-full block" style={{ touchAction: 'none' }} />
 
             {/* Zoom controls */}
             <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -463,7 +494,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
               </div>
             )}
 
-            {/* Map legend */}
+            {/* Map legend — compact on mobile, full on desktop */}
             <div className="absolute top-2 right-2 flex flex-col gap-1.5 text-xs text-gray-500 bg-white/80 backdrop-blur-sm rounded-lg p-2 shadow-sm border border-gray-100">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#0d9488] border-2 border-white shadow-sm" />
@@ -473,7 +504,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
                 <div className="w-3 h-3 rounded-full bg-[#2d7d7d] opacity-70 border border-white shadow-sm" />
                 <span>Co-author</span>
               </div>
-              <div className="border-t border-gray-100 pt-1.5 mt-0.5 space-y-1">
+              <div className="hidden sm:block border-t border-gray-100 pt-1.5 mt-0.5 space-y-1">
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-2 rounded-sm" style={{ backgroundColor: CONTINENT_FILLS['europe'] }} />
                   <span>Europe</span>
@@ -537,9 +568,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
               <li>• Teal dot marks your location; darker dots are co-authors</li>
               <li>• Dot size scales with number of shared papers</li>
               <li>• Arcs show collaboration routes across the globe</li>
-              <li>• Hover a dot for details · Scroll to zoom · Drag to pan</li>
+              <li>• Tap or hover a dot for details · Pinch or scroll to zoom · Drag to pan</li>
               <li>• Use region buttons or zoom controls to explore specific areas</li>
-              <li>• Locations sourced from OpenAlex — top 20 co-authors by shared papers</li>
+              <li>• Locations sourced from OpenAlex — top 50 co-authors by shared papers</li>
             </ul>
           </div>
         </div>
