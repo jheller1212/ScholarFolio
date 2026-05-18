@@ -1,28 +1,5 @@
 import type { Publication, CoAuthorGeoData } from '../../types/scholar';
-import { RateLimiter } from '../scholar/rate-limiter';
-import { timeoutSignal } from '../../utils/api';
-
-const API_URL = 'https://api.openalex.org';
-const EMAIL = 'scholarfolio@scholarfolio.org';
-
-const geoRateLimiter = new RateLimiter(5000, 10);
-const HEADERS = {
-  'User-Agent': `ScholarFolio/1.0 (mailto:${EMAIL})`
-};
-
-async function fetchJson<T>(url: string): Promise<T | null> {
-  try {
-    await geoRateLimiter.acquireToken();
-    const response = await fetch(url, {
-      headers: HEADERS,
-      signal: timeoutSignal(10000)
-    });
-    if (!response.ok) return null;
-    return await response.json() as T;
-  } catch {
-    return null;
-  }
-}
+import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
 
 interface WorkAuthorship {
   author: { id: string; display_name: string };
@@ -43,50 +20,30 @@ interface InstitutionResult {
 
 /**
  * Fetches co-author geo data using a works-based approach:
- * 1. Find main author's OpenAlex ID
- * 2. Fetch all their works → extract co-author IDs + institution IDs (already disambiguated)
+ * 1. Find main author's OpenAlex ID (shared cached lookup)
+ * 2. Fetch all their works -> extract co-author IDs + institution IDs
  * 3. Match co-authors to publication names from ScholarFolio data
  * 4. Batch-fetch institution geo for unique institution IDs
  */
 export async function fetchCoAuthorGeoData(
   authorName: string,
-  _authorAffiliation: string,
+  authorAffiliation: string,
   publications: Publication[]
 ): Promise<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] }> {
-  // Step 1: Find the main author's OpenAlex ID and current institution
-  const authorSearch = await fetchJson<{ results: Array<{
-    id: string;
-    display_name: string;
-    last_known_institutions?: Array<{
-      id: string;
-      display_name: string;
-      country_code: string;
-    }>;
-  }> }>(
-    `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=10&select=id,display_name,last_known_institutions&mailto=${EMAIL}`
-  );
+  // Use shared author lookup (cached across services)
+  const author = await findOpenAlexAuthor(authorName, authorAffiliation);
+  if (!author) return { mainAuthor: null, coAuthors: [] };
 
-  // Prefer results whose display_name matches the search name
-  const nameLower = authorName.toLowerCase().trim();
-  const nameMatches = authorSearch?.results?.filter(r =>
-    r.display_name.toLowerCase().trim() === nameLower
-  );
-  const candidates = nameMatches?.length ? nameMatches : authorSearch?.results;
-  const mainAuthorResult = candidates?.[0];
-  const mainAuthorOaId = mainAuthorResult?.id;
-  if (!mainAuthorOaId) return { mainAuthor: null, coAuthors: [] };
-
-  // Use last_known_institutions for the main author's CURRENT affiliation
-  const mainCurrentInst = mainAuthorResult?.last_known_institutions?.[0];
-
+  const mainAuthorOaId = author.id;
+  const mainCurrentInst = author.lastKnownInstitutions[0];
   const shortId = mainAuthorOaId.replace('https://openalex.org/', '');
 
   // Step 2: Fetch works with authorships (paginated, up to 200 per page)
   const allAuthorships: WorkAuthorship[] = [];
   let page = 1;
   while (page <= 5) {
-    const worksData = await fetchJson<{ results: WorkResult[] }>(
-      `${API_URL}/works?filter=authorships.author.id:${shortId}&per_page=200&page=${page}&select=authorships&mailto=${EMAIL}`
+    const worksData = await oaFetchJson<{ results: WorkResult[] }>(
+      `${OA_API_URL}/works?filter=authorships.author.id:${shortId}&per_page=200&page=${page}&select=authorships&mailto=${OA_EMAIL}`
     );
     if (!worksData?.results?.length) break;
     for (const work of worksData.results) {
@@ -97,7 +54,6 @@ export async function fetchCoAuthorGeoData(
   }
 
   // Step 3: Build co-author map with their most recent institution
-  // Match OpenAlex names to ScholarFolio publication names
   const normalize = (name: string) => name.toLowerCase().trim();
   const getLastName = (name: string) => {
     const parts = name.split(/\s+/);
@@ -132,7 +88,6 @@ export async function fetchCoAuthorGeoData(
   }
 
   // From OpenAlex authorships, collect unique co-authors with their institution
-  // Use author ID to deduplicate, pick most frequent institution
   interface CoAuthorInfo {
     oaId: string;
     displayName: string;
@@ -145,7 +100,6 @@ export async function fetchCoAuthorGeoData(
   const coAuthorInstitutions = new Map<string, CoAuthorInfo>();
   const mainNameLower = authorName.toLowerCase().trim();
   for (const authorship of allAuthorships) {
-    // Skip the main author — by ID and by name (handles duplicate OA profiles)
     if (authorship.author.id === mainAuthorOaId) continue;
     if (authorship.author.display_name.toLowerCase().trim() === mainNameLower) continue;
     const inst = authorship.institutions[0];
@@ -176,11 +130,9 @@ export async function fetchCoAuthorGeoData(
   const matched: MatchedCoAuthor[] = [];
   const usedOaIds = new Set<string>();
 
-  // Helper: extract all name tokens for fuzzy matching
   const getNameTokens = (name: string) => new Set(normalize(name).split(/\s+/).filter(t => t.length > 1));
 
   for (const [sfName, stats] of coAuthorStats) {
-    // Try exact match first, then last-name match, then token overlap
     let bestMatch: CoAuthorInfo | null = null;
     for (const info of coAuthorInstitutions.values()) {
       if (usedOaIds.has(info.oaId)) continue;
@@ -199,7 +151,6 @@ export async function fetchCoAuthorGeoData(
         }
       }
     }
-    // Fallback: token overlap (handles reordered compound names like "Easthope Awai" vs "Awai Easthope")
     if (!bestMatch) {
       const sfTokens = getNameTokens(sfName);
       let bestOverlap = 0;
@@ -219,11 +170,10 @@ export async function fetchCoAuthorGeoData(
     }
   }
 
-  // Sort by shared papers and take top 20
+  // Sort by shared papers and take top 50
   matched.sort((a, b) => b.papers - a.papers);
   const top50 = matched.slice(0, 50);
 
-  // Use the main author's current institution from their profile
   const mainInstitutionId = mainCurrentInst?.id ?? null;
   const mainInstitutionName = mainCurrentInst?.display_name ?? null;
   const mainCountryCode = mainCurrentInst?.country_code ?? null;
@@ -238,8 +188,8 @@ export async function fetchCoAuthorGeoData(
   const geoCache = new Map<string, { lat: number; lng: number }>();
   const geoPromises = [...uniqueInstIds].map(async instId => {
     const sid = instId.replace('https://openalex.org/', '');
-    const data = await fetchJson<InstitutionResult>(
-      `${API_URL}/institutions/${sid}?select=geo&mailto=${EMAIL}`
+    const data = await oaFetchJson<InstitutionResult>(
+      `${OA_API_URL}/institutions/${sid}?select=geo&mailto=${OA_EMAIL}`
     );
     if (data?.geo?.latitude != null && data?.geo?.longitude != null) {
       geoCache.set(instId, { lat: data.geo.latitude, lng: data.geo.longitude });
@@ -248,11 +198,11 @@ export async function fetchCoAuthorGeoData(
   await Promise.all(geoPromises);
 
   // Build results
-  let mainAuthor: CoAuthorGeoData | null = null;
+  let mainAuthorGeo: CoAuthorGeoData | null = null;
   if (mainInstitutionId && mainInstitutionName && mainCountryCode) {
     const geo = geoCache.get(mainInstitutionId);
     if (geo) {
-      mainAuthor = {
+      mainAuthorGeo = {
         name: authorName,
         institution: mainInstitutionName,
         countryCode: mainCountryCode,
@@ -279,5 +229,5 @@ export async function fetchCoAuthorGeoData(
     });
   }
 
-  return { mainAuthor, coAuthors };
+  return { mainAuthor: mainAuthorGeo, coAuthors };
 }
