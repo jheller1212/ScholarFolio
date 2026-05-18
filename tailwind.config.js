@@ -38,6 +38,14 @@ export default {
           100: '#f1f5f9',
           200: '#e2e8f0',
         },
+        // Semantic category colors (muted, academic tone)
+        cat: {
+          impact: { from: '#b08d57', to: '#8b6f47' },       // warm amber/gold
+          collab: { from: '#2d7d7d', to: '#1f5c5c' },       // teal (brand)
+          trend: { from: '#4a6fa5', to: '#3a5a8a' },         // slate blue
+          field: { from: '#6b5b8a', to: '#554870' },         // muted indigo
+          oa: { from: '#4a8c6f', to: '#3a7059' },            // sage green
+        },
       },
       backgroundImage: {
         'gradient-primary': 'linear-gradient(135deg, #2d7d7d, #1f5c5c)',
