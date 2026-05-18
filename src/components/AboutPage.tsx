@@ -27,7 +27,33 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What it is</h2>
             <p>
               Scholar Folio is a free, open-source research portfolio tool. Paste your Google Scholar URL
-              and get a clear overview of your publication history, collaboration network, and research reach.
+              and get a shareable page with your publication history, citation metrics, collaboration network,
+              co-author world map, open access profile, and field-normalized impact — all generated automatically.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What it shows</h2>
+            <ul className="space-y-2 list-none">
+              <li><strong>Impact metrics</strong> — h-index, g-index, i10, citation growth, Gini coefficient, age-normalized rates</li>
+              <li><strong>Field-normalized impact</strong> — FWCI and Mean Journal Impact via OpenAlex, so you can compare across disciplines</li>
+              <li><strong>Citation trends</strong> — year-by-year charts, cumulative growth, publication output, and momentum analysis</li>
+              <li><strong>Co-author network</strong> — interactive visualization of your collaboration patterns and key partnerships</li>
+              <li><strong>World map</strong> — where your co-authors are, mapped by institution location</li>
+              <li><strong>Open access profile</strong> — gold, green, hybrid, and bronze OA breakdown with per-paper status</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
+            <p className="mb-2">
+              Profile data is sourced from <strong>Google Scholar</strong> (via SerpAPI, with direct scraping as fallback).
+              Open access stats, co-author geography, ORCID, and field-normalized metrics come from <strong>OpenAlex</strong>, an
+              open bibliometric database.
+            </p>
+            <p>
+              No data is stored beyond a 7-day cache to reduce API calls. ScholarFolio does not scrape, store,
+              or sell researcher data.
             </p>
           </section>
 
@@ -52,7 +78,8 @@ export function AboutPage({ onBack }: AboutPageProps) {
                 Jonas Heller <ExternalLink className="h-3 w-3" />
               </a>,
               Assistant Professor of Marketing at Maastricht University, researching consumer behavior
-              in emerging technologies (AR, VR, AI).
+              in emerging technologies (AR, VR, AI). This is an evening/weekend project, built for fun and
+              because there's a real need for automatic, individual-level research performance pages.
             </p>
           </section>
 
@@ -86,7 +113,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Pricing</h2>
 
             <p className="mb-4">
-              Scholar Folio is free to try: <strong>3 searches without signing up</strong>, and{' '}
+              Scholar Folio is free to try: <strong>5 searches without signing up</strong>, and{' '}
               <strong>5 more when you create an account</strong>.
             </p>
 
@@ -112,7 +139,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
                 cover this cost. There are no subscriptions, no ranking tools, and no data monetization.
               </p>
               <p>
-                <strong>Cached profiles</strong> (searched by anyone in the last 72 hours) are always free
+                <strong>Cached profiles</strong> (searched by anyone in the last 7 days) are always free
                 and do not cost a credit.
               </p>
             </div>
