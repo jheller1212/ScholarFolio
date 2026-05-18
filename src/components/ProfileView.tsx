@@ -15,7 +15,8 @@ import { ResearcherNarrative } from './ResearcherNarrative';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { Author } from '../types/scholar';
+import type { Author, CoAuthorGeoData } from '../types/scholar';
+import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { extractLastName } from '../utils/names';
 import packageJson from '../../package.json';
 
@@ -79,6 +80,17 @@ export function ProfileView({
   }, [updateIndicator]);
   const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
+  const [prefetchedGeo, setPrefetchedGeo] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
+
+  // Prefetch co-author geo data as soon as profile loads (don't wait for tab click)
+  useEffect(() => {
+    if (!data) { setPrefetchedGeo(null); return; }
+    let cancelled = false;
+    fetchCoAuthorGeoData(data.name, data.affiliation, data.publications).then(result => {
+      if (!cancelled) setPrefetchedGeo(result);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [data?.name, data?.affiliation, data?.publications]);
 
   // Extract scholar ID from URL params or profileUrl
   const scholarId = new URLSearchParams(window.location.search).get('user')
@@ -465,6 +477,7 @@ export function ProfileView({
             publications={data.publications}
             authorName={data.name}
             authorAffiliation={data.affiliation}
+            prefetchedData={prefetchedGeo}
           />
         )}
 
