@@ -1,5 +1,6 @@
 import type { Publication, CoAuthorGeoData } from '../../types/scholar';
 import { RateLimiter } from '../scholar/rate-limiter';
+import { timeoutSignal } from '../../utils/api';
 
 const API_URL = 'https://api.openalex.org';
 const EMAIL = 'scholarfolio@scholarfolio.org';
@@ -14,7 +15,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     await geoRateLimiter.acquireToken();
     const response = await fetch(url, {
       headers: HEADERS,
-      signal: AbortSignal.timeout(10000)
+      signal: timeoutSignal(10000)
     });
     if (!response.ok) return null;
     return await response.json() as T;
@@ -212,7 +213,7 @@ export async function fetchCoAuthorGeoData(
 
   // Sort by shared papers and take top 20
   matched.sort((a, b) => b.papers - a.papers);
-  const top20 = matched.slice(0, 20);
+  const top50 = matched.slice(0, 50);
 
   // Use the main author's current institution from their profile
   const mainInstitutionId = mainCurrentInst?.id ?? null;
@@ -222,7 +223,7 @@ export async function fetchCoAuthorGeoData(
   // Step 4: Collect unique institution IDs and batch-fetch their geo
   const uniqueInstIds = new Set<string>();
   if (mainInstitutionId) uniqueInstIds.add(mainInstitutionId);
-  for (const m of top20) {
+  for (const m of top50) {
     uniqueInstIds.add(m.oaInfo.institutionId);
   }
 
@@ -256,7 +257,7 @@ export async function fetchCoAuthorGeoData(
   }
 
   const coAuthors: CoAuthorGeoData[] = [];
-  for (const m of top20) {
+  for (const m of top50) {
     const geo = geoCache.get(m.oaInfo.institutionId);
     if (!geo) continue;
     coAuthors.push({

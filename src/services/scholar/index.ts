@@ -1,7 +1,7 @@
 import type { Author } from '../../types/scholar';
 import { findJournalRanking } from '../../data/journalRankings';
 import { metricsCalculator } from '../metrics';
-import { ApiError } from '../../utils/api';
+import { ApiError, timeoutSignal } from '../../utils/api';
 import { normalizeAuthorNames } from '../../utils/names';
 import { scholarFetcher } from './fetcher';
 import { scholarParser } from './parser';
@@ -38,7 +38,7 @@ export const scholarService = {
             'Authorization': `Bearer ${supabaseKey}`
           },
           body: JSON.stringify({ action: 'search', query }),
-          signal: AbortSignal.timeout(10000)
+          signal: timeoutSignal(10000)
         }
       );
 
