@@ -50,16 +50,23 @@ export async function fetchFieldNormalizedMetrics(
 ): Promise<FieldNormalizedMetrics | null> {
   try {
     // Step 1: Find author in OpenAlex
-    const authorSearch = await fetchJson<{ results: Array<{ id: string }> }>(
-      `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=5&select=id,last_known_institutions,affiliations&mailto=${EMAIL}`
+    const authorSearch = await fetchJson<{ results: Array<{ id: string; display_name: string }> }>(
+      `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=10&select=id,display_name,last_known_institutions,affiliations&mailto=${EMAIL}`
     );
     if (!authorSearch?.results?.length) return null;
 
-    // Try to match by affiliation
-    let authorId = authorSearch.results[0].id;
-    if (authorSearch.results.length > 1 && authorAffiliation) {
+    // First: filter to results whose display_name actually matches the search name
+    const nameLower = authorName.toLowerCase().trim();
+    const nameMatches = authorSearch.results.filter(r =>
+      r.display_name.toLowerCase().trim() === nameLower
+    );
+    const candidates = nameMatches.length > 0 ? nameMatches : authorSearch.results;
+
+    // Then try to match by affiliation among candidates
+    let authorId = candidates[0].id;
+    if (candidates.length > 1 && authorAffiliation) {
       const affLower = authorAffiliation.toLowerCase();
-      for (const result of authorSearch.results) {
+      for (const result of candidates) {
         const fullResult = await fetchJson<{
           id: string;
           last_known_institutions?: Array<{ display_name?: string }>;

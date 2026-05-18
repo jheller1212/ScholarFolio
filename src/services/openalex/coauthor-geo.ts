@@ -56,15 +56,23 @@ export async function fetchCoAuthorGeoData(
   // Step 1: Find the main author's OpenAlex ID and current institution
   const authorSearch = await fetchJson<{ results: Array<{
     id: string;
+    display_name: string;
     last_known_institutions?: Array<{
       id: string;
       display_name: string;
       country_code: string;
     }>;
   }> }>(
-    `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=1&select=id,last_known_institutions&mailto=${EMAIL}`
+    `${API_URL}/authors?search=${encodeURIComponent(authorName)}&per_page=10&select=id,display_name,last_known_institutions&mailto=${EMAIL}`
   );
-  const mainAuthorResult = authorSearch?.results?.[0];
+
+  // Prefer results whose display_name matches the search name
+  const nameLower = authorName.toLowerCase().trim();
+  const nameMatches = authorSearch?.results?.filter(r =>
+    r.display_name.toLowerCase().trim() === nameLower
+  );
+  const candidates = nameMatches?.length ? nameMatches : authorSearch?.results;
+  const mainAuthorResult = candidates?.[0];
   const mainAuthorOaId = mainAuthorResult?.id;
   if (!mainAuthorOaId) return { mainAuthor: null, coAuthors: [] };
 
