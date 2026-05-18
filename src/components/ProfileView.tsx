@@ -419,14 +419,12 @@ export function ProfileView({
                       icon="meanIF"
                     />
                   )}
-                  {data.fieldMetrics.rcrMean !== null && (
-                    <MetricsCard
-                      title="RCR"
-                      value={data.fieldMetrics.rcrMean}
-                      subtitle={`${data.fieldMetrics.rcrPaperCount} PubMed paper${data.fieldMetrics.rcrPaperCount !== 1 ? 's' : ''}`}
-                      icon="rcr"
-                    />
-                  )}
+                  <MetricsCard
+                    title="RCR"
+                    value={data.fieldMetrics.rcrMean !== null ? data.fieldMetrics.rcrMean : 'N/A'}
+                    subtitle={data.fieldMetrics.rcrMean !== null ? `${data.fieldMetrics.rcrPaperCount} PubMed paper${data.fieldMetrics.rcrPaperCount !== 1 ? 's' : ''}` : 'PubMed papers only'}
+                    icon="rcr"
+                  />
                 </div>
               </div>
             )}
