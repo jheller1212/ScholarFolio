@@ -11,6 +11,7 @@ interface CoAuthorMapProps {
   publications: Publication[];
   authorName: string;
   authorAffiliation: string;
+  prefetchedData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null;
 }
 
 interface TooltipState {
@@ -65,7 +66,7 @@ const REGION_VIEWS = [
   { id: 'oceania', label: 'Oceania', center: [145, -25] as [number, number], scale: 4 },
 ];
 
-export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoAuthorMapProps) {
+export function CoAuthorMap({ publications, authorName, authorAffiliation, prefetchedData }: CoAuthorMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -76,8 +77,13 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
   const [mapError, setMapError] = useState(false);
   const [activeRegion, setActiveRegion] = useState('world');
 
-  // Fetch geo data on mount
+  // Use prefetched data if available, otherwise fetch on mount
   useEffect(() => {
+    if (prefetchedData) {
+      setGeoData(prefetchedData);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     fetchCoAuthorGeoData(authorName, authorAffiliation, publications).then(result => {
@@ -87,7 +93,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation }: CoA
       }
     });
     return () => { cancelled = true; };
-  }, [authorName, authorAffiliation, publications]);
+  }, [authorName, authorAffiliation, publications, prefetchedData]);
 
   const zoomToRegion = useCallback((regionId: string) => {
     const svg = svgRef.current;
