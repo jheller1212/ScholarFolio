@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LogIn, LogOut, User, X, Eye, EyeOff } from 'lucide-react';
+import { LogIn, User, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function AuthButton() {
-  const { user, credits, loading, signIn, signUp, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -66,21 +66,7 @@ export function AuthButton() {
   };
 
   if (user) {
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-          <User className="h-3.5 w-3.5" />
-          <span className="max-w-[120px] truncate">{user.email}</span>
-        </div>
-        <button
-          onClick={signOut}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
-      </div>
-    );
+    return null;
   }
 
   return (
