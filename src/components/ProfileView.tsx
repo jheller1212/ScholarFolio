@@ -17,6 +17,7 @@ import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
+import type { PIndexResult } from '../services/openalex/pindex';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { extractLastName } from '../utils/names';
 import packageJson from '../../package.json';
@@ -82,6 +83,7 @@ export function ProfileView({
   const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
   const [prefetchedGeo, setPrefetchedGeo] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
+  const [pIndexResult, setPIndexResult] = useState<PIndexResult | null>(null);
 
   // Prefetch co-author geo data as soon as profile loads (don't wait for tab click)
   useEffect(() => {
@@ -316,7 +318,7 @@ export function ProfileView({
 
           {/* Researcher Narrative */}
           <div className="mt-5 pt-5 border-t border-gray-100">
-            <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} />
+            <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} pIndexResult={pIndexResult} />
           </div>
         </div>
 
@@ -443,7 +445,7 @@ export function ProfileView({
             )}
 
             {data && (
-              <PIndexSection authorName={data.name} affiliation={data.affiliation} />
+              <PIndexSection authorName={data.name} affiliation={data.affiliation} scrapedPublications={data.publications} onResult={setPIndexResult} />
             )}
 
             <div>

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
+import type { PIndexResult } from '../services/openalex/pindex';
 import { findJournalRanking } from '../data/journalRankings';
 import { scholarService } from '../services/scholar';
 
@@ -9,7 +10,9 @@ interface ResearcherNarrativeProps {
   data: Author;
   geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null;
   onSearch?: (url: string) => void;
+  pIndexResult?: PIndexResult | null;
 }
+
 
 function getCareerSpan(publications: Author['publications']): { firstYear: number; lastYear: number; years: number } {
   const currentYear = new Date().getFullYear();
@@ -427,7 +430,7 @@ function inferDiscipline(affiliation: string, topicNames: string[]): string | nu
   return null;
 }
 
-export function generateNarrativeParagraphs(data: Author): string[] {
+export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexResult | null): string[] {
     const { publications, metrics, topics, name, totalCitations } = data;
     const career = getCareerSpan(publications);
     const topVenues = getTopVenues(publications, 3);
@@ -507,9 +510,9 @@ export function generateNarrativeParagraphs(data: Author): string[] {
 
     if (career.firstYear > 0) {
       if (career.years <= 2) {
-        careerParagraph += ` ${lastName}'s first indexed publication appeared in ${career.firstYear}.`;
+        careerParagraph += ` ${lastName}'s first indexed publication appeared in **${career.firstYear}**.`;
       } else {
-        careerParagraph += ` ${lastName}'s publication record spans ${career.years} years, from ${career.firstYear} to ${career.lastYear}.`;
+        careerParagraph += ` ${lastName}'s publication record spans **${career.years}** years, from ${career.firstYear} to ${career.lastYear}.`;
       }
     }
 
@@ -530,18 +533,18 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     // Impact paragraph
     let impactParagraph = '';
     if (totalCitations === 0 && publications.length <= 3) {
-      impactParagraph = `${lastName} has ${publications.length} indexed publication${publications.length !== 1 ? 's' : ''} and has not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastName} has **${publications.length}** indexed publication${publications.length !== 1 ? 's' : ''} and has not yet accumulated citations in Google Scholar.`;
     } else if (totalCitations === 0) {
-      impactParagraph = `${lastName} has published ${publications.length} work${publications.length !== 1 ? 's' : ''} but has not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastName} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} but has not yet accumulated citations in Google Scholar.`;
     } else {
-      impactParagraph = `Over the course of their career, ${lastName} has published ${publications.length} work${publications.length !== 1 ? 's' : ''} and accumulated ${totalCitations.toLocaleString()} citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of ${metrics.hIndex}`;
+      impactParagraph = `Over the course of their career, ${lastName} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} and accumulated **${totalCitations.toLocaleString()}** citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of **${metrics.hIndex}**`;
       if (metrics.i10Index > 0) {
-        impactParagraph += ` and an i10-index of ${metrics.i10Index} (${metrics.i10Index} publication${metrics.i10Index !== 1 ? 's' : ''} with 10 or more citations)`;
+        impactParagraph += ` and an i10-index of **${metrics.i10Index}** (${metrics.i10Index} publication${metrics.i10Index !== 1 ? 's' : ''} with 10 or more citations)`;
       }
       impactParagraph += '.';
 
       if (topPaper && topPaper.citations > 0) {
-        impactParagraph += ` Their most cited work, "${topPaper.title}", has received ${topPaper.citations.toLocaleString()} citation${topPaper.citations !== 1 ? 's' : ''}.`;
+        impactParagraph += ` Their most cited work, "${topPaper.title}", has received **${topPaper.citations.toLocaleString()}** citation${topPaper.citations !== 1 ? 's' : ''}.`;
       }
     }
     paragraphs.push(impactParagraph);
@@ -555,11 +558,11 @@ export function generateNarrativeParagraphs(data: Author): string[] {
 
     let trendParagraph = '';
     if (phase === 'accelerating') {
-      trendParagraph = `${lastName}'s publication output has been accelerating, averaging ${recentRate} publications per year recently compared to ${olderRate} in the preceding period.`;
+      trendParagraph = `${lastName}'s publication output has been accelerating, averaging **${recentRate}** publications per year recently compared to **${olderRate}** in the preceding period.`;
     } else if (phase === 'steady') {
-      trendParagraph = `${lastName} maintains a steady publication pace of approximately ${recentRate} publications per year, indicating a sustained and active research program.`;
+      trendParagraph = `${lastName} maintains a steady publication pace of approximately **${recentRate}** publications per year, indicating a sustained and active research program.`;
     } else if (phase === 'decelerating') {
-      trendParagraph = `${lastName}'s recent publication rate has slowed to ${recentRate} per year, compared to ${olderRate} in the preceding three-year period.`;
+      trendParagraph = `${lastName}'s recent publication rate has slowed to **${recentRate}** per year, compared to **${olderRate}** in the preceding three-year period.`;
     } else if (phase === 'emerging') {
       trendParagraph = `${lastName} appears to be in the early stages of their publication career.`;
     } else if (phase === 'inactive') {
@@ -636,7 +639,7 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       } else {
         collabPct = `A small fraction (${metrics.collaborationScore}%)`;
       }
-      collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of ${metrics.averageAuthors} authors per paper across ${metrics.totalCoAuthors} unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
+      collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
       if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
         collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published ${metrics.topCoAuthorPapers} papers.`;
       }
@@ -658,6 +661,15 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       }
       venuesParagraph += '.';
       paragraphs.push(venuesParagraph);
+    }
+
+    // P-index paragraph (only when result is available)
+    if (pIndexResult && (pIndexResult.rawPIndex !== null || pIndexResult.owpiPIndex !== null)) {
+      const rawVal = pIndexResult.rawPIndex !== null ? `**${pIndexResult.rawPIndex}**` : 'N/A';
+      const owpiVal = pIndexResult.owpiPIndex !== null ? `**${pIndexResult.owpiPIndex}**` : 'N/A';
+      paragraphs.push(
+        `Based on OpenAlex data, ${lastName} achieves a p-index of ${rawVal} (average citation percentile within journal and year), with an authorship-weighted p-index of ${owpiVal}.`
+      );
     }
 
     return paragraphs;
@@ -820,8 +832,8 @@ function generateCitationDistributionParagraph(metrics: Author['metrics'], total
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
-export function ResearcherNarrative({ data, geoData, onSearch }: ResearcherNarrativeProps) {
-  const narrative = useMemo(() => generateNarrativeParagraphs(data), [data]);
+export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: ResearcherNarrativeProps) {
+  const narrative = useMemo(() => generateNarrativeParagraphs(data, pIndexResult), [data, pIndexResult]);
   const oaParagraph = useMemo(() => generateOpenAccessParagraph(data), [data]);
   const fieldMetricsParagraph = useMemo(() => generateFieldMetricsParagraph(data.fieldMetrics), [data.fieldMetrics]);
   const geoParagraph = useMemo(() => generateGeoParagraph(geoData), [geoData]);
@@ -1016,7 +1028,13 @@ export function ResearcherNarrative({ data, geoData, onSearch }: ResearcherNarra
 
       <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
         {narrative.map((paragraph, i) => (
-          <p key={i}>{linkifyText(paragraph)}</p>
+          <p key={i}>
+            {paragraph.split(/\*\*(.*?)\*\*/g).map((part, j) =>
+              j % 2 === 1
+                ? <strong key={j} className="font-semibold text-gray-900 dark:text-gray-100">{part}</strong>
+                : linkifyText(part)
+            )}
+          </p>
         ))}
         {fieldMetricsParagraph && <p>{fieldMetricsParagraph}</p>}
         {citationDistParagraph && <p>{citationDistParagraph}</p>}
