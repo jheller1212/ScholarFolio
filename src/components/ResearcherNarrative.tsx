@@ -640,15 +640,16 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
         collabPct = `A small fraction (${metrics.collaborationScore}%)`;
       }
       collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
-      const topAuthors = metrics.topCoAuthors?.filter(a => a.papers >= 2) ?? [];
-      if (topAuthors.length > 0) {
-        const authorList = topAuthors.map(a => `${a.name} (${a.papers})`);
-        if (authorList.length === 1) {
-          collabParagraph += ` ${lastName}'s most frequent collaborator is ${authorList[0]} papers.`;
-        } else {
-          const last = authorList.pop()!;
-          collabParagraph += ` ${lastName}'s most frequent collaborators are ${authorList.join(', ')}, and ${last} papers.`;
-        }
+      if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
+        collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published **${metrics.topCoAuthorPapers}** papers.`;
+      }
+      const otherCoAuthors = (metrics.topCoAuthors ?? [])
+        .filter(a => a.papers >= 2 && a.name !== metrics.topCoAuthor);
+      if (otherCoAuthors.length > 0) {
+        const names = otherCoAuthors.map(a => `${a.name} (${a.papers})`);
+        const last = names.pop()!;
+        const list = names.length > 0 ? `${names.join(', ')}, and ${last}` : last;
+        collabParagraph += ` Other frequent co-authors include ${list}.`;
       }
       paragraphs.push(collabParagraph);
     } else if (publications.length > 0) {
