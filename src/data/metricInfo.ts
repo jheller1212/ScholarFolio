@@ -185,6 +185,12 @@ export const metricInfo = {
     cons: "Assumes author order reflects contribution, which varies by field (e.g., alphabetical ordering in economics). May disadvantage researchers in large collaborative teams.",
     link: "https://www.p-index.net/"
   },
+  weightedCitations: {
+    description: "Sum of each article's citations multiplied by the researcher's authorship weight for that article, using the Abbas (2011) positional weighting formula.\n\nFor a paper with k authors, the weight of the j-th author is: w = 2(k−j+1) / k(k+1). A sole-authored paper with 100 citations contributes 100; a 4th-of-5 author paper with 100 citations contributes ~27.",
+    pros: "Accounts for authorship position when counting total citations. Rewards lead authorship and penalizes free-riding on large author lists.",
+    cons: "Assumes author order reflects contribution level, which varies by field. Always lower than raw citation count.",
+    link: "https://link.springer.com/article/10.1007/s11192-011-0389-7"
+  },
   closedAccess: {
     description: "Publications behind a paywall, accessible only through subscriptions or individual purchase.",
     pros: "Traditional publishing model with established peer review processes.",

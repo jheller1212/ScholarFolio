@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info, X } from 'lucide-react';
 import { oaFetchJson, OA_API_URL, OA_EMAIL } from '../services/openalex/author-lookup';
-import { computePIndex, type PIndexResult } from '../services/openalex/pindex';
+import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
 
 interface OpenAlexSearchResult {
@@ -17,28 +17,30 @@ interface PIndexSectionProps {
   affiliation: string;
 }
 
+type Step = 'idle' | 'searching' | 'select' | 'loading-works' | 'review' | 'computing' | 'done' | 'error';
+
 export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
-  const [step, setStep] = useState<'idle' | 'searching' | 'select' | 'computing' | 'done' | 'error'>('idle');
+  const [step, setStep] = useState<Step>('idle');
   const [searchResults, setSearchResults] = useState<OpenAlexSearchResult[]>([]);
   const [selectedAuthor, setSelectedAuthor] = useState<OpenAlexSearchResult | null>(null);
+  const [allWorks, setAllWorks] = useState<PIndexWork[]>([]);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<PIndexResult | null>(null);
   const [progress, setProgress] = useState({ pct: 0, status: '' });
   const [errorMsg, setErrorMsg] = useState('');
   const [showDetails, setShowDetails] = useState(false);
 
-  // Search fields — pre-filled from the profile
   const nameParts = authorName.split(' ');
   const [firstName, setFirstName] = useState(nameParts.slice(0, -1).join(' '));
   const [lastName, setLastName] = useState(nameParts[nameParts.length - 1] || '');
   const [institution, setInstitution] = useState(() => {
-    // Strip position prefixes like "Assistant Professor of Marketing, " to extract institution
     const stripped = affiliation.replace(/^(Assistant|Associate|Full|Adjunct|Visiting|Emeritus)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor)\s*(of|in|for|,)\s*/i, '');
-    // If stripping removed something, take what's left; otherwise take text after last comma
     if (stripped !== affiliation) return stripped.replace(/^,\s*/, '').trim();
-    // Fallback: take text after last comma (often "University of X")
     const parts = affiliation.split(',');
     return parts[parts.length - 1].trim();
   });
+
+  const includedCount = useMemo(() => allWorks.length - excludedIds.size, [allWorks, excludedIds]);
 
   const handleSearch = useCallback(async () => {
     if (!firstName.trim() || !lastName.trim()) return;
@@ -60,13 +62,59 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
     setStep('select');
   }, [firstName, lastName]);
 
-  const handleSelect = useCallback(async (author: OpenAlexSearchResult) => {
+  const handleSelectAuthor = useCallback(async (author: OpenAlexSearchResult) => {
     setSelectedAuthor(author);
+    setStep('loading-works');
+
+    try {
+      const works = await fetchPIndexWorks(author.id);
+      if (works.length === 0) {
+        setErrorMsg('No publications found for this author in OpenAlex.');
+        setStep('error');
+        return;
+      }
+      // Sort by year desc, then citations desc
+      works.sort((a, b) => b.year - a.year || b.citations - a.citations);
+      setAllWorks(works);
+      setExcludedIds(new Set());
+      setStep('review');
+    } catch {
+      setErrorMsg('Failed to fetch publications. Please try again.');
+      setStep('error');
+    }
+  }, []);
+
+  const toggleWork = useCallback((id: string) => {
+    setExcludedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setExcludedIds(new Set());
+  }, []);
+
+  const handleDeselectAll = useCallback(() => {
+    setExcludedIds(new Set(allWorks.map(w => w.id)));
+  }, [allWorks]);
+
+  const handleCompute = useCallback(async () => {
+    if (!selectedAuthor) return;
+    const included = allWorks.filter(w => !excludedIds.has(w.id));
+    if (included.length === 0) {
+      setErrorMsg('Select at least one publication to compute the p-index.');
+      setStep('error');
+      return;
+    }
+
     setStep('computing');
     setProgress({ pct: 0, status: 'Starting…' });
 
     try {
-      const pIndex = await computePIndex(author.id, (pct, status) => {
+      const pIndex = await computePIndexFromWorks(included, selectedAuthor.id, (pct, status) => {
         setProgress({ pct, status });
       });
 
@@ -81,15 +129,22 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
       setErrorMsg('Calculation failed. Please try again later.');
       setStep('error');
     }
-  }, []);
+  }, [selectedAuthor, allWorks, excludedIds]);
 
   const handleReset = useCallback(() => {
     setStep('idle');
     setResult(null);
     setSelectedAuthor(null);
     setSearchResults([]);
+    setAllWorks([]);
+    setExcludedIds(new Set());
     setErrorMsg('');
     setProgress({ pct: 0, status: '' });
+  }, []);
+
+  const handleBackToReview = useCallback(() => {
+    setStep('review');
+    setResult(null);
   }, []);
 
   return (
@@ -100,7 +155,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
         <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">(Pham, Wu &amp; Wang, 2024)</span>
       </h3>
 
-      {/* Info banner */}
+      {/* Step 1: Idle — info + search form */}
       {step === 'idle' && (
         <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 rounded-xl p-4 mb-3">
           <div className="flex gap-3">
@@ -155,7 +210,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
         </div>
       )}
 
-      {/* Searching spinner */}
+      {/* Step 2: Searching */}
       {step === 'searching' && (
         <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
           <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
@@ -163,7 +218,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
         </div>
       )}
 
-      {/* Author selection */}
+      {/* Step 3: Author selection */}
       {step === 'select' && (
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-3">
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -175,7 +230,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
               return (
                 <button
                   key={author.id}
-                  onClick={() => handleSelect(author)}
+                  onClick={() => handleSelectAuthor(author)}
                   className="w-full text-left px-3 py-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30 border border-transparent hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
                 >
                   <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{author.display_name}</p>
@@ -186,16 +241,92 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
               );
             })}
           </div>
-          <button
-            onClick={handleReset}
-            className="mt-3 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
+          <button onClick={handleReset} className="mt-3 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             ← Back to search
           </button>
         </div>
       )}
 
-      {/* Computing with progress */}
+      {/* Step 3b: Loading publications */}
+      {step === 'loading-works' && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+          Loading publications for {selectedAuthor?.display_name}…
+        </div>
+      )}
+
+      {/* Step 4: Review & filter publications */}
+      {step === 'review' && (
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Review publications for <strong>{selectedAuthor?.display_name}</strong>
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                Uncheck any publications that don't belong to this researcher. {includedCount} of {allWorks.length} selected.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSelectAll}
+                className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline"
+              >
+                Select all
+              </button>
+              <span className="text-[10px] text-gray-300 dark:text-gray-600">|</span>
+              <button
+                onClick={handleDeselectAll}
+                className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline"
+              >
+                Deselect all
+              </button>
+            </div>
+          </div>
+
+          <div className="max-h-72 overflow-y-auto border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700/50">
+            {allWorks.map(work => {
+              const excluded = excludedIds.has(work.id);
+              return (
+                <label
+                  key={work.id}
+                  className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors ${excluded ? 'opacity-40' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={!excluded}
+                    onChange={() => toggleWork(work.id)}
+                    className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500 flex-shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[11px] leading-tight ${excluded ? 'text-gray-400 dark:text-gray-600 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
+                      {work.title}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                      {work.journal} · {work.year} · {work.citations} cit · pos {work.authorPosition}/{work.totalAuthors}
+                    </p>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between mt-3">
+            <button onClick={handleReset} className="text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              ← Back to search
+            </button>
+            <button
+              onClick={handleCompute}
+              disabled={includedCount === 0}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              Calculate P-Index ({includedCount} publications)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Computing with progress */}
       {step === 'computing' && (
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-3">
           <div className="flex items-center gap-2 mb-3">
@@ -221,16 +352,13 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
             <AlertTriangle className="h-4 w-4 text-red-500" />
             <span className="text-xs text-red-700 dark:text-red-300">{errorMsg}</span>
           </div>
-          <button
-            onClick={handleReset}
-            className="mt-2 text-[10px] text-red-500 hover:text-red-700 dark:hover:text-red-400"
-          >
+          <button onClick={handleReset} className="mt-2 text-[10px] text-red-500 hover:text-red-700 dark:hover:text-red-400">
             Try again
           </button>
         </div>
       )}
 
-      {/* Results */}
+      {/* Step 6: Results */}
       {step === 'done' && result && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
@@ -250,20 +378,26 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
               subtitle="Authorship-weighted"
               icon="owpi"
             />
+            <MetricsCard
+              title="Weighted Citations"
+              value={result.weightedCitations.toLocaleString()}
+              subtitle="Authorship-adjusted"
+              icon="weightedCitations"
+            />
           </div>
 
-          {/* Source note */}
           <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">
-            Based on {result.worksWithPercentile} of {result.worksAnalyzed} publications from OpenAlex.
+            Based on {result.worksWithPercentile} of {result.worksAnalyzed} selected publications from OpenAlex.
             Values may differ from Web of Science due to different coverage and indexing.
-            {selectedAuthor && (
-              <button onClick={handleReset} className="ml-2 text-violet-500 hover:text-violet-700 underline">
-                Recalculate
-              </button>
-            )}
+            <button onClick={handleBackToReview} className="ml-2 text-violet-500 hover:text-violet-700 underline">
+              Edit selection
+            </button>
+            <span className="mx-1">·</span>
+            <button onClick={handleReset} className="text-violet-500 hover:text-violet-700 underline">
+              Start over
+            </button>
           </p>
 
-          {/* Expandable top publications */}
           {result.topPublications.length > 0 && (
             <button
               onClick={() => setShowDetails(!showDetails)}
@@ -308,15 +442,14 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
               </table>
             </div>
           )}
-        </>
-      )}
 
-      {/* Idle state — show confirmed check if we already computed */}
-      {step === 'done' && selectedAuthor && (
-        <div className="flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400 mt-2">
-          <CheckCircle className="h-3 w-3" />
-          OpenAlex profile: {selectedAuthor.display_name}
-        </div>
+          {selectedAuthor && (
+            <div className="flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400 mt-2">
+              <CheckCircle className="h-3 w-3" />
+              OpenAlex profile: {selectedAuthor.display_name}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

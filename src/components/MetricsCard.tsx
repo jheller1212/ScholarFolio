@@ -40,7 +40,7 @@ interface MetricsCardProps {
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
         'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
         'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF' |
-        'pindex' | 'owpi';
+        'pindex' | 'owpi' | 'weightedCitations';
 }
 
 function useCountUp(target: number | string, duration = 600) {
@@ -138,6 +138,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       // P-Index metrics
       case 'pindex': return <Award className="h-3.5 w-3.5" />;
       case 'owpi': return <Scale className="h-3.5 w-3.5" />;
+      case 'weightedCitations': return <Citation className="h-3.5 w-3.5" />;
 
       // Open Access metrics
       case 'oaPercent': return <Unlock className="h-3.5 w-3.5" />;
@@ -188,6 +189,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'closedAccess': return 'closedAccess';
       case 'pindex': return 'pindex';
       case 'owpi': return 'owpi';
+      case 'weightedCitations': return 'weightedCitations';
       default: return 'citations';
     }
   };
@@ -208,7 +210,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'network': case 'coAuthors': case 'avgAuthors': case 'soloAuthor': case 'topCoAuthor':
         return 'from-cat-collab-from to-cat-collab-to';
       // P-Index → violet
-      case 'pindex': case 'owpi':
+      case 'pindex': case 'owpi': case 'weightedCitations':
         return 'from-violet-500 to-purple-600';
       // Field-normalized → indigo
       case 'fwci': case 'rcr': case 'meanIF':
