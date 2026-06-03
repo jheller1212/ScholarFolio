@@ -12,6 +12,7 @@ import { CitationNetwork } from './CitationNetwork';
 import { CoAuthorMap } from './CoAuthorMap';
 import { OpenScienceTab } from './OpenScienceTab';
 import { ResearcherNarrative } from './ResearcherNarrative';
+import { PIndexSection } from './PIndexSection';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -439,6 +440,10 @@ export function ProfileView({
                   />
                 </div>
               </div>
+            )}
+
+            {data && (
+              <PIndexSection authorName={data.name} affiliation={data.affiliation} />
             )}
 
             <div>

@@ -39,7 +39,8 @@ interface MetricsCardProps {
         'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' |
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
         'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
-        'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF';
+        'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF' |
+        'pindex' | 'owpi';
 }
 
 function useCountUp(target: number | string, duration = 600) {
@@ -134,6 +135,10 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'sIndex': return <Zap className="h-3.5 w-3.5" />;
       case 'hpIndex': return <Award className="h-3.5 w-3.5" />;
 
+      // P-Index metrics
+      case 'pindex': return <Award className="h-3.5 w-3.5" />;
+      case 'owpi': return <Scale className="h-3.5 w-3.5" />;
+
       // Open Access metrics
       case 'oaPercent': return <Unlock className="h-3.5 w-3.5" />;
       case 'goldOa': return <Unlock className="h-3.5 w-3.5" />;
@@ -181,6 +186,8 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'hybridOa': return 'hybridOa';
       case 'bronzeOa': return 'bronzeOa';
       case 'closedAccess': return 'closedAccess';
+      case 'pindex': return 'pindex';
+      case 'owpi': return 'owpi';
       default: return 'citations';
     }
   };
@@ -200,6 +207,9 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       // Collaboration metrics → teal (brand)
       case 'network': case 'coAuthors': case 'avgAuthors': case 'soloAuthor': case 'topCoAuthor':
         return 'from-cat-collab-from to-cat-collab-to';
+      // P-Index → violet
+      case 'pindex': case 'owpi':
+        return 'from-violet-500 to-purple-600';
       // Field-normalized → indigo
       case 'fwci': case 'rcr': case 'meanIF':
         return 'from-cat-field-from to-cat-field-to';
