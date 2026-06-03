@@ -370,8 +370,8 @@ export function ProfileView({
         </div>
 
         {/* Tab content */}
-        <div key={tabKey} className="tab-content-enter">
-        {activeTab === 'metrics' && (
+        {/* Metrics tab stays mounted (hidden) so P-Index computation survives tab switches */}
+        <div className={activeTab === 'metrics' ? 'tab-content-enter' : 'hidden'}>
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-impact-from"></span>Impact Metrics</h3>
@@ -463,8 +463,9 @@ export function ProfileView({
             </div>
 
           </div>
-        )}
+        </div>
 
+        <div key={tabKey} className="tab-content-enter">
         {activeTab === 'trends' && (
           <div className="w-full">
             <CitationsChart citationsPerYear={data.metrics.citationsPerYear} citationGraphSource={data.metrics.citationGraphSource} publications={data.publications} />
