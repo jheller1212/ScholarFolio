@@ -12,7 +12,9 @@ interface ResearcherNarrativeProps {
 }
 
 function getCareerSpan(publications: Author['publications']): { firstYear: number; lastYear: number; years: number } {
-  const years = publications.map(p => p.year).filter(y => y > 0);
+  const currentYear = new Date().getFullYear();
+  // Filter out garbage years: must be after 1950 and not in the future
+  const years = publications.map(p => p.year).filter(y => y >= 1950 && y <= currentYear + 1);
   if (years.length === 0) return { firstYear: 0, lastYear: 0, years: 0 };
   const firstYear = Math.min(...years);
   const lastYear = Math.max(...years);
@@ -34,6 +36,11 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
         .replace(/\s+\d+\s*,.*$/, '')
         .replace(/\s+\d+\s*$/, '')
         .trim();
+      // Skip non-journal venues (repositories, working papers, etc.)
+      const lowerBase = baseName.toLowerCase();
+      const isNonJournal = /\b(ssrn|arxiv|researchgate|netspar|rijksoverheid|working paper|discussion paper|technical report|preprint|mimeo|unpublished|available at|course|thesis|dissertation|patent|us patent|google patent|university press|press|verlag|publisher|editora)\b/i.test(lowerBase);
+      if (isNonJournal || baseName.length <= 3) return;
+
       if (baseName.length > 0) {
         const key = baseName.toLowerCase();
         const existing = venueCounts.get(key);
@@ -135,7 +142,7 @@ function parseAffiliation(raw: string): { position: string; institution: string 
  * Extract dominant themes from a set of publication titles.
  * Returns lowercased bigrams/trigrams that appear frequently.
  */
-function extractTitleThemes(publications: Author['publications']): string[] {
+function extractTitleThemes(publications: Author['publications'], authorName?: string, fieldTopics?: string[]): string[] {
   // Stop words: function words + common academic verbs/fillers that aren't real topics
   const stopWords = new Set([
     // Function words
@@ -186,11 +193,56 @@ function extractTitleThemes(publications: Author['publications']): string[] {
     'potential', 'possible', 'proposed', 'alternative', 'traditional',
     'comprehensive', 'preliminary', 'initial', 'advanced', 'novel',
     'ethical', 'practical', 'theoretical', 'methodological',
+    // Verbs and verb-like words that leak into bigrams
+    'seeing', 'believing', 'making', 'taking', 'getting', 'going', 'looking',
+    'working', 'thinking', 'knowing', 'finding', 'giving', 'telling', 'feeling',
+    'becoming', 'keeping', 'leaving', 'putting', 'running', 'setting', 'turning',
+    'bringing', 'holding', 'letting', 'beginning', 'seeming', 'helping', 'talking',
+    'moving', 'living', 'playing', 'standing', 'losing', 'paying', 'meeting',
+    'sitting', 'opening', 'growing', 'walking', 'winning', 'teaching', 'offering',
+    'learning', 'considering', 'appearing', 'leading', 'rising', 'changing',
+    'coming', 'reading', 'calling', 'following', 'adding', 'reaching', 'serving',
+    'pulling', 'pushing', 'covering', 'cutting', 'crossing', 'breaking', 'passing',
+    'raising', 'addressing', 'reporting', 'engaging', 'promoting', 'achieving',
+    'supporting', 'providing', 'ensuring', 'delivering', 'stimulating', 'fostering',
+    'leveraging', 'harnessing', 'unlocking', 'unleashing', 'overcoming',
+    'navigating', 'transforming', 'disrupting', 'accelerating', 'redefining',
+    'reimagining', 'uncovering', 'unraveling', 'unpacking', 'deconstructing',
+    'drives', 'driven', 'matters',
+    // Common adjective/noun fragments that aren't topics
+    'curious', 'personal', 'reliability', 'gut', 'online', 'quality', 'shop',
+    'consumers', 'collected', 'papers', 'adventures', 'character', 'years',
+    'vol', 'swiss', 'berlin',
+    'real', 'world', 'open', 'key', 'big', 'end', 'old', 'age', 'set',
+    'well', 'way', 'much', 'back', 'turn', 'look', 'take', 'make', 'give',
+    'come', 'keep', 'let', 'say', 'get', 'got', 'put', 'run', 'see', 'seem',
+    'need', 'try', 'ask', 'use', 'find', 'tell', 'call', 'play', 'work',
+    'move', 'live', 'believe', 'bring', 'happen', 'write', 'provide', 'sit',
+    'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'learn', 'change',
+    'lead', 'understand', 'watch', 'follow', 'stop', 'speak', 'read', 'add',
+    'spend', 'grow', 'win', 'teach', 'show', 'hear', 'offer', 'remember',
+    'consider', 'appear', 'love', 'buy', 'wait', 'die', 'send', 'expect',
+    'build', 'stay', 'fall', 'reach', 'kill', 'remain', 'suggest', 'raise',
+    'pass', 'sell', 'require', 'report', 'decide', 'pull',
+    // Publication-type words
+    'book', 'books', 'handbook', 'proceedings', 'conference', 'journal',
+    'preprint', 'thesis', 'dissertation', 'monograph', 'manuscript',
+    // Common non-English words that slip through (no diacritics)
+    'der', 'die', 'das', 'und', 'ein', 'eine', 'einer', 'des', 'dem',
+    'den', 'auf', 'aus', 'bei', 'mit', 'von', 'zum', 'zur', 'als',
+    'les', 'des', 'une', 'dans', 'sur', 'par', 'pour', 'avec', 'aux',
+    'het', 'een', 'van', 'voor', 'met', 'niet', 'dat', 'zij',
+    'theorie', 'antwort', 'briefe', 'sechzig', 'english', 'translation',
+    'letter', 'jul', 'jan', 'feb', 'mar', 'apr', 'jun', 'aug', 'sep', 'oct', 'nov', 'dec',
   ]);
 
   const bigramCounts = new Map<string, number>();
 
   for (const pub of publications) {
+    // Skip non-English titles: check for diacritics, non-Latin scripts, or high non-ASCII ratio
+    const hasNonAsciiLetters = /[À-ÖØ-öø-ÿĀ-ſ\u0400-\u04FF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/.test(pub.title);
+    if (hasNonAsciiLetters) continue;
+
     const words = pub.title.toLowerCase()
       .replace(/[^a-z\s-]/g, ' ')
       .split(/\s+/)
@@ -204,9 +256,36 @@ function extractTitleThemes(publications: Author['publications']): string[] {
     }
   }
 
-  // Only keep bigrams that appear in ≥2 papers
+  // Build a set of words to exclude: author name parts + field/discipline words from topics
+  const excludeWords = new Set<string>();
+  if (authorName) {
+    for (const part of authorName.toLowerCase().split(/\s+/)) {
+      if (part.length > 2) excludeWords.add(part);
+    }
+  }
+  if (fieldTopics) {
+    for (const topic of fieldTopics) {
+      for (const word of topic.toLowerCase().split(/\s+/)) {
+        if (word.length > 2 && !stopWords.has(word)) excludeWords.add(word);
+      }
+    }
+  }
+
+  // Minimum frequency: ≥2 for small corpora, ≥3 for larger ones (reduces noise)
+  const minCount = publications.length >= 50 ? 3 : 2;
+
   const sorted = Array.from(bigramCounts.entries())
-    .filter(([, count]) => count >= 2)
+    .filter(([term, count]) => {
+      if (count < minCount) return false;
+      const words = term.split(' ');
+      // Skip bigrams containing author name parts (e.g., "ruyter wetzels")
+      if (words.some(w => excludeWords.has(w))) return false;
+      // Skip bigrams where both words are ≤3 chars (likely noise)
+      if (words.every(w => w.length <= 3)) return false;
+      // Skip bigrams that are only Latin/non-English characters patterns
+      // (heuristic: if both words have no common English letter patterns)
+      return true;
+    })
     .sort((a, b) => b[1] - a[1]);
 
   // Deduplicate: skip bigrams that heavily overlap with already-selected ones
@@ -228,7 +307,11 @@ function extractTitleThemes(publications: Author['publications']): string[] {
 
 /** Infer research methods/approaches from publication titles. */
 function inferResearchMethods(publications: Author['publications']): string[] {
-  const titleCorpus = publications.map(p => p.title.toLowerCase()).join(' ');
+  // Only use academic paper titles — skip book-like titles, interviews, memoirs
+  const academicTitles = publications
+    .filter(p => !/\b(interview|memoir|autobiography|biography|lecture|speech|letter|obituary|tribute|foreword|preface|afterword)\b/i.test(p.title))
+    .map(p => p.title.toLowerCase());
+  const titleCorpus = academicTitles.join(' ');
 
   // Each pattern: [regex to test against joined titles, human-readable label]
   const methodPatterns: [RegExp, string][] = [
@@ -279,6 +362,36 @@ function inferResearchMethods(publications: Author['publications']): string[] {
   return detected.slice(0, 4); // Cap at 4 to keep the sentence readable
 }
 
+/**
+ * Infer an academic discipline label from the affiliation and/or topics.
+ * E.g. "Assistant Professor in Marketing" → "Marketing"
+ *      "Department of Computer Science" → "Computer Science"
+ */
+function inferDiscipline(affiliation: string, topicNames: string[]): string | null {
+  // Try to extract from affiliation: "Professor of/in X", "Department of X"
+  // Prefer position-based patterns (more reliable than institution-based)
+  const positionPatterns = [
+    /(?:professor|prof\.?)\s+(?:of|in|for)\s+(.+?)(?:\s*[,;]|$)/i,
+    /(?:department|dept\.?)\s+(?:of|in)\s+(.+?)(?:\s*[,;]|$)/i,
+  ];
+  for (const pattern of positionPatterns) {
+    const match = affiliation.match(pattern);
+    if (match) {
+      const field = match[1].trim().replace(/\s+at\s+.*$/i, '');
+      // Reject if it looks like an institution name rather than a discipline
+      if (field.length > 2 && field.length < 60 && !/\b(university|institute|college|school|center|centre|lab|studies)\b/i.test(field)) {
+        return field;
+      }
+    }
+  }
+  // Fall back to first topic if it looks like a discipline (short, not too specific)
+  if (topicNames.length > 0) {
+    const first = topicNames[0];
+    if (first.split(/\s+/).length <= 5) return first;
+  }
+  return null;
+}
+
 export function generateNarrativeParagraphs(data: Author): string[] {
     const { publications, metrics, topics, name, totalCitations } = data;
     const career = getCareerSpan(publications);
@@ -302,6 +415,9 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       }
     }
 
+    // Infer discipline for context
+    const discipline = inferDiscipline(data.affiliation, topicNames);
+
     // Career overview paragraph
     const paragraphs: string[] = [];
 
@@ -315,7 +431,12 @@ export function generateNarrativeParagraphs(data: Author): string[] {
         careerParagraph += ` at ${institution}`;
       }
     } else if (institution) {
-      careerParagraph += ` a researcher at ${institution}`;
+      // If we have a discipline, use it: "a Marketing researcher at..."
+      if (discipline) {
+        careerParagraph += ` a ${discipline} researcher at ${institution}`;
+      } else {
+        careerParagraph += ` a researcher at ${institution}`;
+      }
     } else {
       careerParagraph += ' a researcher';
     }
@@ -324,11 +445,15 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     }
     careerParagraph += '.';
 
+    // Extract last name for natural pronoun alternation
+    const nameParts = name.trim().split(/\s+/);
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
+
     if (career.firstYear > 0) {
       if (career.years <= 2) {
-        careerParagraph += ` Their first indexed publication appeared in ${career.firstYear}.`;
+        careerParagraph += ` ${lastName}'s first indexed publication appeared in ${career.firstYear}.`;
       } else {
-        careerParagraph += ` Their publication record spans ${career.years} years, from ${career.firstYear} to ${career.lastYear}.`;
+        careerParagraph += ` ${lastName}'s publication record spans ${career.years} years, from ${career.firstYear} to ${career.lastYear}.`;
       }
     }
 
@@ -341,7 +466,7 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       } else {
         methodsText = methods.slice(0, -1).join(', ') + ' and ' + methods[methods.length - 1];
       }
-      careerParagraph += ` Based on their publication titles, their work draws on ${methodsText}.`;
+      careerParagraph += ` Based on publication titles, ${lastName}'s work draws on ${methodsText}.`;
     }
 
     paragraphs.push(careerParagraph);
@@ -349,11 +474,11 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     // Impact paragraph
     let impactParagraph = '';
     if (totalCitations === 0 && publications.length <= 3) {
-      impactParagraph = `They have ${publications.length} indexed publication${publications.length !== 1 ? 's' : ''} and have not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastName} has ${publications.length} indexed publication${publications.length !== 1 ? 's' : ''} and has not yet accumulated citations in Google Scholar.`;
     } else if (totalCitations === 0) {
-      impactParagraph = `They have published ${publications.length} work${publications.length !== 1 ? 's' : ''} but have not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastName} has published ${publications.length} work${publications.length !== 1 ? 's' : ''} but has not yet accumulated citations in Google Scholar.`;
     } else {
-      impactParagraph = `Over the course of their career, they have published ${publications.length} work${publications.length !== 1 ? 's' : ''} and accumulated ${totalCitations.toLocaleString()} citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of ${metrics.hIndex}`;
+      impactParagraph = `Over the course of their career, ${lastName} has published ${publications.length} work${publications.length !== 1 ? 's' : ''} and accumulated ${totalCitations.toLocaleString()} citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of ${metrics.hIndex}`;
       if (metrics.i10Index > 0) {
         impactParagraph += ` and an i10-index of ${metrics.i10Index} (${metrics.i10Index} publication${metrics.i10Index !== 1 ? 's' : ''} with 10 or more citations)`;
       }
@@ -365,16 +490,25 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     }
     paragraphs.push(impactParagraph);
 
-    // Productivity & trend paragraph
+    // Productivity & trend paragraph — with specific publication rate numbers
+    const currentYear = new Date().getFullYear();
+    const recentYearPubs = publications.filter(p => p.year >= currentYear - 3 && p.year <= currentYear);
+    const olderYearPubs = publications.filter(p => p.year >= currentYear - 6 && p.year < currentYear - 3);
+    const recentRate = recentYearPubs.length > 0 ? (recentYearPubs.length / 3).toFixed(1) : '0';
+    const olderRate = olderYearPubs.length > 0 ? (olderYearPubs.length / 3).toFixed(1) : '0';
+
     let trendParagraph = '';
-    const phaseDescriptions: Record<string, string> = {
-      'accelerating': 'Their publication output has been accelerating in recent years, suggesting an expanding research program.',
-      'steady': 'They maintain a steady publication pace, indicating a sustained and active research program.',
-      'decelerating': 'Their recent publication rate has slowed compared to earlier years.',
-      'emerging': 'They appear to be in the early stages of their publication career.',
-      'inactive': 'There are no publications in the most recent three years in the indexed record.'
-    };
-    trendParagraph += phaseDescriptions[phase] || '';
+    if (phase === 'accelerating') {
+      trendParagraph = `${lastName}'s publication output has been accelerating, averaging ${recentRate} publications per year recently compared to ${olderRate} in the preceding period.`;
+    } else if (phase === 'steady') {
+      trendParagraph = `${lastName} maintains a steady publication pace of approximately ${recentRate} publications per year, indicating a sustained and active research program.`;
+    } else if (phase === 'decelerating') {
+      trendParagraph = `${lastName}'s recent publication rate has slowed to ${recentRate} per year, compared to ${olderRate} in the preceding three-year period.`;
+    } else if (phase === 'emerging') {
+      trendParagraph = `${lastName} appears to be in the early stages of their publication career.`;
+    } else if (phase === 'inactive') {
+      trendParagraph = 'There are no publications in the most recent three years in the indexed record.';
+    }
 
     if (Math.abs(metrics.citationGrowthRate) >= 2) {
       const growthDirection = metrics.citationGrowthRate > 0 ? 'growing' : 'declining';
@@ -391,8 +525,9 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       const earlyPubs = sorted.slice(0, midpoint);
       const recentPubs = sorted.slice(midpoint);
 
-      const earlyThemes = extractTitleThemes(earlyPubs);
-      const recentThemes = extractTitleThemes(recentPubs);
+      const fieldLabels = topicNames.length > 0 ? topicNames : undefined;
+      const earlyThemes = extractTitleThemes(earlyPubs, name, fieldLabels);
+      const recentThemes = extractTitleThemes(recentPubs, name, fieldLabels);
 
       // Find themes unique to each period (not in the other's top themes)
       const earlySet = new Set(earlyThemes);
@@ -405,20 +540,24 @@ export function generateNarrativeParagraphs(data: Author): string[] {
         return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
       };
 
-      if (earlyOnly.length > 0 && recentOnly.length > 0) {
+      // Only include evolution paragraph if we have at least 2 good themes per period
+      if (earlyOnly.length >= 2 && recentOnly.length >= 2) {
         paragraphs.push(
-          `Their earlier work focused on topics such as ${formatList(earlyOnly)}, while their more recent publications have shifted towards ${formatList(recentOnly)}.`
+          `${lastName}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
+        );
+      } else if (earlyOnly.length > 0 && recentOnly.length > 0) {
+        paragraphs.push(
+          `${lastName}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
         );
       } else if (recentOnly.length > 0) {
         paragraphs.push(
-          `Their recent work has increasingly focused on ${formatList(recentOnly)}.`
+          `${lastName}'s recent work has increasingly focused on ${formatList(recentOnly)}.`
         );
       } else if (earlyThemes.length > 0 && recentThemes.length > 0) {
-        // Themes overlap — research focus has been consistent
         const shared = earlyThemes.filter(t => recentSet.has(t)).slice(0, 3);
         if (shared.length > 0) {
           paragraphs.push(
-            `Throughout their career, their research has consistently centered on ${formatList(shared)}.`
+            `Throughout their career, ${lastName}'s research has consistently centered on ${formatList(shared)}.`
           );
         }
       }
@@ -441,9 +580,9 @@ export function generateNarrativeParagraphs(data: Author): string[] {
       } else {
         collabPct = `A small fraction (${metrics.collaborationScore}%)`;
       }
-      collabParagraph = `${collabPct} of their publications are co-authored, with an average of ${metrics.averageAuthors} authors per paper across ${metrics.totalCoAuthors} unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
+      collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of ${metrics.averageAuthors} authors per paper across ${metrics.totalCoAuthors} unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
       if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
-        collabParagraph += ` Their most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published ${metrics.topCoAuthorPapers} papers.`;
+        collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published ${metrics.topCoAuthorPapers} papers.`;
       }
       paragraphs.push(collabParagraph);
     } else if (publications.length > 0) {
@@ -454,8 +593,8 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     if (topVenues.length > 0) {
       const venueList = topVenues.map(v => `${v.name} (${v.count} publication${v.count !== 1 ? 's' : ''})`);
       let venuesParagraph = topVenues.length === 1
-        ? 'Their most frequent publication outlet is '
-        : 'Their most frequent publication outlets include ';
+        ? `${lastName}'s most frequent publication outlet is `
+        : `${lastName}'s most frequent publication outlets include `;
       if (venueList.length === 1) {
         venuesParagraph += venueList[0];
       } else {
