@@ -3,7 +3,7 @@ import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as Cha
 import { NarrativeCvTab } from './NarrativeCvTab';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
-import { exportProfilePdf } from '../utils/pdfExport';
+// pdfExport is dynamically imported on click to avoid bundling jsPDF (344KB)
 import { SearchBar } from './SearchBar';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
@@ -257,8 +257,9 @@ export function ProfileView({
                     </button>
                   )}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (!data) return;
+                      const { exportProfilePdf } = await import('../utils/pdfExport');
                       exportProfilePdf(data, scholarId || undefined, prefetchedGeo);
                     }}
                     className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"

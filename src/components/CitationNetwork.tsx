@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import * as d3 from 'd3';
+import { select, selectAll } from 'd3-selection';
+import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
+import type { Simulation as D3Simulation, SimulationNodeDatum as D3SimulationNode } from 'd3-force';
+import { drag, type D3DragEvent } from 'd3-drag';
+import { zoom, zoomIdentity } from 'd3-zoom';
+import { scaleSequential } from 'd3-scale';
+import { interpolateRdYlGn, interpolateViridis } from 'd3-scale-chromatic';
 import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
 import type { Publication } from '../types/scholar';
 import { extractLastName } from '../utils/names';
@@ -183,7 +189,7 @@ const CLUSTER_COLORS = [
 
 export function CitationNetwork({ publications, fullScreen = false }: CitationNetworkProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
+  const simulationRef = useRef<D3Simulation<Node, Link> | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('publications');
   const [connectionLimit, setConnectionLimit] = useState<10 | 20>(10);
 
@@ -207,7 +213,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
   useEffect(() => {
     if (!svgRef.current || !publications.length) return;
 
-    d3.select(svgRef.current).selectAll('*').remove();
+    select(svgRef.current).selectAll('*').remove();
     stopSimulation();
 
     const showCitations = viewMode === 'citations';
@@ -346,14 +352,14 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     const allYears = links.map(l => l.lastYear).filter((y): y is number => y != null);
     const minYear = allYears.length > 0 ? Math.min(...allYears) : 2000;
     const maxYear = allYears.length > 0 ? Math.max(...allYears) : 2024;
-    const temporalColorScale = d3.scaleSequential(d3.interpolateRdYlGn)
+    const temporalColorScale = scaleSequential(interpolateRdYlGn)
       .domain([minYear, maxYear]);
 
     // --- Set up visualization ---
     const width = svgRef.current.clientWidth;
     const height = svgRef.current.clientHeight;
 
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
       .attr('viewBox', [0, 0, width, height]);
 
     const defs = svg.append('defs');
@@ -383,7 +389,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     // Color scale for collaboration strength (used in non-cluster views)
     const maxPubs = Math.max(...nodes.filter(n => n.group !== 1).map(n => n.sharedPublications), 1);
     const maxCites = Math.max(...nodes.filter(n => n.group !== 1).map(n => n.sharedCitations), 1);
-    const strengthColorScale = d3.scaleSequential(d3.interpolateViridis)
+    const strengthColorScale = scaleSequential(interpolateViridis)
       .domain([0, showCitations ? maxCites : maxPubs]);
 
     // Node color based on view mode
@@ -441,8 +447,8 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     }
 
     // Simulation
-    simulationRef.current = d3.forceSimulation(nodes as d3.SimulationNode[])
-      .force('link', d3.forceLink(links)
+    simulationRef.current = forceSimulation(nodes as D3SimulationNode[])
+      .force('link', forceLink(links)
         .id((d: any) => d.id)
         .distance(d => {
           const value = showCitations
@@ -451,15 +457,15 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           return 250 / Math.sqrt(value);
         })
       )
-      .force('charge', d3.forceManyBody()
+      .force('charge', forceManyBody()
         .strength(d => {
           const node = d as Node;
           const value = showCitations ? node.sharedCitations : node.sharedPublications;
           return -300 * Math.sqrt(value);
         })
       )
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide()
+      .force('center', forceCenter(width / 2, height / 2))
+      .force('collision', forceCollide()
         .radius(d => {
           const node = d as Node;
           const value = showCitations ? node.sharedCitations : node.sharedPublications;
@@ -503,7 +509,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
       .selectAll('g')
       .data(nodes)
       .join('g')
-      .call(d3.drag<SVGGElement, Node>()
+      .call(drag<SVGGElement, Node>()
         .on('start', dragstarted)
         .on('drag', dragged)
         .on('end', dragended));
@@ -590,7 +596,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     });
 
     // Zoom — only transform the container, not individual node groups
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoom = zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         container.attr('transform', event.transform);
@@ -601,7 +607,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     const initialScale = 0.8;
     svg.call(
       zoom.transform,
-      d3.zoomIdentity
+      zoomIdentity
         .translate(width / 2, height / 2)
         .scale(initialScale)
         .translate(-width / 2, -height / 2)
@@ -619,18 +625,18 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         .attr('transform', d => `translate(${(d as any).x},${(d as any).y})`);
     });
 
-    function dragstarted(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
+    function dragstarted(event: D3DragEvent<SVGGElement, Node, Node>) {
       if (!event.active && simulationRef.current) simulationRef.current.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
     }
 
-    function dragged(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
+    function dragged(event: D3DragEvent<SVGGElement, Node, Node>) {
       event.subject.fx = event.x;
       event.subject.fy = event.y;
     }
 
-    function dragended(event: d3.D3DragEvent<SVGGElement, Node, Node>) {
+    function dragended(event: D3DragEvent<SVGGElement, Node, Node>) {
       if (!event.active && simulationRef.current) simulationRef.current.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;

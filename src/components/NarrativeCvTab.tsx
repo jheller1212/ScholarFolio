@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Info, Loader2 } from 'lucide-react';
-import { exportNarrativeCv } from '../utils/narrativeCvExport';
-import type { NarrativeCvFormat } from '../utils/narrativeCvExport';
+// docx (~650KB) is dynamically imported on export click
+type NarrativeCvFormat = 'nwo' | 'erc' | 'msca';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 
 interface NarrativeCvTabProps {
@@ -54,6 +54,7 @@ export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
   const handleExport = async (format: NarrativeCvFormat) => {
     setExporting(format);
     try {
+      const { exportNarrativeCv } = await import('../utils/narrativeCvExport');
       await exportNarrativeCv(data, format, geoData);
     } catch (err) {
       console.error('Narrative CV export failed:', err);
