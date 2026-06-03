@@ -232,9 +232,11 @@ function topicString(data: Author): string {
 // Main export
 // ============================================================
 
+export type NarrativeCvFormat = 'nwo' | 'erc' | 'msca';
+
 export async function exportNarrativeCv(
   data: Author,
-  format: 'nwo' | 'erc',
+  format: NarrativeCvFormat,
   geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
 ): Promise<void> {
   let resolvedOrcidId = data.openAccess?.orcid;
@@ -244,9 +246,13 @@ export async function exportNarrativeCv(
   }
   const orcid = resolvedOrcidId ? await fetchOrcidProfile(resolvedOrcidId) : null;
 
-  const children = format === 'nwo'
-    ? buildNwo(data, orcid, resolvedOrcidId, geoData)
-    : buildErc(data, orcid, resolvedOrcidId, geoData);
+  const builders: Record<NarrativeCvFormat, () => Paragraph[]> = {
+    nwo: () => buildNwo(data, orcid, resolvedOrcidId, geoData),
+    erc: () => buildErc(data, orcid, resolvedOrcidId, geoData),
+    msca: () => buildMsca(data, orcid, resolvedOrcidId, geoData),
+  };
+
+  const children = builders[format]();
 
   const doc = new Document({
     sections: [{
@@ -260,8 +266,8 @@ export async function exportNarrativeCv(
   const blob = await Packer.toBlob(doc);
   const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_');
   const dateStr = new Date().toISOString().slice(0, 10);
-  const prefix = format === 'nwo' ? 'NWO_EBCV' : 'ERC_CV';
-  saveAs(blob, `ScholarFolio_${prefix}_${safeName}_${dateStr}.docx`);
+  const prefixes: Record<NarrativeCvFormat, string> = { nwo: 'NWO_EBCV', erc: 'ERC_CV', msca: 'MSCA_CV' };
+  saveAs(blob, `ScholarFolio_${prefixes[format]}_${safeName}_${dateStr}.docx`);
 }
 
 // ============================================================
@@ -540,5 +546,121 @@ function buildErc(
   p.push(placeholderParagraph('[Add: international collaborations, research networks, and mobility.]'));
 
   p.push(footerParagraph('ERC CV & Track Record'));
+  return p;
+}
+
+// ============================================================
+// MSCA Postdoctoral Fellowship (Part B2 - CV)
+// Citation counts acceptable, no JIF requirement
+// ============================================================
+
+function buildMsca(
+  data: Author,
+  orcid: OrcidProfile | null,
+  orcidId: string | undefined,
+  _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null,
+): Paragraph[] {
+  const p: Paragraph[] = [];
+  const narrative = generateNarrativeParagraphs(data);
+
+  // Header
+  p.push(new Paragraph({
+    children: [new TextRun({ text: 'MSCA POSTDOCTORAL FELLOWSHIP — CV (Part B2)', font: 'Calibri', size: 16, color: PLACEHOLDER })],
+    spacing: { after: 100 },
+  }));
+  p.push(new Paragraph({
+    children: [new TextRun({ text: data.name, bold: true, font: 'Calibri', size: 36, color: DARK })],
+    spacing: { after: 60 },
+  }));
+  if (data.affiliation) {
+    p.push(new Paragraph({
+      children: [new TextRun({ text: data.affiliation, font: 'Calibri', size: 22, color: GRAY })],
+      spacing: { after: 200 },
+    }));
+  }
+
+  p.push(placeholderParagraph(
+    'MSCA Postdoctoral Fellowship CV. No strict page limit for Part B2, but keep concise. ' +
+    'Complete placeholder sections before submission.'
+  ));
+
+  // Personal details
+  p.push(sectionHeading('Personal Details'));
+  p.push(labelValueParagraph('Name', data.name));
+  if (data.affiliation) p.push(labelValueParagraph('Current affiliation', data.affiliation));
+  if (orcidId) p.push(labelValueParagraph('ORCID', orcidId));
+  if (data.topics.length > 0) {
+    const topicNames = data.topics.map(t =>
+      typeof t.name === 'object' ? (t.name as { title?: string }).title || '' : String(t.name)
+    ).filter(Boolean);
+    p.push(labelValueParagraph('Research areas', topicNames.slice(0, 5).join(', ')));
+  }
+  p.push(placeholderParagraph('[Add: nationality, date of birth, contact details]'));
+
+  // Education
+  p.push(sectionHeading('Education'));
+  if (orcid?.educations?.length) {
+    p.push(...educationEntries(orcid.educations));
+  } else {
+    p.push(placeholderParagraph('[PhD degree, institution, year, thesis title]'));
+    p.push(placeholderParagraph('[MSc / MA degree, institution, year]'));
+  }
+
+  // Research experience
+  p.push(sectionHeading('Research Experience & Positions'));
+  if (orcid?.employments?.length) {
+    p.push(...employmentEntries(orcid.employments));
+  } else {
+    if (data.affiliation) p.push(bodyParagraph(`Current: ${data.affiliation}`));
+    p.push(placeholderParagraph('[Add: previous research positions with dates]'));
+  }
+
+  // Publications
+  p.push(sectionHeading('Publications'));
+  if (narrative[0]) p.push(bodyParagraph(stripMarkdown(narrative[0])));
+
+  p.push(subHeading('Selected publications'));
+  const keyOutputs = selectKeyOutputs(data.publications);
+  p.push(...publicationEntries(keyOutputs, data.openAccess, true));
+
+  // Grants & awards
+  p.push(sectionHeading('Grants, Fellowships & Awards'));
+  if (orcid?.fundings?.length) {
+    p.push(...fundingEntries(orcid.fundings));
+  } else {
+    p.push(placeholderParagraph('[List research grants and fellowships received]'));
+  }
+  if (orcid?.distinctions?.length) {
+    p.push(subHeading('Awards'));
+    for (const dist of orcid.distinctions) {
+      const yearStr = dist.year ? ` (${dist.year})` : '';
+      p.push(bodyParagraph(`${dist.title} — ${dist.organization}${yearStr}`));
+    }
+  } else {
+    p.push(placeholderParagraph('[List academic awards and prizes]'));
+  }
+
+  // Supervision & teaching
+  p.push(sectionHeading('Supervision & Teaching'));
+  p.push(placeholderParagraph('[List students supervised (PhD, MSc), courses taught, mentoring activities]'));
+
+  // Institutional responsibilities
+  p.push(sectionHeading('Institutional Responsibilities & Service'));
+  p.push(placeholderParagraph('[List editorial board memberships, reviewing activities, conference organisation]'));
+
+  // International mobility
+  p.push(sectionHeading('International Mobility & Collaboration'));
+  const collabPara = narrative.find(n =>
+    n.includes('co-authored') || n.includes('collaborator') || n.includes('single-authored')
+  );
+  if (collabPara) p.push(bodyParagraph(stripMarkdown(collabPara)));
+  p.push(placeholderParagraph('[Describe international research stays, mobility, and collaboration networks]'));
+
+  // Transferable skills & career breaks
+  p.push(sectionHeading('Transferable Skills & Career Breaks'));
+  p.push(placeholderParagraph('[Describe transferable skills (project management, outreach, industry collaboration)]'));
+  p.push(placeholderParagraph('[If applicable, explain any career breaks, parental leave, or non-standard career paths]'));
+
+  p.push(footerParagraph('MSCA Postdoctoral Fellowship CV'));
   return p;
 }
