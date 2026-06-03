@@ -193,7 +193,8 @@ export function exportProfilePdf(data: Author, scholarId?: string, geoData?: { m
     setColor(DARK);
     for (const para of allNarrativeParagraphs) {
       ensureSpace(12);
-      const lines = doc.splitTextToSize(para, CW);
+      const plainPara = para.replace(/\*\*(.*?)\*\*/g, '$1');
+      const lines = doc.splitTextToSize(plainPara, CW);
       doc.text(lines, M, y);
       y += lines.length * 3.5 + 2;
     }

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info, X } from 'lucide-react';
+import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { oaFetchJson, OA_API_URL, OA_EMAIL } from '../services/openalex/author-lookup';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
@@ -15,11 +15,25 @@ interface OpenAlexSearchResult {
 interface PIndexSectionProps {
   authorName: string;
   affiliation: string;
+  onResult?: (result: PIndexResult | null) => void;
+  scrapedPublications?: Array<{ title: string; year: number; citations: number }>;
 }
 
 type Step = 'idle' | 'searching' | 'select' | 'loading-works' | 'review' | 'computing' | 'done' | 'error';
+type MatchStatus = 'confirmed' | 'likely' | 'unmatched';
 
-export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
+function titleSimilarity(a: string, b: string): number {
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+  const wordsA = new Set(normalize(a));
+  const wordsB = new Set(normalize(b));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  for (const w of wordsA) if (wordsB.has(w)) intersection++;
+  return intersection / Math.max(wordsA.size, wordsB.size);
+}
+
+export function PIndexSection({ authorName, affiliation, onResult, scrapedPublications }: PIndexSectionProps) {
   const [step, setStep] = useState<Step>('idle');
   const [searchResults, setSearchResults] = useState<OpenAlexSearchResult[]>([]);
   const [selectedAuthor, setSelectedAuthor] = useState<OpenAlexSearchResult | null>(null);
@@ -29,6 +43,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
   const [progress, setProgress] = useState({ pct: 0, status: '' });
   const [errorMsg, setErrorMsg] = useState('');
   const [showDetails, setShowDetails] = useState(false);
+  const [matchStatuses, setMatchStatuses] = useState<Map<string, MatchStatus>>(new Map());
 
   const nameParts = authorName.split(' ');
   const [firstName, setFirstName] = useState(nameParts.slice(0, -1).join(' '));
@@ -41,6 +56,28 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
   });
 
   const includedCount = useMemo(() => allWorks.length - excludedIds.size, [allWorks, excludedIds]);
+
+  const matchSummary = useMemo(() => {
+    if (matchStatuses.size === 0) return null;
+    let confirmed = 0, likely = 0, unmatched = 0;
+    for (const status of matchStatuses.values()) {
+      if (status === 'confirmed') confirmed++;
+      else if (status === 'likely') likely++;
+      else unmatched++;
+    }
+    return { confirmed, likely, unmatched };
+  }, [matchStatuses]);
+
+  const sortedWorks = useMemo(() => {
+    if (matchStatuses.size === 0) return allWorks;
+    const order: Record<MatchStatus, number> = { confirmed: 0, likely: 1, unmatched: 2 };
+    return [...allWorks].sort((a, b) => {
+      const statusA = matchStatuses.get(a.id) ?? 'unmatched';
+      const statusB = matchStatuses.get(b.id) ?? 'unmatched';
+      if (order[statusA] !== order[statusB]) return order[statusA] - order[statusB];
+      return b.year - a.year || b.citations - a.citations;
+    });
+  }, [allWorks, matchStatuses]);
 
   const handleSearch = useCallback(async () => {
     if (!firstName.trim() || !lastName.trim()) return;
@@ -73,16 +110,43 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
         setStep('error');
         return;
       }
-      // Sort by year desc, then citations desc
+
+      // Sort by year desc, then citations desc as baseline
       works.sort((a, b) => b.year - a.year || b.citations - a.citations);
       setAllWorks(works);
-      setExcludedIds(new Set());
+
+      // Compute match status against scraped Google Scholar publications
+      if (scrapedPublications && scrapedPublications.length > 0) {
+        const statuses = new Map<string, MatchStatus>();
+        for (const work of works) {
+          let bestScore = 0;
+          for (const scraped of scrapedPublications) {
+            const score = titleSimilarity(work.title, scraped.title);
+            if (score > bestScore) bestScore = score;
+          }
+          if (bestScore >= 0.8) statuses.set(work.id, 'confirmed');
+          else if (bestScore >= 0.5) statuses.set(work.id, 'likely');
+          else statuses.set(work.id, 'unmatched');
+        }
+        setMatchStatuses(statuses);
+
+        // Only auto-exclude works with zero word overlap (clearly not the same author's work).
+        // "Likely" and borderline "unmatched" works stay checked — user can deselect manually.
+        const autoExcluded = new Set(
+          works.filter(w => statuses.get(w.id) === 'unmatched').map(w => w.id)
+        );
+        setExcludedIds(autoExcluded);
+      } else {
+        setMatchStatuses(new Map());
+        setExcludedIds(new Set());
+      }
+
       setStep('review');
     } catch {
       setErrorMsg('Failed to fetch publications. Please try again.');
       setStep('error');
     }
-  }, []);
+  }, [scrapedPublications]);
 
   const toggleWork = useCallback((id: string) => {
     setExcludedIds(prev => {
@@ -120,6 +184,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
 
       if (pIndex) {
         setResult(pIndex);
+        onResult?.(pIndex);
         setStep('done');
       } else {
         setErrorMsg('Could not compute p-index. No publications with journal data found.');
@@ -129,7 +194,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
       setErrorMsg('Calculation failed. Please try again later.');
       setStep('error');
     }
-  }, [selectedAuthor, allWorks, excludedIds]);
+  }, [selectedAuthor, allWorks, excludedIds, onResult]);
 
   const handleReset = useCallback(() => {
     setStep('idle');
@@ -138,6 +203,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
     setSearchResults([]);
     setAllWorks([]);
     setExcludedIds(new Set());
+    setMatchStatuses(new Map());
     setErrorMsg('');
     setProgress({ pct: 0, status: '' });
   }, []);
@@ -265,6 +331,11 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
               </p>
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                 {includedCount} of {allWorks.length} selected.
+                {matchSummary && (
+                  <span className="ml-1">
+                    {matchSummary.confirmed} confirmed · {matchSummary.likely} possible · {matchSummary.unmatched} unmatched
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
@@ -284,18 +355,28 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
             </div>
           </div>
 
-          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-3">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-            <p className="text-[11px] text-amber-700 dark:text-amber-300">
-              <strong>Important:</strong> Please carefully review and uncheck any publications that are not yours.
-              OpenAlex may include papers from other researchers with similar names. Including wrong publications
-              will significantly affect your p-index score.
-            </p>
-          </div>
+          {matchStatuses.size > 0 ? (
+            <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 mb-3">
+              <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-green-700 dark:text-green-300">
+                Publications found in your Google Scholar profile are pre-selected (green). Unmatched items are unchecked — review and include any that are yours.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-3">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                <strong>Important:</strong> Please carefully review and uncheck any publications that are not yours.
+                OpenAlex may include papers from other researchers with similar names. Including wrong publications
+                will significantly affect your p-index score.
+              </p>
+            </div>
+          )}
 
           <div className="max-h-72 overflow-y-auto border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700/50">
-            {allWorks.map(work => {
+            {sortedWorks.map(work => {
               const excluded = excludedIds.has(work.id);
+              const matchStatus = matchStatuses.get(work.id);
               return (
                 <label
                   key={work.id}
@@ -308,9 +389,21 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
                     className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 dark:border-slate-600 text-violet-600 focus:ring-violet-500 flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className={`text-[11px] leading-tight ${excluded ? 'text-gray-400 dark:text-gray-600 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
-                      {work.title}
-                    </p>
+                    <div className="flex items-start gap-1.5 flex-wrap">
+                      <p className={`text-[11px] leading-tight ${excluded ? 'text-gray-400 dark:text-gray-600 line-through' : 'text-gray-800 dark:text-gray-200'}`}>
+                        {work.title}
+                      </p>
+                      {matchStatuses.size > 0 && (
+                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                          matchStatus === 'confirmed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                          matchStatus === 'likely' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                          'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500'
+                        }`}>
+                          {matchStatus === 'confirmed' ? '✓ GScholar' :
+                           matchStatus === 'likely' ? '~ Possible' : '? Not found'}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {work.journal} · {work.year} · {work.citations} cit · pos {work.authorPosition}/{work.totalAuthors}
                     </p>
