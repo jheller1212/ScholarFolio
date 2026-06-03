@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as d3 from 'd3';
+import { select } from 'd3-selection';
+import { zoom as d3Zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
+import { geoNaturalEarth1, geoPath, geoCentroid, geoInterpolate, type GeoPermissibleObjects, type GeoProjection } from 'd3-geo';
 import * as topojson from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -30,7 +32,7 @@ interface WorldTopology extends Topology {
 
 // Continent classification based on geographic centroid
 function classifyContinent(feature: GeoJSON.Feature): string {
-  const [lng, lat] = d3.geoCentroid(feature);
+  const [lng, lat] = geoCentroid(feature);
   if (lng >= -30 && lng <= 50 && lat > 35) return 'europe';
   if (lng >= -25 && lng <= 55 && lat <= 37 && lat >= -40) return 'africa';
   if (lng < -25 && lat > 15) return 'north-america';
@@ -69,8 +71,8 @@ const REGION_VIEWS = [
 export function CoAuthorMap({ publications, authorName, authorAffiliation, prefetchedData }: CoAuthorMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const projectionRef = useRef<d3.GeoProjection | null>(null);
+  const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const projectionRef = useRef<GeoProjection | null>(null);
   const [loading, setLoading] = useState(true);
   const [geoData, setGeoData] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, data: null });
@@ -105,8 +107,8 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
     setActiveRegion(regionId);
 
     if (regionId === 'world') {
-      d3.select(svg).transition().duration(750)
-        .call(zoom.transform, d3.zoomIdentity);
+      select(svg).transition().duration(750)
+        .call(zoom.transform, zoomIdentity);
       return;
     }
 
@@ -119,24 +121,24 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
     const pt = projection(region.center);
     if (!pt) return;
 
-    const transform = d3.zoomIdentity
+    const transform = zoomIdentity
       .translate(width / 2, height / 2)
       .scale(region.scale)
       .translate(-pt[0], -pt[1]);
 
-    d3.select(svg).transition().duration(750)
+    select(svg).transition().duration(750)
       .call(zoom.transform, transform);
   }, []);
 
   const handleZoomIn = useCallback(() => {
     if (!svgRef.current || !zoomRef.current) return;
-    d3.select(svgRef.current).transition().duration(300)
+    select(svgRef.current).transition().duration(300)
       .call(zoomRef.current.scaleBy, 1.5);
   }, []);
 
   const handleZoomOut = useCallback(() => {
     if (!svgRef.current || !zoomRef.current) return;
-    d3.select(svgRef.current).transition().duration(300)
+    select(svgRef.current).transition().duration(300)
       .call(zoomRef.current.scaleBy, 1 / 1.5);
   }, []);
 
@@ -153,22 +155,22 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
     const isMobile = width < 640;
     const height = isMobile ? Math.max(280, Math.round(width * 0.65)) : Math.max(360, Math.round(width * 0.5));
 
-    const svg = d3.select(svgRef.current);
+    const svg = select(svgRef.current);
     svg.selectAll('*').remove();
     svg.attr('viewBox', `0 0 ${width} ${height}`).attr('width', width).attr('height', height);
 
-    const projection = d3.geoNaturalEarth1()
+    const projection = geoNaturalEarth1()
       .scale(width / 6.5)
       .translate([width / 2, height / 2]);
     projectionRef.current = projection;
 
-    const pathGen = d3.geoPath().projection(projection);
+    const pathGen = geoPath().projection(projection);
 
     // Zoom behaviour
     const zoomGroup = svg.append('g');
 
     let currentScale = 1;
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
+    const zoom = d3Zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.5, 20])
       .on('zoom', event => {
         zoomGroup.attr('transform', event.transform);
@@ -197,7 +199,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
 
         // Outer sphere (ocean)
         zoomGroup.insert('path', ':first-child')
-          .datum({ type: 'Sphere' } as d3.GeoPermissibleObjects)
+          .datum({ type: 'Sphere' } as GeoPermissibleObjects)
           .attr('d', pathGen as unknown as string)
           .attr('fill', '#eaf4f4')
           .attr('stroke', '#d1fae5')
@@ -234,7 +236,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
               geometry: {
                 type: 'LineString',
                 coordinates: (() => {
-                  const interp = d3.geoInterpolate(
+                  const interp = geoInterpolate(
                     [geoData.mainAuthor!.lng, geoData.mainAuthor!.lat],
                     [coAuthor.lng, coAuthor.lat]
                   );
