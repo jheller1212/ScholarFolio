@@ -77,31 +77,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Add credits to user
-      const { data: current } = await supabase
-        .from('user_credits')
-        .select('credits_remaining, total_purchased')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (current) {
-        await supabase
-          .from('user_credits')
-          .update({
-            credits_remaining: current.credits_remaining + credits,
-            total_purchased: current.total_purchased + credits,
-          })
-          .eq('user_id', userId);
-      } else {
-        // User row doesn't exist yet (shouldn't happen with trigger, but just in case)
-        await supabase
-          .from('user_credits')
-          .insert({
-            user_id: userId,
-            credits_remaining: credits,
-            total_purchased: credits,
-          });
-      }
+      // Atomically add credits (handles upsert internally)
+      await supabase.rpc('increment_credits', { p_user_id: userId, p_amount: credits });
 
       console.log(`[Webhook] Successfully added ${credits} credits for user ${userId}`);
     }
