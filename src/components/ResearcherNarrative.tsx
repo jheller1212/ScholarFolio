@@ -136,8 +136,9 @@ function parseAffiliation(raw: string): { position: string; institution: string 
  * Returns lowercased bigrams/trigrams that appear frequently.
  */
 function extractTitleThemes(publications: Author['publications']): string[] {
-  // Common stop words to filter out
+  // Stop words: function words + common academic verbs/fillers that aren't real topics
   const stopWords = new Set([
+    // Function words
     'the', 'a', 'an', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with',
     'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'has',
     'have', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
@@ -147,9 +148,33 @@ function extractTitleThemes(publications: Author['publications']): string[] {
     'why', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
     'some', 'such', 'than', 'too', 'very', 'also', 'just', 'about', 'above',
     'after', 'again', 'between', 'into', 'through', 'during', 'before',
-    'new', 'using', 'based', 'study', 'analysis', 'research', 'approach',
-    'role', 'effect', 'effects', 'impact', 'case', 'evidence', 'towards',
-    'toward', 'among', 'across', 'review', 'via', 'under', 'over',
+    'via', 'under', 'over', 'upon', 'within', 'without', 'along', 'since',
+    // Academic verbs/gerunds that aren't topics
+    'using', 'based', 'exploring', 'examining', 'understanding', 'investigating',
+    'analyzing', 'analysing', 'assessing', 'evaluating', 'measuring', 'testing',
+    'comparing', 'developing', 'building', 'creating', 'designing', 'proposing',
+    'presenting', 'showing', 'demonstrating', 'revealing', 'suggesting',
+    'explaining', 'predicting', 'modeling', 'modelling', 'determining',
+    'identifying', 'mapping', 'tracking', 'monitoring', 'implementing',
+    'applying', 'adopting', 'integrating', 'combining', 'linking', 'bridging',
+    'rethinking', 'reconsidering', 'revisiting', 'extending', 'expanding',
+    'enhancing', 'improving', 'increasing', 'reducing', 'enabling', 'driving',
+    'shaping', 'influencing', 'affecting', 'mediating', 'moderating',
+    // Common academic nouns that are too generic
+    'new', 'study', 'analysis', 'research', 'approach', 'role', 'effect',
+    'effects', 'impact', 'case', 'evidence', 'towards', 'toward', 'among',
+    'across', 'review', 'results', 'findings', 'implications', 'perspective',
+    'perspectives', 'framework', 'model', 'models', 'theory', 'theories',
+    'conceptual', 'empirical', 'systematic', 'comparative', 'critical',
+    'introduction', 'editorial', 'commentary', 'response', 'reply', 'note',
+    'chapter', 'paper', 'article', 'literature', 'future', 'directions',
+    'special', 'issue', 'part', 'volume',
+    // Common adjectives/adverbs that aren't topics
+    'really', 'highly', 'fully', 'merely', 'largely', 'mainly', 'primarily',
+    'particularly', 'especially', 'generally', 'currently', 'recently',
+    'increasingly', 'different', 'various', 'several', 'multiple',
+    'first', 'second', 'third', 'early', 'late', 'recent', 'current',
+    'good', 'better', 'best', 'high', 'low', 'large', 'small', 'long', 'short',
   ]);
 
   const bigramCounts = new Map<string, number>();
@@ -160,25 +185,30 @@ function extractTitleThemes(publications: Author['publications']): string[] {
       .split(/\s+/)
       .filter(w => w.length > 2 && !stopWords.has(w));
 
-    // Count meaningful bigrams
+    // Count meaningful bigrams (these are the best topic indicators)
     for (let i = 0; i < words.length - 1; i++) {
       const bigram = `${words[i]} ${words[i + 1]}`;
       bigramCounts.set(bigram, (bigramCounts.get(bigram) || 0) + 1);
     }
-    // Also count significant single words (longer, more likely domain terms)
+    // Single words only if they are strong domain terms (≥6 chars, appear ≥3 times)
     for (const w of words) {
-      if (w.length >= 5) {
+      if (w.length >= 6) {
         bigramCounts.set(w, (bigramCounts.get(w) || 0) + 1);
       }
     }
   }
 
-  // Return themes that appear in at least 2 papers, sorted by frequency.
-  // Remove single words that are already part of a selected bigram to avoid
-  // splitting phrases like "social media" into separate "social" and "media".
+  // Return themes that appear frequently, strongly preferring bigrams.
+  // Bigrams need ≥2 occurrences, single words need ≥3 to qualify.
   const sorted = Array.from(bigramCounts.entries())
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1]);
+    .filter(([term, count]) => term.includes(' ') ? count >= 2 : count >= 3)
+    .sort((a, b) => {
+      // Prefer bigrams over single words at same frequency
+      const aIsBigram = a[0].includes(' ') ? 1 : 0;
+      const bIsBigram = b[0].includes(' ') ? 1 : 0;
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return bIsBigram - aIsBigram;
+    });
 
   const selected: string[] = [];
   for (const [term] of sorted) {
