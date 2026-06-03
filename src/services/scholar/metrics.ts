@@ -20,7 +20,8 @@ export class MetricsCalculator {
         topCoAuthor: '', topCoAuthorPapers: 0,
         topCoAuthorCitations: 0, topCoAuthorFirstYear: 0,
         topCoAuthorLastYear: 0, topCoAuthorFirstPaper: '',
-        topCoAuthorLastPaper: ''
+        topCoAuthorLastPaper: '',
+        topCoAuthors: []
       };
     }
 
@@ -268,6 +269,13 @@ export class MetricsCalculator {
       }
     });
 
+    // Top co-authors sorted by paper count (max 4)
+    const topCoAuthors = [...coAuthorCounts.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 4)
+      .filter(([, d]) => d.count >= 2)
+      .map(([name, d]) => ({ name, papers: d.count }));
+
     return {
       totalCoAuthors: coAuthorCounts.size,
       averageAuthors: parseFloat((totalAuthors / publications.length).toFixed(1)),
@@ -279,7 +287,8 @@ export class MetricsCalculator {
       topCoAuthorFirstYear: topCoAuthorData.firstYear,
       topCoAuthorLastYear: topCoAuthorData.lastYear,
       topCoAuthorFirstPaper: topCoAuthorData.firstPaper,
-      topCoAuthorLastPaper: topCoAuthorData.lastPaper
+      topCoAuthorLastPaper: topCoAuthorData.lastPaper,
+      topCoAuthors
     };
   }
 
