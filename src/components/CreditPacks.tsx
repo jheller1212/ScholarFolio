@@ -72,9 +72,16 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="credit-packs-title"
+      onClick={onClose}
+      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+    >
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden modal-card"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden modal-card"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -82,6 +89,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
@@ -89,7 +97,7 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
             <Heart className="h-5 w-5 text-amber-300" />
             <span className="text-xs font-medium uppercase tracking-wider text-white/80">Support Scholar Folio</span>
           </div>
-          <h2 className="text-xl font-bold">
+          <h2 id="credit-packs-title" className="text-xl font-bold">
             Keep this open-science tool running
           </h2>
           <p className="text-sm text-white/80 mt-1">

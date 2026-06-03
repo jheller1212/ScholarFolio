@@ -38,20 +38,20 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-3">Open Access Over Time</h3>
-      <div className="bg-white rounded-xl border border-gray-100 shadow-card p-6">
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Open Access Over Time</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-6">
         {/* Hover detail panel */}
         <div className="h-10 mb-3">
           {hoveredData ? (
             <div className="flex items-center gap-4 text-sm animate-in fade-in duration-150">
-              <span className="font-semibold text-gray-900">{hoveredData.year}</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{hoveredData.year}</span>
               <span className="text-[#2d7d7d] font-medium">{hoveredData.oa} open access</span>
-              <span className="text-gray-400">·</span>
-              <span className="text-gray-500">{hoveredData.closed} closed</span>
-              <span className="text-gray-400">·</span>
-              <span className="text-gray-500">{hoveredData.total} total</span>
-              <span className="text-gray-400">·</span>
-              <span className="font-medium text-gray-700">{hoveredData.pct}% OA</span>
+              <span className="text-gray-400 dark:text-gray-500">·</span>
+              <span className="text-gray-500 dark:text-gray-400">{hoveredData.closed} closed</span>
+              <span className="text-gray-400 dark:text-gray-500">·</span>
+              <span className="text-gray-500 dark:text-gray-400">{hoveredData.total} total</span>
+              <span className="text-gray-400 dark:text-gray-500">·</span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">{hoveredData.pct}% OA</span>
             </div>
           ) : (
             <p className="text-xs text-gray-400">Hover over a bar to see the breakdown</p>
@@ -67,7 +67,7 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
               onMouseLeave={() => setHoveredYear(null)}
             >
               <span className={`w-12 text-xs shrink-0 transition-colors ${hoveredYear === year ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{year}</span>
-              <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative cursor-pointer">
+              <div className="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-5 overflow-hidden relative cursor-pointer">
                 <div
                   className="absolute inset-y-0 left-0 bg-gray-200 rounded-full transition-all duration-300"
                   style={{ width: `${(total / maxTotal) * 100}%` }}
@@ -103,7 +103,7 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
 
   if (!oa) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 shadow-card p-8 text-center">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-8 text-center">
         <Unlock className="h-8 w-8 text-gray-300 mx-auto mb-3" />
         <p className="text-sm text-gray-500">Loading Open Access data...</p>
         <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
@@ -115,7 +115,7 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
     <div className="space-y-6">
       {/* Summary metrics — using MetricsCard for consistency */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Open Access Metrics</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Open Access Metrics</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           <MetricsCard title="Open Access" value={`${oa.oaPercent}%`} subtitle={`${oa.oa} of ${oa.total} publications`} icon="oaPercent" />
           {oa.gold > 0 && <MetricsCard title="Gold OA" value={oa.gold} subtitle="Fully OA journals" icon="goldOa" />}
@@ -128,8 +128,8 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
 
       {/* Visual breakdown bar */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Access Breakdown</h3>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-card p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Access Breakdown</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-6">
           <div className="h-6 rounded-full overflow-hidden flex bg-gray-100">
             {oa.gold > 0 && (
               <div
@@ -169,27 +169,27 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
             {oa.gold > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-600 cursor-help" title="Published in fully open access journals">
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-help" title="Published in fully open access journals">
                 <span className="w-3 h-3 rounded bg-[#2d7d7d]" /> Gold ({oa.gold})
               </span>
             )}
             {oa.green > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-600 cursor-help" title="Available via repositories">
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-help" title="Available via repositories">
                 <span className="w-3 h-3 rounded bg-[#4db6ac]" /> Green ({oa.green})
               </span>
             )}
             {oa.hybrid > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-600 cursor-help" title="OA in subscription journals">
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-help" title="OA in subscription journals">
                 <span className="w-3 h-3 rounded bg-[#80cbc4]" /> Hybrid ({oa.hybrid})
               </span>
             )}
             {oa.bronze > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-600 cursor-help" title="Free to read, no open license">
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-help" title="Free to read, no open license">
                 <span className="w-3 h-3 rounded bg-[#b2dfdb]" /> Bronze ({oa.bronze})
               </span>
             )}
             {oa.closed > 0 && (
-              <span className="flex items-center gap-1.5 text-xs text-gray-600 cursor-help" title="Behind paywall">
+              <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-help" title="Behind paywall">
                 <span className="w-3 h-3 rounded bg-gray-300" /> Closed ({oa.closed})
               </span>
             )}
@@ -203,8 +203,8 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
       {/* ORCID */}
       {oa.orcid && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">ORCID</h3>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-card p-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">ORCID</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-4">
             <a
               href={`https://orcid.org/${oa.orcid}`}
               target="_blank"

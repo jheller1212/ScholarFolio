@@ -42,19 +42,27 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] p-4">
-      <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl flex flex-col">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-[15vh] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="scholar-search-title"
+      onClick={onClose}
+      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-          <h2 className="text-base font-semibold text-gray-900 flex items-center">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+          <h2 id="scholar-search-title" className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center">
             <Search className="h-4 w-4 text-[#2d7d7d] mr-2" />
             Find Author on Google Scholar
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Close"
           >
-            <X className="h-4 w-4 text-gray-500" />
+            <X className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
@@ -66,7 +74,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
               1
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 mb-2">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
                 Search for the author on Google Scholar
               </p>
               <button
@@ -85,7 +93,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
               2
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                 Click on the author's profile, then copy the URL from your browser
               </p>
               <p className="text-xs text-gray-400 mt-1">
@@ -100,7 +108,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
               3
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 mb-2">
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
                 Paste the profile URL here
               </p>
               <form onSubmit={handleSubmit}>
@@ -111,7 +119,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect }: ScholarSearchM
                     value={pastedUrl}
                     onChange={(e) => { setPastedUrl(e.target.value); setError(null); }}
                     placeholder="https://scholar.google.com/citations?user=..."
-                    className="w-full px-4 py-2.5 pl-10 pr-12 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 focus:bg-white transition-all"
+                    className="w-full px-4 py-2.5 pl-10 pr-12 text-sm text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 focus:bg-white dark:focus:bg-gray-800 transition-all"
                     autoComplete="off"
                     spellCheck="false"
                   />

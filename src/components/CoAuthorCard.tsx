@@ -26,7 +26,7 @@ export function CoAuthorCard({
   const [showPapers, setShowPapers] = React.useState(false);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 hover:border-gray-200 dark:hover:border-slate-600 transition-colors overflow-hidden">
       <div className="p-3 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {imageUrl ? (
@@ -47,7 +47,7 @@ export function CoAuthorCard({
           )}
           <div className="min-w-0">
             <div className="flex items-center space-x-1">
-              <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{name}</p>
               {profileUrl && (
                 <a
                   href={profileUrl}
@@ -59,8 +59,8 @@ export function CoAuthorCard({
                 </a>
               )}
             </div>
-            <p className="text-xs text-gray-600 truncate">{affiliation}</p>
-            <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{affiliation}</p>
+            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>{citations.toLocaleString()} citations</span>
               <span className="text-gray-300">•</span>
               <span>h-index: {hIndex}</span>
@@ -77,10 +77,10 @@ export function CoAuthorCard({
         </div>
       </div>
       {showPapers && sharedPapers.length > 0 && (
-        <div className="border-t border-gray-100 bg-gray-50/50 p-3">
+        <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50 p-3">
           <ul className="space-y-2">
             {sharedPapers.map((paper, index) => (
-              <li key={index} className="text-xs text-gray-600 hover:text-gray-900">
+              <li key={index} className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
                 <a href={paper.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                   {paper.title}{paper.year > 0 ? ` (${paper.year})` : ''} - {paper.citations} citations
                 </a>
