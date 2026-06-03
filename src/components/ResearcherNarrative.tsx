@@ -1,11 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check } from 'lucide-react';
+import React, { useMemo, useState, useCallback } from 'react';
+import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Author } from '../types/scholar';
+import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
 import { findJournalRanking } from '../data/journalRankings';
+import { scholarService } from '../services/scholar';
 
 interface ResearcherNarrativeProps {
   data: Author;
+  geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null;
+  onSearch?: (url: string) => void;
 }
 
 function getCareerSpan(publications: Author['publications']): { firstYear: number; lastYear: number; years: number } {
@@ -504,9 +507,106 @@ function generateOpenAccessParagraph(data: Author): string | null {
   return paragraph;
 }
 
-export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
+function generateFieldMetricsParagraph(fieldMetrics?: FieldNormalizedMetrics | null): string | null {
+  if (!fieldMetrics) return null;
+  const parts: string[] = [];
+
+  if (fieldMetrics.fwci !== null) {
+    const fwci = fieldMetrics.fwci.toFixed(2);
+    if (fieldMetrics.fwci >= 1.0) {
+      parts.push(`Their Field-Weighted Citation Impact (FWCI) is ${fwci}, meaning their publications receive ${fwci} times the world average citations for their field and publication year.`);
+    } else {
+      parts.push(`Their Field-Weighted Citation Impact (FWCI) is ${fwci}, relative to the world average of 1.00 for their field and publication year.`);
+    }
+  }
+
+  if (fieldMetrics.meanCitedness !== null) {
+    parts.push(`The mean journal impact of their publication outlets is ${fieldMetrics.meanCitedness.toFixed(2)}.`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
+function generateGeoParagraph(geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null): string | null {
+  if (!geoData || geoData.coAuthors.length === 0) return null;
+
+  const countries = new Set(geoData.coAuthors.map(a => a.countryCode));
+  const countryCount = countries.size;
+  if (countryCount === 0) return null;
+
+  // Build country → co-author count map
+  const countryNames = new Map<string, number>();
+  for (const a of geoData.coAuthors) {
+    // Use institution country as a rough label
+    const key = a.countryCode;
+    countryNames.set(key, (countryNames.get(key) || 0) + 1);
+  }
+
+  // Map continent
+  const continentMap: Record<string, string> = {
+    US: 'North America', CA: 'North America', MX: 'North America',
+    BR: 'South America', AR: 'South America', CL: 'South America', CO: 'South America', PE: 'South America',
+    GB: 'Europe', DE: 'Europe', FR: 'Europe', NL: 'Europe', IT: 'Europe', ES: 'Europe', SE: 'Europe',
+    NO: 'Europe', DK: 'Europe', FI: 'Europe', BE: 'Europe', CH: 'Europe', AT: 'Europe', PT: 'Europe',
+    IE: 'Europe', PL: 'Europe', CZ: 'Europe', HU: 'Europe', RO: 'Europe', GR: 'Europe', HR: 'Europe',
+    SI: 'Europe', SK: 'Europe', BG: 'Europe', LT: 'Europe', LV: 'Europe', EE: 'Europe', LU: 'Europe',
+    CN: 'Asia', JP: 'Asia', KR: 'Asia', IN: 'Asia', SG: 'Asia', TW: 'Asia', HK: 'Asia',
+    TH: 'Asia', MY: 'Asia', ID: 'Asia', PH: 'Asia', VN: 'Asia', PK: 'Asia', IL: 'Asia',
+    TR: 'Asia', SA: 'Asia', AE: 'Asia', QA: 'Asia',
+    AU: 'Oceania', NZ: 'Oceania',
+    ZA: 'Africa', NG: 'Africa', KE: 'Africa', EG: 'Africa', MA: 'Africa', GH: 'Africa', ET: 'Africa',
+  };
+  const continents = new Set<string>();
+  for (const code of countries) {
+    const continent = continentMap[code] || 'other';
+    if (continent !== 'other') continents.add(continent);
+  }
+
+  let scope: string;
+  if (countryCount >= 10) scope = 'an extensive';
+  else if (countryCount >= 5) scope = 'a broad';
+  else if (countryCount >= 3) scope = 'a moderate';
+  else scope = 'a limited';
+
+  let paragraph = `Their co-authors span ${countryCount} ${countryCount === 1 ? 'country' : 'countries'}`;
+  if (continents.size > 1) {
+    paragraph += ` across ${continents.size} continents`;
+  }
+  paragraph += `, reflecting ${scope} international collaboration network.`;
+
+  return paragraph;
+}
+
+function generateCitationDistributionParagraph(metrics: Author['metrics'], totalCitations: number): string | null {
+  if (totalCitations === 0) return null;
+  const parts: string[] = [];
+
+  if (metrics.citationGini > 0) {
+    let giniDesc: string;
+    if (metrics.citationGini >= 0.8) giniDesc = 'highly concentrated among a few key papers';
+    else if (metrics.citationGini >= 0.6) giniDesc = 'moderately concentrated';
+    else if (metrics.citationGini >= 0.4) giniDesc = 'moderately spread across publications';
+    else giniDesc = 'relatively evenly distributed across publications';
+    parts.push(`Their citation Gini coefficient of ${metrics.citationGini.toFixed(2)} indicates that citations are ${giniDesc}.`);
+  }
+
+  if (metrics.citationHalfLife > 0 && metrics.citationHalfLife < 100) {
+    parts.push(`The citation half-life is ${metrics.citationHalfLife} year${metrics.citationHalfLife !== 1 ? 's' : ''}, meaning half of all citations were received within ${metrics.citationHalfLife} year${metrics.citationHalfLife !== 1 ? 's' : ''} of publication.`);
+  }
+
+  if (metrics.ageNormalizedRate > 0) {
+    parts.push(`Age-normalized, they receive approximately ${metrics.ageNormalizedRate} citation${metrics.ageNormalizedRate !== 1 ? 's' : ''} per career year.`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : null;
+}
+
+export function ResearcherNarrative({ data, geoData, onSearch }: ResearcherNarrativeProps) {
   const narrative = useMemo(() => generateNarrativeParagraphs(data), [data]);
   const oaParagraph = useMemo(() => generateOpenAccessParagraph(data), [data]);
+  const fieldMetricsParagraph = useMemo(() => generateFieldMetricsParagraph(data.fieldMetrics), [data.fieldMetrics]);
+  const geoParagraph = useMemo(() => generateGeoParagraph(geoData), [geoData]);
+  const citationDistParagraph = useMemo(() => generateCitationDistributionParagraph(data.metrics, data.totalCitations), [data.metrics, data.totalCitations]);
   const [showReport, setShowReport] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
   const [reportEmail, setReportEmail] = useState('');
@@ -515,6 +615,95 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
   const scholarId = new URLSearchParams(window.location.search).get('user')
     || window.location.pathname.replace(/^\//, '').replace(/\/$/, '')
     || '';
+
+  // Collect all co-author names for linkification
+  const coAuthorNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const pub of data.publications) {
+      for (const author of pub.authors) {
+        const normalized = author.trim();
+        if (normalized && normalized !== data.name && normalized !== '...') {
+          names.add(normalized);
+        }
+      }
+    }
+    return names;
+  }, [data.publications, data.name]);
+
+  const [searchingAuthor, setSearchingAuthor] = useState<string | null>(null);
+
+  const handleAuthorClick = useCallback(async (authorName: string) => {
+    if (!onSearch || searchingAuthor) return;
+    setSearchingAuthor(authorName);
+    try {
+      const results = await scholarService.searchAuthors(authorName);
+      if (results.length >= 1) {
+        const url = `https://scholar.google.com/citations?user=${encodeURIComponent(results[0].authorId)}`;
+        onSearch(url);
+      }
+    } catch {
+      // Silently fail — author might not have a Scholar profile
+    } finally {
+      setSearchingAuthor(null);
+    }
+  }, [onSearch, searchingAuthor]);
+
+  /** Replace known co-author names in text with clickable buttons */
+  const linkifyText = useCallback((text: string): React.ReactNode => {
+    if (!onSearch || coAuthorNames.size === 0) return text;
+
+    // Find co-author names that appear in this text
+    const matches: { name: string; start: number; end: number }[] = [];
+    for (const name of coAuthorNames) {
+      let idx = text.indexOf(name);
+      while (idx !== -1) {
+        matches.push({ name, start: idx, end: idx + name.length });
+        idx = text.indexOf(name, idx + name.length);
+      }
+    }
+    if (matches.length === 0) return text;
+
+    // Sort by position and remove overlaps
+    matches.sort((a, b) => a.start - b.start);
+    const filtered: typeof matches = [];
+    let lastEnd = -1;
+    for (const m of matches) {
+      if (m.start >= lastEnd) {
+        filtered.push(m);
+        lastEnd = m.end;
+      }
+    }
+
+    // Build JSX fragments
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    for (const m of filtered) {
+      if (m.start > cursor) {
+        parts.push(text.slice(cursor, m.start));
+      }
+      const authorName = m.name;
+      parts.push(
+        <button
+          key={`${m.start}-${authorName}`}
+          onClick={() => handleAuthorClick(authorName)}
+          className="text-[#2d7d7d] hover:text-[#1f5c5c] hover:underline transition-colors cursor-pointer inline"
+          title={`View ${authorName}'s profile on ScholarFolio`}
+        >
+          {searchingAuthor === authorName ? (
+            <span className="inline-flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin inline" />
+              {authorName}
+            </span>
+          ) : authorName}
+        </button>
+      );
+      cursor = m.end;
+    }
+    if (cursor < text.length) {
+      parts.push(text.slice(cursor));
+    }
+    return <>{parts}</>;
+  }, [coAuthorNames, onSearch, handleAuthorClick, searchingAuthor]);
 
   const handleReport = async () => {
     if (!reportMsg.trim()) return;
@@ -608,10 +797,19 @@ export function ResearcherNarrative({ data }: ResearcherNarrativeProps) {
 
       <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
         {narrative.map((paragraph, i) => (
-          <p key={i}>{paragraph}</p>
+          <p key={i}>{linkifyText(paragraph)}</p>
         ))}
+        {fieldMetricsParagraph && <p>{fieldMetricsParagraph}</p>}
+        {citationDistParagraph && <p>{citationDistParagraph}</p>}
+        {geoParagraph && <p>{geoParagraph}</p>}
         {oaParagraph && <p>{oaParagraph}</p>}
       </div>
     </div>
   );
 }
+
+// Re-export text-only versions for PDF export
+export const generateFieldMetricsParagraphText = generateFieldMetricsParagraph;
+export const generateGeoParagraphText = generateGeoParagraph;
+export const generateCitationDistributionParagraphText = generateCitationDistributionParagraph;
+export const generateOpenAccessParagraphText = generateOpenAccessParagraph;

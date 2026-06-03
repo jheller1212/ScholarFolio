@@ -255,7 +255,7 @@ export function ProfileView({
                   <button
                     onClick={() => {
                       if (!data) return;
-                      exportProfilePdf(data, scholarId || undefined);
+                      exportProfilePdf(data, scholarId || undefined, prefetchedGeo);
                     }}
                     className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
                   >
@@ -316,7 +316,7 @@ export function ProfileView({
 
           {/* Researcher Narrative */}
           <div className="mt-5 pt-5 border-t border-gray-100">
-            <ResearcherNarrative data={data} />
+            <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} />
           </div>
         </div>
 
