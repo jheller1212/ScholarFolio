@@ -20,39 +20,20 @@ function getCorsHeaders(req: Request) {
 // In-flight request coalescing to prevent duplicate API calls
 const inflightRequests = new Map<string, Promise<any>>();
 
-// --- IP-based rate limiting (in-memory, per edge function instance) ---
-const ipRequestLog = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW = 3600_000; // 1 hour in ms
+// --- Rate limit constants ---
 const RATE_LIMIT_MAX_PROFILE = 10;  // max profile fetches per IP per hour
 const RATE_LIMIT_MAX_SEARCH = 20;   // max name searches per IP per hour
 const ANON_DAILY_LIMIT = 5;         // max profile fetches per IP per day (anonymous)
-const ANON_DAILY_WINDOW = 86400_000;
-
-function checkRateLimit(ip: string, limit: number, window: number = RATE_LIMIT_WINDOW): boolean {
-  const now = Date.now();
-  const timestamps = ipRequestLog.get(ip) || [];
-  const recent = timestamps.filter(t => t > now - window);
-  ipRequestLog.set(ip, recent);
-  if (recent.length >= limit) return false; // rate limited
-  recent.push(now);
-  return true; // allowed
-}
 
 function getRequestIp(req: Request): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown';
-}
-
-// Clean up old entries every 10 minutes to prevent memory leaks
-setInterval(() => {
-  const cutoff = Date.now() - ANON_DAILY_WINDOW;
-  for (const [ip, timestamps] of ipRequestLog) {
-    const recent = timestamps.filter(t => t > cutoff);
-    if (recent.length === 0) ipRequestLog.delete(ip);
-    else ipRequestLog.set(ip, recent);
+  // Use last entry in x-forwarded-for chain (harder to spoof)
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const parts = xff.split(',').map(s => s.trim()).filter(Boolean);
+    return parts[parts.length - 1] || 'unknown';
   }
-}, 600_000);
+  return req.headers.get('x-real-ip') || 'unknown';
+}
 
 const CACHE_DURATION = 604800; // 7 days in seconds
 const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
@@ -793,8 +774,8 @@ Deno.serve(async (req) => {
     const jwt = authHeader.replace('Bearer ', '');
     let userId: string | null = null;
 
-    // Try to get authenticated user from JWT
-    if (jwt && jwt !== (Deno.env.get('SUPABASE_ANON_KEY') ?? '')) {
+    // Attempt auth on any non-empty bearer token
+    if (jwt) {
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(jwt);
       if (!authError && authUser) {
         userId = authUser.id;
@@ -803,12 +784,20 @@ Deno.serve(async (req) => {
 
     // --- Author search by name (no credit cost, but rate limited) ---
     if (action === 'search' && query) {
-      if (!checkRateLimit(`search:${clientIp}`, RATE_LIMIT_MAX_SEARCH)) {
+      const { data: searchAllowed } = await supabase.rpc('check_search_rate_limit', {
+        p_ip: clientIp, p_limit: RATE_LIMIT_MAX_SEARCH
+      });
+      if (searchAllowed === false) {
         return new Response(
           JSON.stringify({ error: "Too many searches. Please try again later." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      // Log the search request for rate limiting
+      await supabase.from('request_logs').insert({
+        ip: clientIp, source: 'search', user_id: userId || null,
+        author_id: null, origin: req.headers.get('Origin'), user_agent: req.headers.get('User-Agent')
+      }).catch(() => {});
       console.log(`[Search] Searching for authors: ${query}`);
       const results = await searchAuthorsByName(query);
       return new Response(
@@ -827,21 +816,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    // --- Rate limit profile fetches ---
-    // Per-hour limit for all users (prevents rapid-fire abuse)
-    if (!checkRateLimit(`profile:${clientIp}`, RATE_LIMIT_MAX_PROFILE)) {
+    // --- Rate limit profile fetches (persistent, DB-backed) ---
+    const { data: profileAllowed } = await supabase.rpc('check_rate_limit', {
+      p_ip: clientIp, p_limit: RATE_LIMIT_MAX_PROFILE, p_window_seconds: 3600
+    });
+    if (profileAllowed === false) {
       return new Response(
         JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Tighter daily limit for anonymous users (server-side enforcement)
-    if (!userId && !checkRateLimit(`anon:${clientIp}`, ANON_DAILY_LIMIT, ANON_DAILY_WINDOW)) {
-      return new Response(
-        JSON.stringify({ error: "Daily search limit reached. Sign up for more free searches." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Tighter daily limit for anonymous users
+    if (!userId) {
+      const { data: anonAllowed } = await supabase.rpc('check_anon_daily_limit', {
+        p_ip: clientIp, p_limit: ANON_DAILY_LIMIT
+      });
+      if (anonAllowed === false) {
+        return new Response(
+          JSON.stringify({ error: "Daily search limit reached. Sign up for more free searches." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     console.log(`Processing request for URL: ${profileUrl}`);
@@ -946,18 +942,10 @@ Deno.serve(async (req) => {
 
       if (decrError) {
         console.error("Credit decrement error:", decrError);
-        // Fallback: check credits manually
-        const { data: fallback } = await supabase
-          .from('user_credits')
-          .select('credits_remaining')
-          .eq('user_id', userId)
-          .maybeSingle();
-        if ((fallback?.credits_remaining ?? 0) <= 0) {
-          return new Response(
-            JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        return new Response(
+          JSON.stringify({ error: "Credit check failed. Please try again." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       } else if (success === false) {
         return new Response(
           JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
@@ -985,18 +973,7 @@ Deno.serve(async (req) => {
     } catch (fetchError) {
       if (creditDeducted && userId) {
         console.log(`[Credits] Refunding deducted credit after failed fetch for user ${userId}`);
-        const { data: currentCredits } = await supabase
-          .from('user_credits')
-          .select('credits_remaining')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (currentCredits) {
-          await supabase
-            .from('user_credits')
-            .update({ credits_remaining: currentCredits.credits_remaining + 1 })
-            .eq('user_id', userId);
-        }
+        await supabase.rpc('refund_credit', { p_user_id: userId });
       }
       throw fetchError;
     }
