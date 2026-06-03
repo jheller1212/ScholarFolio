@@ -30,9 +30,15 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
   const nameParts = authorName.split(' ');
   const [firstName, setFirstName] = useState(nameParts.slice(0, -1).join(' '));
   const [lastName, setLastName] = useState(nameParts[nameParts.length - 1] || '');
-  const [institution, setInstitution] = useState(
-    affiliation.replace(/,.*$/, '').replace(/^(Assistant|Associate|Full)?\s*Professor.*?,\s*/i, '').trim()
-  );
+  const [institution, setInstitution] = useState(() => {
+    // Strip position prefixes like "Assistant Professor of Marketing, " to extract institution
+    const stripped = affiliation.replace(/^(Assistant|Associate|Full|Adjunct|Visiting|Emeritus)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor)\s*(of|in|for|,)\s*/i, '');
+    // If stripping removed something, take what's left; otherwise take text after last comma
+    if (stripped !== affiliation) return stripped.replace(/^,\s*/, '').trim();
+    // Fallback: take text after last comma (often "University of X")
+    const parts = affiliation.split(',');
+    return parts[parts.length - 1].trim();
+  });
 
   const handleSearch = useCallback(async () => {
     if (!firstName.trim() || !lastName.trim()) return;
@@ -133,7 +139,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
                 type="text"
                 value={institution}
                 onChange={e => setInstitution(e.target.value)}
-                placeholder="Institution (optional)"
+                placeholder="Institution"
                 className="px-3 py-1.5 text-xs rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
             </div>
