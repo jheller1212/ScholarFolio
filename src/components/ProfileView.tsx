@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 import { exportProfilePdf } from '../utils/pdfExport';
+import { exportNarrativeCv } from '../utils/narrativeCvExport';
 import { SearchBar } from './SearchBar';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
@@ -84,6 +85,7 @@ export function ProfileView({
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
   const [prefetchedGeo, setPrefetchedGeo] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [pIndexResult, setPIndexResult] = useState<PIndexResult | null>(null);
+  const [showNarrativeCvMenu, setShowNarrativeCvMenu] = useState(false);
 
   // Prefetch co-author geo data as soon as profile loads (don't wait for tab click)
   useEffect(() => {
@@ -94,6 +96,19 @@ export function ProfileView({
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [data?.name, data?.affiliation, data?.publications]);
+
+  // Close narrative CV dropdown when clicking outside
+  useEffect(() => {
+    if (!showNarrativeCvMenu) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-narrative-cv-menu]')) {
+        setShowNarrativeCvMenu(false);
+      }
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showNarrativeCvMenu]);
 
   // Extract scholar ID from URL params or profileUrl
   const scholarId = new URLSearchParams(window.location.search).get('user')
@@ -264,6 +279,41 @@ export function ProfileView({
                     <Download className="h-3 w-3" />
                     PDF
                   </button>
+                  <div className="relative" data-narrative-cv-menu>
+                    <button
+                      onClick={() => setShowNarrativeCvMenu(!showNarrativeCvMenu)}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                    >
+                      <FileText className="h-3 w-3" />
+                      Narrative CV
+                    </button>
+                    {showNarrativeCvMenu && (
+                      <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg py-1 z-50 min-w-[200px]">
+                        <button
+                          onClick={() => {
+                            if (!data) return;
+                            exportNarrativeCv(data, 'nwo', prefetchedGeo);
+                            setShowNarrativeCvMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <span className="font-medium">NWO</span>
+                          <span className="text-gray-400 dark:text-gray-500 ml-1">— Evidence-Based CV</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!data) return;
+                            exportNarrativeCv(data, 'erc', prefetchedGeo);
+                            setShowNarrativeCvMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <span className="font-medium">ERC</span>
+                          <span className="text-gray-400 dark:text-gray-500 ml-1">— CV & Track Record</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   {claimedSlug ? (
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
                       <BadgeCheck className="h-3.5 w-3.5" />
