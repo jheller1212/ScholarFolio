@@ -16,8 +16,8 @@ function getCareerSpan(publications: Author['publications']): { firstYear: numbe
   // Filter out garbage years: must be after 1950 and not in the future
   const years = publications.map(p => p.year).filter(y => y >= 1950 && y <= currentYear + 1);
   if (years.length === 0) return { firstYear: 0, lastYear: 0, years: 0 };
-  const firstYear = Math.min(...years);
-  const lastYear = Math.max(...years);
+  const firstYear = years.reduce((a, b) => a < b ? a : b);
+  const lastYear = years.reduce((a, b) => a > b ? a : b);
   return { firstYear, lastYear, years: lastYear - firstYear + 1 };
 }
 
@@ -38,7 +38,7 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
         .trim();
       // Skip non-journal venues (repositories, working papers, etc.)
       const lowerBase = baseName.toLowerCase();
-      const isNonJournal = /\b(ssrn|arxiv|researchgate|netspar|rijksoverheid|working paper|discussion paper|technical report|preprint|mimeo|unpublished|available at|course|thesis|dissertation|patent|us patent|google patent|university press|press|verlag|publisher|editora)\b/i.test(lowerBase);
+      const isNonJournal = /\b(ssrn|arxiv|researchgate|netspar|rijksoverheid|working paper|discussion paper|technical report|preprint|mimeo|unpublished|available at|course|thesis|dissertation|patent|us patent|google patent|university press|academic press|verlag|publisher|editora)\b/i.test(lowerBase);
       if (isNonJournal || baseName.length <= 3) return;
 
       if (baseName.length > 0) {
@@ -92,7 +92,7 @@ function getProductivityPhase(publications: Author['publications']): string {
   const olderPubs = publications.filter(p => p.year >= currentYear - 6 && p.year < currentYear - 3).length;
 
   if (recentPubs === 0) return 'inactive';
-  if (olderPubs === 0) return 'emerging';
+  if (olderPubs === 0) return recentPubs >= 10 ? 'accelerating' : 'emerging';
   const ratio = recentPubs / Math.max(olderPubs, 1);
   if (ratio > 1.3) return 'accelerating';
   if (ratio > 0.7) return 'steady';
@@ -142,9 +142,8 @@ function parseAffiliation(raw: string): { position: string; institution: string 
  * Extract dominant themes from a set of publication titles.
  * Returns lowercased bigrams/trigrams that appear frequently.
  */
-function extractTitleThemes(publications: Author['publications'], authorName?: string, fieldTopics?: string[]): string[] {
-  // Stop words: function words + common academic verbs/fillers that aren't real topics
-  const stopWords = new Set([
+// Module-level stop words set — constructed once, reused across calls
+const THEME_STOP_WORDS = new Set([
     // Function words
     'the', 'a', 'an', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with',
     'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'has',
@@ -188,8 +187,8 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
     'patterns', 'mechanisms', 'factors', 'dimensions', 'aspects',
     'definition', 'overview', 'agenda', 'assessment', 'exploration',
     'investigation', 'examination', 'discussion', 'considerations',
-    'automated', 'automatic', 'semi-automated', 'manual', 'digital',
-    'global', 'local', 'national', 'international', 'regional',
+    'automated', 'automatic', 'semi-automated', 'manual',
+    'local', 'national', 'international', 'regional',
     'potential', 'possible', 'proposed', 'alternative', 'traditional',
     'comprehensive', 'preliminary', 'initial', 'advanced', 'novel',
     'ethical', 'practical', 'theoretical', 'methodological',
@@ -210,8 +209,8 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
     'reimagining', 'uncovering', 'unraveling', 'unpacking', 'deconstructing',
     'drives', 'driven', 'matters',
     // Common adjective/noun fragments that aren't topics
-    'curious', 'personal', 'reliability', 'gut', 'online', 'quality', 'shop',
-    'consumers', 'collected', 'papers', 'adventures', 'character', 'years',
+    'curious', 'personal', 'reliability', 'gut', 'shop',
+    'collected', 'papers', 'adventures', 'character', 'years',
     'vol', 'swiss', 'berlin',
     'real', 'world', 'open', 'key', 'big', 'end', 'old', 'age', 'set',
     'well', 'way', 'much', 'back', 'turn', 'look', 'take', 'make', 'give',
@@ -234,19 +233,23 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
     'het', 'een', 'van', 'voor', 'met', 'niet', 'dat', 'zij',
     'theorie', 'antwort', 'briefe', 'sechzig', 'english', 'translation',
     'letter', 'jul', 'jan', 'feb', 'mar', 'apr', 'jun', 'aug', 'sep', 'oct', 'nov', 'dec',
-  ]);
+]);
 
+function extractTitleThemes(publications: Author['publications'], authorName?: string, fieldTopics?: string[]): string[] {
   const bigramCounts = new Map<string, number>();
 
   for (const pub of publications) {
-    // Skip non-English titles: check for diacritics, non-Latin scripts, or high non-ASCII ratio
-    const hasNonAsciiLetters = /[À-ÖØ-öø-ÿĀ-ſ\u0400-\u04FF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/.test(pub.title);
-    if (hasNonAsciiLetters) continue;
+    // Skip non-English titles: non-Latin scripts are always excluded; for diacritics,
+    // use a ratio check to allow English titles with occasional accented proper nouns
+    if (/[\u0400-\u04FF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/.test(pub.title)) continue;
+    const alphaChars = pub.title.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿĀ-ſ]/g, '');
+    const nonAsciiCount = (pub.title.match(/[À-ÖØ-öø-ÿĀ-ſ]/g) || []).length;
+    if (alphaChars.length > 0 && nonAsciiCount / alphaChars.length > 0.15) continue;
 
     const words = pub.title.toLowerCase()
       .replace(/[^a-z\s-]/g, ' ')
       .split(/\s+/)
-      .filter(w => w.length > 2 && !stopWords.has(w));
+      .filter(w => w.length > 2 && !THEME_STOP_WORDS.has(w));
 
     // Only count bigrams — they are far better topic labels than single words.
     // "virtual reality" > "virtual"; "machine learning" > "learning"
@@ -266,7 +269,7 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
   if (fieldTopics) {
     for (const topic of fieldTopics) {
       for (const word of topic.toLowerCase().split(/\s+/)) {
-        if (word.length > 2 && !stopWords.has(word)) excludeWords.add(word);
+        if (word.length > 2 && !THEME_STOP_WORDS.has(word)) excludeWords.add(word);
       }
     }
   }
@@ -331,7 +334,7 @@ function inferResearchMethods(publications: Author['publications']): string[] {
     [/\bcomputational\b/, 'computational approaches'],
     [/\bstatistical\b/, 'statistical analysis'],
     [/\bregression\b/, 'regression analysis'],
-    [/\bstructural equation|(?:^|\b)sem\b/, 'structural equation modeling'],
+    [/\bstructural equation\b/, 'structural equation modeling'],
     [/\bgrounded theory\b/, 'grounded theory'],
     [/\bsystematic review\b/, 'systematic reviews'],
     [/\bliterature review\b/, 'literature reviews'],
@@ -446,8 +449,14 @@ export function generateNarrativeParagraphs(data: Author): string[] {
     careerParagraph += '.';
 
     // Extract last name for natural pronoun alternation
-    const nameParts = name.trim().split(/\s+/);
-    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
+    // Handle comma-inverted names like "García López, José" → "García López"
+    let lastName: string;
+    if (name.includes(',')) {
+      lastName = name.split(',')[0].trim().split(/\s+/).pop() || name;
+    } else {
+      const nameParts = name.trim().split(/\s+/);
+      lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
+    }
 
     if (career.firstYear > 0) {
       if (career.years <= 2) {
