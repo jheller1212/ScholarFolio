@@ -640,8 +640,15 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
         collabPct = `A small fraction (${metrics.collaborationScore}%)`;
       }
       collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
-      if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
-        collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published ${metrics.topCoAuthorPapers} papers.`;
+      const topAuthors = metrics.topCoAuthors?.filter(a => a.papers >= 2) ?? [];
+      if (topAuthors.length > 0) {
+        const authorList = topAuthors.map(a => `${a.name} (${a.papers})`);
+        if (authorList.length === 1) {
+          collabParagraph += ` ${lastName}'s most frequent collaborator is ${authorList[0]} papers.`;
+        } else {
+          const last = authorList.pop()!;
+          collabParagraph += ` ${lastName}'s most frequent collaborators are ${authorList.join(', ')}, and ${last} papers.`;
+        }
       }
       paragraphs.push(collabParagraph);
     } else if (publications.length > 0) {

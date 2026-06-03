@@ -57,6 +57,7 @@ export interface Metrics {
   topCoAuthorLastYear: number;
   topCoAuthorFirstPaper: string;
   topCoAuthorLastPaper: string;
+  topCoAuthors: Array<{ name: string; papers: number }>;
 }
 
 export type OaStatus = 'gold' | 'green' | 'hybrid' | 'bronze' | 'closed';

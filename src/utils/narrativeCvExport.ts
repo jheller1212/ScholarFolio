@@ -1,19 +1,18 @@
-import jsPDF from 'jspdf';
+import {
+  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  AlignmentType, BorderStyle, TabStopPosition, TabStopType,
+} from 'docx';
+import { saveAs } from 'file-saver';
 import type { Author, Publication, OpenAccessStats, CoAuthorGeoData } from '../types/scholar';
 import { generateNarrativeParagraphs } from '../components/ResearcherNarrative';
 import { fetchOrcidProfile } from '../services/orcid';
 import type { OrcidProfile } from '../services/orcid';
 import { findOpenAlexAuthor } from '../services/openalex/author-lookup';
 
-const PAGE_W = 210;
-const PAGE_H = 297;
-const M = 18; // margin
-const CW = PAGE_W - M * 2;
-const TEAL = [45, 125, 125] as const;
-const DARK = [30, 41, 59] as const;
-const GRAY = [100, 116, 139] as const;
-const LIGHT_GRAY = [203, 213, 225] as const;
-const PLACEHOLDER_GRAY = [148, 163, 184] as const; // #94a3b8
+const TEAL = '2D7D7D';
+const DARK = '1E293B';
+const GRAY = '64748B';
+const PLACEHOLDER = '94A3B8';
 
 function stripMarkdown(text: string): string {
   return text.replace(/\*\*(.*?)\*\*/g, '$1');
@@ -45,907 +44,501 @@ function isOA(pub: Publication, openAccess?: OpenAccessStats): boolean {
   return !!entry && entry.status !== 'closed';
 }
 
-export async function exportNarrativeCv(
-  data: Author,
-  format: 'nwo' | 'erc',
-  geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
-): Promise<void> {
-  let orcidId = data.openAccess?.orcid;
-  // Fallback: if ORCID not in cached OA stats, try fetching from OpenAlex directly
-  if (!orcidId) {
-    const author = await findOpenAlexAuthor(data.name, data.affiliation);
-    orcidId = author?.orcid;
-  }
-  const orcid = orcidId ? await fetchOrcidProfile(orcidId) : null;
-
-  if (format === 'nwo') {
-    exportNwo(data, geoData, orcid);
-  } else {
-    exportErc(data, geoData, orcid);
-  }
-}
-
-// ============================================================
-// ORCID formatting helpers
-// ============================================================
-
 function orcidDateRange(startYear: number | null, endYear: number | null): string {
   if (!startYear) return '';
   return endYear ? `${startYear}–${endYear}` : `${startYear}–present`;
 }
 
+// --- Shared paragraph builders ---
+
+function sectionHeading(text: string): Paragraph {
+  return new Paragraph({
+    text,
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 300, after: 100 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: TEAL } },
+    run: { color: TEAL, bold: true, font: 'Calibri' },
+  });
+}
+
+function subHeading(text: string): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, bold: true, font: 'Calibri', size: 21, color: DARK })],
+    spacing: { before: 200, after: 60 },
+  });
+}
+
+function bodyParagraph(text: string): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, font: 'Calibri', size: 20, color: DARK })],
+    spacing: { before: 40, after: 40 },
+  });
+}
+
+function placeholderParagraph(text: string): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, font: 'Calibri', size: 20, color: PLACEHOLDER, italics: true })],
+    spacing: { before: 40, after: 40 },
+  });
+}
+
+function labelValueParagraph(label: string, value: string): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: `${label}: `, bold: true, font: 'Calibri', size: 20, color: DARK }),
+      new TextRun({ text: value, font: 'Calibri', size: 20, color: GRAY }),
+    ],
+    spacing: { before: 40, after: 40 },
+  });
+}
+
+function educationEntries(eds: OrcidProfile['educations']): Paragraph[] {
+  const result: Paragraph[] = [];
+  for (const ed of eds) {
+    const dateRange = orcidDateRange(ed.startYear, ed.endYear);
+    const degreeLabel = [ed.degree, ed.department].filter(Boolean).join(' in ') || '(Degree not specified)';
+    const locationParts = [ed.city, ed.country].filter(Boolean).join(', ');
+    const institutionLine = [ed.institution, locationParts].filter(Boolean).join(', ');
+    result.push(
+      new Paragraph({
+        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+        children: [
+          new TextRun({ text: degreeLabel, bold: true, font: 'Calibri', size: 20, color: DARK }),
+          ...(dateRange ? [
+            new TextRun({ text: '\t', font: 'Calibri', size: 20 }),
+            new TextRun({ text: dateRange, font: 'Calibri', size: 20, color: GRAY }),
+          ] : []),
+        ],
+        spacing: { before: 80, after: 0 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: institutionLine, font: 'Calibri', size: 20, color: GRAY })],
+        spacing: { before: 0, after: 40 },
+      }),
+    );
+  }
+  return result;
+}
+
+function employmentEntries(ems: OrcidProfile['employments']): Paragraph[] {
+  const result: Paragraph[] = [];
+  for (const em of ems) {
+    const dateRange = orcidDateRange(em.startYear, em.endYear);
+    const locationParts = [em.city, em.country].filter(Boolean).join(', ');
+    const instLine = [em.institution, locationParts].filter(Boolean).join(', ');
+    result.push(
+      new Paragraph({
+        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+        children: [
+          new TextRun({ text: em.role || '(Role not specified)', bold: true, font: 'Calibri', size: 20, color: DARK }),
+          ...(dateRange ? [
+            new TextRun({ text: '\t', font: 'Calibri', size: 20 }),
+            new TextRun({ text: dateRange, font: 'Calibri', size: 20, color: GRAY }),
+          ] : []),
+        ],
+        spacing: { before: 80, after: 0 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: instLine, font: 'Calibri', size: 20, color: GRAY })],
+        spacing: { before: 0, after: 40 },
+      }),
+    );
+  }
+  return result;
+}
+
+function fundingEntries(fus: OrcidProfile['fundings']): Paragraph[] {
+  const result: Paragraph[] = [];
+  for (const fu of fus) {
+    const dateRange = orcidDateRange(fu.startYear, fu.endYear);
+    result.push(
+      new Paragraph({
+        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+        children: [
+          new TextRun({ text: fu.title || '(Untitled grant)', bold: true, font: 'Calibri', size: 20, color: DARK }),
+          ...(dateRange ? [
+            new TextRun({ text: '\t', font: 'Calibri', size: 20 }),
+            new TextRun({ text: dateRange, font: 'Calibri', size: 20, color: GRAY }),
+          ] : []),
+        ],
+        spacing: { before: 80, after: 0 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: fu.funder, font: 'Calibri', size: 20, color: GRAY })],
+        spacing: { before: 0, after: 40 },
+      }),
+    );
+  }
+  return result;
+}
+
+function publicationEntries(
+  pubs: Publication[], openAccess?: OpenAccessStats, includeCitations = false
+): Paragraph[] {
+  const result: Paragraph[] = [];
+  for (let i = 0; i < pubs.length; i++) {
+    const pub = pubs[i];
+    const oaFlag = isOA(pub, openAccess) ? ' [OA]' : '';
+    const authorsText = pub.authors.slice(0, 6).join(', ') + (pub.authors.length > 6 ? ' et al.' : '');
+    const venue = pub.venue ? pub.venue.replace(/,.*$/, '').trim() : '';
+
+    const metaParts = [venue, pub.year ? String(pub.year) : ''].filter(Boolean);
+    if (includeCitations && pub.citations > 0) {
+      metaParts.push(`${pub.citations} citation${pub.citations !== 1 ? 's' : ''}`);
+    }
+
+    result.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${i + 1}. `, bold: true, font: 'Calibri', size: 19, color: DARK }),
+          new TextRun({ text: `${pub.title}${oaFlag}`, bold: true, font: 'Calibri', size: 19, color: DARK }),
+        ],
+        spacing: { before: 100, after: 0 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: authorsText, font: 'Calibri', size: 18, color: GRAY })],
+        spacing: { before: 0, after: 0 },
+        indent: { left: 200 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: metaParts.join(' · '), font: 'Calibri', size: 17, color: GRAY })],
+        spacing: { before: 0, after: 60 },
+        indent: { left: 200 },
+      }),
+    );
+  }
+  return result;
+}
+
+function footerParagraph(label: string): Paragraph {
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Paragraph({
+    children: [new TextRun({
+      text: `Generated by ScholarFolio · scholarfolio.org · ${label} · ${dateStr}`,
+      font: 'Calibri', size: 14, color: PLACEHOLDER,
+    })],
+    spacing: { before: 400 },
+    alignment: AlignmentType.CENTER,
+  });
+}
+
+function topicString(data: Author): string {
+  return data.topics.map(t =>
+    typeof t.name === 'object' ? (t.name as { title?: string }).title || '' : String(t.name)
+  ).filter(Boolean).join(' · ');
+}
+
+// ============================================================
+// Main export
+// ============================================================
+
+export async function exportNarrativeCv(
+  data: Author,
+  format: 'nwo' | 'erc',
+  geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
+): Promise<void> {
+  let resolvedOrcidId = data.openAccess?.orcid;
+  if (!resolvedOrcidId) {
+    const author = await findOpenAlexAuthor(data.name, data.affiliation);
+    resolvedOrcidId = author?.orcid;
+  }
+  const orcid = resolvedOrcidId ? await fetchOrcidProfile(resolvedOrcidId) : null;
+
+  const children = format === 'nwo'
+    ? buildNwo(data, orcid, resolvedOrcidId, geoData)
+    : buildErc(data, orcid, resolvedOrcidId, geoData);
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: { margin: { top: 1100, bottom: 1100, left: 1200, right: 1200 } },
+      },
+      children,
+    }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const prefix = format === 'nwo' ? 'NWO_EBCV' : 'ERC_CV';
+  saveAs(blob, `ScholarFolio_${prefix}_${safeName}_${dateStr}.docx`);
+}
+
 // ============================================================
 // NWO Evidence-Based CV
+// No h-index, no JIF, no citation counts per NWO policy
 // ============================================================
 
-function exportNwo(
+function buildNwo(
   data: Author,
+  orcid: OrcidProfile | null,
+  orcidId: string | undefined,
   _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null,
-  orcid?: OrcidProfile | null
-): void {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  let y = M;
+): Paragraph[] {
+  const p: Paragraph[] = [];
+  const narrative = generateNarrativeParagraphs(data);
 
-  const setColor = (c: readonly [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
-  const setFill = (c: readonly [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
-
-  const ensureSpace = (need: number) => {
-    if (y + need > PAGE_H - 18) {
-      doc.addPage();
-      drawPageHeader(doc, setFill);
-      y = M + 4;
-    }
-  };
-
-  const sectionTitle = (text: string) => {
-    ensureSpace(14);
-    setColor(TEAL);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(text, M, y);
-    y += 2;
-    doc.setDrawColor(TEAL[0], TEAL[1], TEAL[2]);
-    doc.setLineWidth(0.4);
-    doc.line(M, y, PAGE_W - M, y);
-    y += 5;
-    setColor(DARK);
-  };
-
-  const bodyText = (text: string, indent = 0) => {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    setColor(DARK);
-    const lines = doc.splitTextToSize(text, CW - indent);
-    for (const line of lines) {
-      ensureSpace(4);
-      doc.text(line, M + indent, y);
-      y += 4;
-    }
-  };
-
-  const placeholderText = (text: string) => {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    setColor(PLACEHOLDER_GRAY);
-    const lines = doc.splitTextToSize(text, CW);
-    for (const line of lines) {
-      ensureSpace(4);
-      doc.text(line, M, y);
-      y += 4;
-    }
-    y += 1;
-  };
-
-  // === COVER HEADER ===
-  drawPageHeader(doc, setFill);
-  y = M + 4;
-
-  // Format label
-  setColor(PLACEHOLDER_GRAY);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('NWO EVIDENCE-BASED CV', M, y);
-  y += 6;
-
-  // Name
-  setColor(DARK);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.name, M, y);
-  y += 7;
-
-  // Affiliation
+  // Header
+  p.push(new Paragraph({
+    children: [new TextRun({ text: 'NWO EVIDENCE-BASED CV', font: 'Calibri', size: 16, color: PLACEHOLDER })],
+    spacing: { after: 100 },
+  }));
+  p.push(new Paragraph({
+    children: [new TextRun({ text: data.name, bold: true, font: 'Calibri', size: 36, color: DARK })],
+    spacing: { after: 60 },
+  }));
   if (data.affiliation) {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    doc.text(data.affiliation, M, y);
-    y += 5;
+    p.push(new Paragraph({
+      children: [new TextRun({ text: data.affiliation, font: 'Calibri', size: 22, color: GRAY })],
+      spacing: { after: 60 },
+    }));
   }
-
-  // Key stats inline
-  const stats = [
-    `h-index: ${data.hIndex}`,
-    `Citations: ${data.totalCitations.toLocaleString()}`,
-    `Publications: ${data.publications.length}`,
-  ];
-  doc.setFontSize(8);
-  setColor(TEAL);
-  doc.text(stats.join('   |   '), M, y);
-  y += 8;
-
-  // Topics
+  if (orcidId) p.push(labelValueParagraph('ORCID', orcidId));
   if (data.topics.length > 0) {
-    const topicNames = data.topics.map(t =>
-      typeof t.name === 'object' ? (t.name as { title?: string }).title || '' : String(t.name)
-    ).filter(Boolean);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    const topicLine = topicNames.join('  ·  ');
-    const tLines = doc.splitTextToSize(topicLine, CW);
-    doc.text(tLines, M, y);
-    y += tLines.length * 3.5 + 6;
+    p.push(new Paragraph({
+      children: [new TextRun({ text: topicString(data), font: 'Calibri', size: 18, color: GRAY })],
+      spacing: { after: 200 },
+    }));
   }
 
-  // Divider
-  doc.setDrawColor(LIGHT_GRAY[0], LIGHT_GRAY[1], LIGHT_GRAY[2]);
-  doc.setLineWidth(0.3);
-  doc.line(M, y, PAGE_W - M, y);
-  y += 8;
+  p.push(placeholderParagraph(
+    'Note: Per NWO policy, this CV does not include Journal Impact Factors or h-indices. Complete placeholder sections before submission.'
+  ));
 
-  // ==============================
-  // SECTION 1: ACADEMIC PROFILE
-  // ==============================
-  sectionTitle('1. Academic Profile');
+  // Section 1: Academic Profile
+  p.push(sectionHeading('1. Academic Profile'));
 
-  const narrativeParagraphs = generateNarrativeParagraphs(data);
+  const stripMetrics = (text: string): string => {
+    let cleaned = stripMarkdown(text);
+    cleaned = cleaned.replace(/,?\s*with an h-index of \d+/gi, '');
+    cleaned = cleaned.replace(/\s*Their h-index is \d+\.\s*/gi, ' ');
+    return cleaned.trim();
+  };
 
-  // Career overview
-  if (narrativeParagraphs[0]) {
-    bodyText(stripMarkdown(narrativeParagraphs[0]));
-    y += 2;
-  }
+  if (narrative[0]) p.push(bodyParagraph(stripMetrics(narrative[0])));
 
-  // Research methods — from paragraph that usually mentions "draws on"
-  const methodsPara = narrativeParagraphs.find(p => p.includes('draws on') || p.includes('methods'));
-  if (methodsPara && methodsPara !== narrativeParagraphs[0]) {
-    bodyText(stripMarkdown(methodsPara));
-    y += 2;
-  }
+  const methodsPara = narrative.find(n => n.includes('draws on') || n.includes('methods'));
+  if (methodsPara && methodsPara !== narrative[0]) p.push(bodyParagraph(stripMetrics(methodsPara)));
 
-  // Research evolution
-  const evolutionPara = narrativeParagraphs.find(p =>
-    p.includes('earlier work') || p.includes('shifted towards') || p.includes('consistently centered')
+  const evolutionPara = narrative.find(n =>
+    n.includes('earlier work') || n.includes('shifted towards') || n.includes('consistently centered')
   );
-  if (evolutionPara) {
-    bodyText(stripMarkdown(evolutionPara));
-    y += 2;
-  }
+  if (evolutionPara) p.push(bodyParagraph(stripMetrics(evolutionPara)));
 
-  // Collaboration profile
-  const collabPara = narrativeParagraphs.find(p =>
-    p.includes('co-authored') || p.includes('collaborator') || p.includes('single-authored')
+  const collabPara = narrative.find(n =>
+    n.includes('co-authored') || n.includes('collaborator') || n.includes('single-authored')
   );
-  if (collabPara) {
-    bodyText(stripMarkdown(collabPara));
-    y += 2;
+  if (collabPara) p.push(bodyParagraph(stripMetrics(collabPara)));
+
+  // ORCID sections
+  if (orcid?.educations?.length) {
+    p.push(subHeading('Education'));
+    p.push(...educationEntries(orcid.educations));
   }
-
-  // Impact paragraph
-  const impactPara = narrativeParagraphs.find(p =>
-    p.includes('h-index') || p.includes('citations') || p.includes('most cited')
-  );
-  if (impactPara) {
-    bodyText(stripMarkdown(impactPara));
-    y += 2;
+  if (orcid?.employments?.length) {
+    p.push(subHeading('Academic & Professional Positions'));
+    p.push(...employmentEntries(orcid.employments));
   }
-
-  y += 3;
-
-  // --- ORCID: Education ---
-  if (orcid?.educations && orcid.educations.length > 0) {
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text('Education', M, y);
-    y += 5;
-    for (const ed of orcid.educations) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(ed.startYear, ed.endYear);
-      const degreeLabel = [ed.degree, ed.department].filter(Boolean).join(' in ');
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      doc.text(degreeLabel, M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      const locationParts = [ed.city, ed.country].filter(Boolean).join(', ');
-      const institutionLine = [ed.institution, locationParts].filter(Boolean).join(', ');
-      bodyText(institutionLine, 0);
-      y += 1;
-    }
-    y += 2;
+  if (orcid?.fundings?.length) {
+    p.push(subHeading('Grants & Funding'));
+    p.push(...fundingEntries(orcid.fundings));
   }
-
-  // --- ORCID: Employment ---
-  if (orcid?.employments && orcid.employments.length > 0) {
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text('Academic & Professional Positions', M, y);
-    y += 5;
-    for (const em of orcid.employments) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(em.startYear, em.endYear);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      doc.text(em.role || '(Role not specified)', M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      const locationParts = [em.city, em.country].filter(Boolean).join(', ');
-      const instLine = [em.institution, locationParts].filter(Boolean).join(', ');
-      bodyText(instLine, 0);
-      y += 1;
-    }
-    y += 2;
-  }
-
-  // --- ORCID: Grants & Funding ---
-  if (orcid?.fundings && orcid.fundings.length > 0) {
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text('Grants & Funding', M, y);
-    y += 5;
-    for (const fu of orcid.fundings) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(fu.startYear, fu.endYear);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      const titleLines = doc.splitTextToSize(fu.title || '(Untitled grant)', CW - 30);
-      doc.text(titleLines[0], M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      for (let i = 1; i < titleLines.length; i++) {
-        ensureSpace(4);
-        doc.setFont('helvetica', 'bold');
-        setColor(DARK);
-        doc.text(titleLines[i], M, y);
-        y += 4;
-      }
-      bodyText(fu.funder, 0);
-      y += 1;
-    }
-    y += 2;
-  }
-
-  // --- ORCID: Distinctions ---
-  if (orcid?.distinctions && orcid.distinctions.length > 0) {
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text('Awards & Distinctions', M, y);
-    y += 5;
+  if (orcid?.distinctions?.length) {
+    p.push(subHeading('Awards & Distinctions'));
     for (const dist of orcid.distinctions) {
-      ensureSpace(6);
       const yearStr = dist.year ? ` (${dist.year})` : '';
-      bodyText(`${dist.title} — ${dist.organization}${yearStr}`);
+      p.push(bodyParagraph(`${dist.title} — ${dist.organization}${yearStr}`));
     }
-    y += 2;
   }
 
-  // NWO-specific placeholder prompts
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  setColor(DARK);
-  doc.text('Additional information to complete manually:', M, y);
-  y += 5;
-
-  const nwoPrompts = [
+  p.push(subHeading('Additional information to complete'));
+  for (const prompt of [
     '[Describe your most significant scientific achievements and their broader societal relevance.]',
     '[Explain how your research profile fits the NWO programme or call you are applying to.]',
-    '[Describe any scientific leadership roles, editorial boards, or programme committees you have held.]',
-    ...((!orcid?.fundings || orcid.fundings.length === 0)
+    '[Describe any scientific leadership roles, editorial boards, or programme committees.]',
+    ...((!orcid?.fundings?.length)
       ? ['[List any prizes, grants, or fellowships received (e.g. NWO Veni/Vidi/Vici, ERC, Marie Curie).]']
       : []),
     '[Add information about research integrity, open science practices, and data management.]',
-  ];
-  for (const prompt of nwoPrompts) {
-    placeholderText(prompt);
+  ]) {
+    p.push(placeholderParagraph(prompt));
   }
 
-  y += 4;
-
-  // ==============================
-  // SECTION 2: KEY OUTPUTS
-  // ==============================
-  sectionTitle('2. Key Outputs (max. 10)');
+  // Section 2: Key Outputs
+  p.push(sectionHeading('2. Key Outputs (max. 10)'));
+  p.push(placeholderParagraph(
+    'Selected publications ranked by journal prestige and contribution significance. Per NWO policy, no Journal Impact Factors or citation counts are included.'
+  ));
 
   const keyOutputs = selectKeyOutputs(data.publications);
-  const hasOaData = !!data.openAccess?.publicationOa;
+  p.push(...publicationEntries(keyOutputs, data.openAccess, false));
+  p.push(placeholderParagraph(
+    '[For each output, add a brief narrative (1-2 sentences) explaining its significance and contribution to the field.]'
+  ));
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  setColor(GRAY);
-  doc.text(
-    'Publications ranked by journal prestige (FT50, then ABS rating) and citation count. Max. 10 shown.',
-    M, y
-  );
-  y += 5;
-
-  if (hasOaData) {
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    setColor(TEAL);
-    doc.text('[OA] = Open Access', M, y);
-    y += 4;
-  }
-
-  for (let i = 0; i < keyOutputs.length; i++) {
-    const pub = keyOutputs[i];
-    ensureSpace(18);
-
-    const oaFlag = hasOaData && isOA(pub, data.openAccess) ? ' [OA]' : '';
-
-    // Number + title
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    const titleText = `${i + 1}. ${pub.title}${oaFlag}`;
-    const titleLines = doc.splitTextToSize(titleText, CW);
-    for (const line of titleLines) {
-      ensureSpace(4);
-      doc.text(line, M, y);
-      y += 4;
-    }
-
-    // Authors
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    const authorsText = pub.authors.slice(0, 6).join(', ') + (pub.authors.length > 6 ? ' et al.' : '');
-    const aLines = doc.splitTextToSize(authorsText, CW);
-    for (const line of aLines) {
-      ensureSpace(4);
-      doc.text(line, M + 4, y);
-      y += 3.5;
-    }
-
-    // Venue, year, citations, ranking badges
-    const venue = pub.venue ? pub.venue.replace(/,.*$/, '').trim() : '';
-    const rankingParts: string[] = [];
-    if (pub.journalRanking?.ft50) rankingParts.push('FT50');
-    if (pub.journalRanking?.abs) rankingParts.push(`ABS ${pub.journalRanking.abs}`);
-    if (pub.journalRanking?.abdc) rankingParts.push(`ABDC ${pub.journalRanking.abdc}`);
-    if (pub.journalRanking?.sjr) rankingParts.push(`SJR ${pub.journalRanking.sjr}`);
-
-    const metaParts = [
-      venue,
-      pub.year ? String(pub.year) : '',
-      pub.citations > 0 ? `${pub.citations} citation${pub.citations !== 1 ? 's' : ''}` : '',
-    ].filter(Boolean);
-    const metaLine = metaParts.join('  ·  ');
-
-    doc.setFontSize(7.5);
-    setColor(GRAY);
-    doc.text(metaLine, M + 4, y);
-
-    if (rankingParts.length > 0) {
-      const metaW = doc.getTextWidth(metaLine);
-      setColor(TEAL);
-      doc.text('  ' + rankingParts.join(' · '), M + 4 + metaW, y);
-    }
-
-    y += 6;
-  }
-
-  addFooter(doc, 'NWO Evidence-Based CV');
-  const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  doc.save(`ScholarFolio_NWO_CV_${safeName}_${dateStr}.pdf`);
+  p.push(footerParagraph('NWO Evidence-Based CV'));
+  return p;
 }
 
 // ============================================================
 // ERC CV & Track Record
+// No JIF, but citation counts are acceptable as evidence
 // ============================================================
 
-function exportErc(
+function buildErc(
   data: Author,
+  orcid: OrcidProfile | null,
+  orcidId: string | undefined,
   _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null,
-  orcid?: OrcidProfile | null
-): void {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  let y = M;
-  let pageCount = 1;
+): Paragraph[] {
+  const p: Paragraph[] = [];
+  const narrative = generateNarrativeParagraphs(data);
 
-  const setColor = (c: readonly [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
-  const setFill = (c: readonly [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
-
-  const ensureSpace = (need: number) => {
-    if (y + need > PAGE_H - 18) {
-      doc.addPage();
-      pageCount++;
-      drawPageHeader(doc, setFill);
-      y = M + 4;
-    }
-  };
-
-  const sectionTitle = (text: string) => {
-    ensureSpace(14);
-    setColor(TEAL);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(text, M, y);
-    y += 2;
-    doc.setDrawColor(TEAL[0], TEAL[1], TEAL[2]);
-    doc.setLineWidth(0.4);
-    doc.line(M, y, PAGE_W - M, y);
-    y += 5;
-    setColor(DARK);
-  };
-
-  const subHeading = (text: string) => {
-    ensureSpace(8);
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text(text, M, y);
-    y += 5;
-  };
-
-  const bodyText = (text: string, indent = 0) => {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    setColor(DARK);
-    const lines = doc.splitTextToSize(text, CW - indent);
-    for (const line of lines) {
-      ensureSpace(4);
-      doc.text(line, M + indent, y);
-      y += 4;
-    }
-  };
-
-  const placeholderText = (text: string, indent = 0) => {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    setColor(PLACEHOLDER_GRAY);
-    const lines = doc.splitTextToSize(text, CW - indent);
-    for (const line of lines) {
-      ensureSpace(4);
-      doc.text(line, M + indent, y);
-      y += 4;
-    }
-    y += 1;
-  };
-
-  const labelValue = (label: string, value: string) => {
-    ensureSpace(5);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    doc.text(label + ': ', M, y);
-    const labelW = doc.getTextWidth(label + ': ');
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    const valLines = doc.splitTextToSize(value, CW - labelW);
-    doc.text(valLines[0], M + labelW, y);
-    y += 4;
-    for (let i = 1; i < valLines.length; i++) {
-      ensureSpace(4);
-      doc.text(valLines[i], M + labelW, y);
-      y += 4;
-    }
-  };
-
-  // === COVER HEADER ===
-  drawPageHeader(doc, setFill);
-  y = M + 4;
-
-  setColor(PLACEHOLDER_GRAY);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('ERC CV & TRACK RECORD', M, y);
-  y += 6;
-
-  setColor(DARK);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.name, M, y);
-  y += 7;
-
+  // Header
+  p.push(new Paragraph({
+    children: [new TextRun({ text: 'ERC CV & TRACK RECORD', font: 'Calibri', size: 16, color: PLACEHOLDER })],
+    spacing: { after: 100 },
+  }));
+  p.push(new Paragraph({
+    children: [new TextRun({ text: data.name, bold: true, font: 'Calibri', size: 36, color: DARK })],
+    spacing: { after: 60 },
+  }));
   if (data.affiliation) {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    doc.text(data.affiliation, M, y);
-    y += 5;
+    p.push(new Paragraph({
+      children: [new TextRun({ text: data.affiliation, font: 'Calibri', size: 22, color: GRAY })],
+      spacing: { after: 200 },
+    }));
   }
 
-  const stats = [
-    `h-index: ${data.hIndex}`,
-    `Citations: ${data.totalCitations.toLocaleString()}`,
-    `Publications: ${data.publications.length}`,
-  ];
-  doc.setFontSize(8);
-  setColor(TEAL);
-  doc.text(stats.join('   |   '), M, y);
-  y += 8;
+  p.push(placeholderParagraph(
+    'ERC CV & Track Record: target 4 pages. Complete placeholder sections before submission. ' +
+    'Do not include journal impact factors per ERC guidelines. Citation counts are acceptable as evidence of impact.'
+  ));
 
-  doc.setDrawColor(LIGHT_GRAY[0], LIGHT_GRAY[1], LIGHT_GRAY[2]);
-  doc.setLineWidth(0.3);
-  doc.line(M, y, PAGE_W - M, y);
-  y += 8;
-
-  // ERC guidance note
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'italic');
-  setColor(PLACEHOLDER_GRAY);
-  const ercNote = 'ERC CV & Track Record: target 4 pages. Complete placeholder sections before submission. ' +
-    'Do not include journal impact factors per ERC guidelines.';
-  const noteLines = doc.splitTextToSize(ercNote, CW);
-  doc.text(noteLines, M, y);
-  y += noteLines.length * 3.5 + 6;
-
-  // ==============================
-  // SECTION A: PERSONAL INFORMATION
-  // ==============================
-  sectionTitle('A. Personal Information');
-
-  labelValue('Name', data.name);
-  if (data.affiliation) labelValue('Current affiliation', data.affiliation);
-
+  // Section A: Personal Information
+  p.push(sectionHeading('A. Personal Information'));
+  p.push(labelValueParagraph('Name', data.name));
+  if (data.affiliation) p.push(labelValueParagraph('Current affiliation', data.affiliation));
   if (data.topics.length > 0) {
     const topicNames = data.topics.map(t =>
       typeof t.name === 'object' ? (t.name as { title?: string }).title || '' : String(t.name)
     ).filter(Boolean);
-    labelValue('Research areas', topicNames.slice(0, 5).join(', '));
+    p.push(labelValueParagraph('Research areas', topicNames.slice(0, 5).join(', ')));
   }
+  if (orcidId) p.push(labelValueParagraph('ORCID', orcidId));
+  p.push(placeholderParagraph('[Add: nationality, date of birth (if required by call)]'));
 
-  placeholderText('[Add: ORCID iD, nationality, date of birth (if required by call)]');
-  y += 3;
-
-  // ==============================
-  // SECTION B: EDUCATION & KEY QUALIFICATIONS
-  // ==============================
-  sectionTitle('B. Education & Key Qualifications');
-
-  if (orcid?.educations && orcid.educations.length > 0) {
-    for (const ed of orcid.educations) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(ed.startYear, ed.endYear);
-      const degreeLabel = [ed.degree, ed.department].filter(Boolean).join(' in ');
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      doc.text(degreeLabel || '(Degree not specified)', M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      const locationParts = [ed.city, ed.country].filter(Boolean).join(', ');
-      const institutionLine = [ed.institution, locationParts].filter(Boolean).join(', ');
-      bodyText(institutionLine, 0);
-      y += 1;
-    }
-    placeholderText('[Add: thesis title or additional qualifications if relevant]');
+  // Section B: Education
+  p.push(sectionHeading('B. Education & Key Qualifications'));
+  if (orcid?.educations?.length) {
+    p.push(...educationEntries(orcid.educations));
+    p.push(placeholderParagraph('[Add: thesis title or additional qualifications if relevant]'));
   } else {
-    placeholderText('[PhD degree, institution, year, thesis title]');
-    placeholderText('[MSc / MA degree, institution, year]');
-    placeholderText('[BSc / BA degree, institution, year]');
-    placeholderText('[Any additional qualifications, certifications, or relevant training]');
+    p.push(placeholderParagraph('[PhD degree, institution, year, thesis title]'));
+    p.push(placeholderParagraph('[MSc / MA degree, institution, year]'));
+    p.push(placeholderParagraph('[BSc / BA degree, institution, year]'));
   }
-  y += 3;
 
-  // ==============================
-  // SECTION C: CURRENT AND PREVIOUS POSITIONS
-  // ==============================
-  sectionTitle('C. Current and Previous Positions');
-
-  if (orcid?.employments && orcid.employments.length > 0) {
-    for (const em of orcid.employments) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(em.startYear, em.endYear);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      doc.text(em.role || '(Role not specified)', M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      const locationParts = [em.city, em.country].filter(Boolean).join(', ');
-      const instLine = [em.institution, locationParts].filter(Boolean).join(', ');
-      bodyText(instLine, 0);
-      y += 1;
-    }
-    placeholderText('[Add: visiting appointments or industry roles if relevant]');
+  // Section C: Positions
+  p.push(sectionHeading('C. Current and Previous Positions'));
+  if (orcid?.employments?.length) {
+    p.push(...employmentEntries(orcid.employments));
+    p.push(placeholderParagraph('[Add: visiting appointments or industry roles if relevant]'));
   } else {
-    if (data.affiliation) {
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      setColor(DARK);
-      doc.text(`Current: ${data.affiliation}`, M, y);
-      y += 5;
-    }
-    placeholderText('[Add: previous positions with institution name, role, and dates (YYYY–YYYY)]');
-    placeholderText('[Include postdoctoral positions, visiting appointments, and industry roles if relevant]');
-  }
-  y += 3;
-
-  // ==============================
-  // SECTION D: RESEARCH ACHIEVEMENTS & PEER RECOGNITION
-  // ==============================
-  sectionTitle('D. Research Achievements & Peer Recognition');
-
-  const narrativeParagraphs = generateNarrativeParagraphs(data);
-
-  subHeading('Career summary');
-  if (narrativeParagraphs[0]) {
-    bodyText(stripMarkdown(narrativeParagraphs[0]));
-    y += 2;
+    if (data.affiliation) p.push(bodyParagraph(`Current: ${data.affiliation}`));
+    p.push(placeholderParagraph('[Add: previous positions with institution name, role, and dates]'));
   }
 
-  const impactPara = narrativeParagraphs.find(p =>
-    p.includes('h-index') || p.includes('citations') || p.includes('most cited')
+  // Section D: Research Achievements
+  p.push(sectionHeading('D. Research Achievements & Peer Recognition'));
+
+  p.push(subHeading('Career summary'));
+  if (narrative[0]) p.push(bodyParagraph(stripMarkdown(narrative[0])));
+
+  const impactPara = narrative.find(n =>
+    n.includes('h-index') || n.includes('citations') || n.includes('most cited')
   );
-  if (impactPara) {
-    bodyText(stripMarkdown(impactPara));
-    y += 2;
-  }
+  if (impactPara) p.push(bodyParagraph(stripMarkdown(impactPara)));
 
-  const trendPara = narrativeParagraphs.find(p =>
-    p.includes('publication output') || p.includes('publication pace') || p.includes('publication rate')
+  const trendPara = narrative.find(n =>
+    n.includes('publication output') || n.includes('publication pace') || n.includes('publication rate')
   );
-  if (trendPara) {
-    bodyText(stripMarkdown(trendPara));
-    y += 3;
-  }
+  if (trendPara) p.push(bodyParagraph(stripMarkdown(trendPara)));
 
-  subHeading('Grants & funding');
-  if (orcid?.fundings && orcid.fundings.length > 0) {
-    for (const fu of orcid.fundings) {
-      ensureSpace(10);
-      const dateRange = orcidDateRange(fu.startYear, fu.endYear);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      setColor(DARK);
-      const titleLines = doc.splitTextToSize(fu.title || '(Untitled grant)', CW - 30);
-      doc.text(titleLines[0], M, y);
-      if (dateRange) {
-        doc.setFont('helvetica', 'normal');
-        setColor(GRAY);
-        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
-      }
-      y += 4;
-      for (let i = 1; i < titleLines.length; i++) {
-        ensureSpace(4);
-        doc.setFont('helvetica', 'bold');
-        setColor(DARK);
-        doc.text(titleLines[i], M, y);
-        y += 4;
-      }
-      bodyText(fu.funder, 0);
-      y += 1;
-    }
-    placeholderText('[Add: funding amounts where relevant]');
+  p.push(subHeading('Grants & funding'));
+  if (orcid?.fundings?.length) {
+    p.push(...fundingEntries(orcid.fundings));
+    p.push(placeholderParagraph('[Add: funding amounts where relevant]'));
   } else {
-    placeholderText('[List research grants received, funding body, amount, and period (e.g. NWO Veni, ERC StG)]');
+    p.push(placeholderParagraph('[List research grants received, funding body, amount, and period]'));
   }
 
-  subHeading('Awards & prizes');
-  if (orcid?.distinctions && orcid.distinctions.length > 0) {
+  p.push(subHeading('Awards & prizes'));
+  if (orcid?.distinctions?.length) {
     for (const dist of orcid.distinctions) {
       const yearStr = dist.year ? ` (${dist.year})` : '';
-      bodyText(`${dist.title} — ${dist.organization}${yearStr}`);
+      p.push(bodyParagraph(`${dist.title} — ${dist.organization}${yearStr}`));
     }
-    y += 1;
   } else {
-    placeholderText('[List academic awards, best paper prizes, teaching awards, etc.]');
+    p.push(placeholderParagraph('[List academic awards, best paper prizes, teaching awards, etc.]'));
   }
 
-  subHeading('Editorial & professional roles');
-  placeholderText('[List editorial board memberships, conference programme committee roles, society memberships]');
+  p.push(subHeading('Editorial & professional roles'));
+  p.push(placeholderParagraph('[List editorial board memberships, conference roles, society memberships]'));
 
-  subHeading('Invited talks');
-  placeholderText('[List keynotes, invited seminar talks, and conference presentations (last 5 years)]');
+  p.push(subHeading('Invited talks'));
+  p.push(placeholderParagraph('[List keynotes, invited talks, and conference presentations (last 5 years)]'));
 
-  subHeading('Media & societal impact');
-  placeholderText('[Describe any policy impact, media coverage, consultancy, or knowledge transfer activities]');
+  p.push(subHeading('Media & societal impact'));
+  p.push(placeholderParagraph('[Describe policy impact, media coverage, consultancy, or knowledge transfer]'));
 
-  y += 3;
-
-  // ==============================
-  // SECTION E: SELECTED PUBLICATIONS & OUTPUTS
-  // ==============================
-  sectionTitle('E. Selected Publications & Outputs (max. 10)');
-
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  setColor(GRAY);
-  const pubNote = 'Ranked by journal prestige (FT50, then ABS) and citation count. ' +
-    'Note: journal impact factors are not included per ERC guidelines.';
-  const pubNoteLines = doc.splitTextToSize(pubNote, CW);
-  doc.text(pubNoteLines, M, y);
-  y += pubNoteLines.length * 3.5 + 4;
+  // Section E: Publications
+  p.push(sectionHeading('E. Selected Publications & Outputs (max. 10)'));
+  p.push(placeholderParagraph(
+    'Selected publications ranked by journal prestige and citation impact. Journal impact factors are not included per ERC guidelines.'
+  ));
 
   const keyOutputs = selectKeyOutputs(data.publications);
-  const hasOaData = !!data.openAccess?.publicationOa;
+  p.push(...publicationEntries(keyOutputs, data.openAccess, true));
+  p.push(placeholderParagraph('[For each output, add a brief narrative explaining how it advanced knowledge in the field.]'));
 
-  if (hasOaData) {
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    setColor(TEAL);
-    doc.text('[OA] = Open Access', M, y);
-    y += 4;
-  }
+  // Section F: Narrative Track Record
+  p.push(sectionHeading('F. Narrative on Track Record'));
 
-  for (let i = 0; i < keyOutputs.length; i++) {
-    const pub = keyOutputs[i];
-    ensureSpace(18);
-
-    const oaFlag = hasOaData && isOA(pub, data.openAccess) ? ' [OA]' : '';
-
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'bold');
-    setColor(DARK);
-    const titleText = `${i + 1}. ${pub.title}${oaFlag}`;
-    const titleLines = doc.splitTextToSize(titleText, CW);
-    for (const line of titleLines) {
-      ensureSpace(4);
-      doc.text(line, M, y);
-      y += 4;
-    }
-
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    setColor(GRAY);
-    const authorsText = pub.authors.slice(0, 6).join(', ') + (pub.authors.length > 6 ? ' et al.' : '');
-    const aLines = doc.splitTextToSize(authorsText, CW);
-    for (const line of aLines) {
-      ensureSpace(4);
-      doc.text(line, M + 4, y);
-      y += 3.5;
-    }
-
-    const venue = pub.venue ? pub.venue.replace(/,.*$/, '').trim() : '';
-    const rankingParts: string[] = [];
-    if (pub.journalRanking?.ft50) rankingParts.push('FT50');
-    if (pub.journalRanking?.abs) rankingParts.push(`ABS ${pub.journalRanking.abs}`);
-    if (pub.journalRanking?.abdc) rankingParts.push(`ABDC ${pub.journalRanking.abdc}`);
-    if (pub.journalRanking?.sjr) rankingParts.push(`SJR ${pub.journalRanking.sjr}`);
-
-    const metaParts = [
-      venue,
-      pub.year ? String(pub.year) : '',
-      pub.citations > 0 ? `${pub.citations} citation${pub.citations !== 1 ? 's' : ''}` : '',
-    ].filter(Boolean);
-    const metaLine = metaParts.join('  ·  ');
-
-    doc.setFontSize(7.5);
-    setColor(GRAY);
-    doc.text(metaLine, M + 4, y);
-
-    if (rankingParts.length > 0) {
-      const metaW = doc.getTextWidth(metaLine);
-      setColor(TEAL);
-      doc.text('  ' + rankingParts.join(' · '), M + 4 + metaW, y);
-    }
-
-    y += 6;
-  }
-
-  // ==============================
-  // SECTION F: NARRATIVE ON TRACK RECORD
-  // ==============================
-  sectionTitle('F. Narrative on Track Record');
-
-  subHeading('Research evolution');
-  const evolutionPara = narrativeParagraphs.find(p =>
-    p.includes('earlier work') || p.includes('shifted towards') || p.includes('consistently centered')
+  p.push(subHeading('Research evolution'));
+  const evolutionPara = narrative.find(n =>
+    n.includes('earlier work') || n.includes('shifted towards') || n.includes('consistently centered')
   );
   if (evolutionPara) {
-    bodyText(stripMarkdown(evolutionPara));
-    y += 2;
+    p.push(bodyParagraph(stripMarkdown(evolutionPara)));
   } else {
-    placeholderText('[Describe how your research has evolved over your career and where it is headed.]');
+    p.push(placeholderParagraph('[Describe how your research has evolved and where it is headed.]'));
   }
 
-  subHeading('Research methods & approach');
-  const methodsPara = narrativeParagraphs.find(p =>
-    p.includes('draws on') || p.includes('methods')
-  );
-  if (methodsPara && methodsPara !== narrativeParagraphs[0]) {
-    bodyText(stripMarkdown(methodsPara));
-    y += 2;
+  p.push(subHeading('Research methods & approach'));
+  const methodsPara = narrative.find(n => n.includes('draws on') || n.includes('methods'));
+  if (methodsPara && methodsPara !== narrative[0]) {
+    p.push(bodyParagraph(stripMarkdown(methodsPara)));
   } else {
-    placeholderText('[Describe the methods and approaches that characterise your research.]');
+    p.push(placeholderParagraph('[Describe the methods and approaches that characterise your research.]'));
   }
 
-  subHeading('Research themes');
+  p.push(subHeading('Research themes'));
   if (data.topics.length > 0) {
     const topicNames = data.topics.map(t =>
       typeof t.name === 'object' ? (t.name as { title?: string }).title || '' : String(t.name)
     ).filter(Boolean);
-    bodyText('Core research themes: ' + topicNames.slice(0, 6).join(', ') + '.');
-    y += 2;
+    p.push(bodyParagraph('Core research themes: ' + topicNames.slice(0, 6).join(', ') + '.'));
   }
-  placeholderText('[Expand on the central themes of your research programme and their scientific significance.]');
-  placeholderText('[Explain how these themes connect to broader challenges in your field and to the proposed project.]');
+  p.push(placeholderParagraph('[Expand on themes and their significance to the proposed project.]'));
 
-  subHeading('Collaboration & international profile');
-  const collabPara = narrativeParagraphs.find(p =>
-    p.includes('co-authored') || p.includes('collaborator') || p.includes('single-authored')
+  p.push(subHeading('Collaboration & international profile'));
+  const collabPara = narrative.find(n =>
+    n.includes('co-authored') || n.includes('collaborator') || n.includes('single-authored')
   );
-  if (collabPara) {
-    bodyText(stripMarkdown(collabPara));
-    y += 2;
-  }
-  placeholderText('[Add information about international collaborations, research networks, and mobility.]');
+  if (collabPara) p.push(bodyParagraph(stripMarkdown(collabPara)));
+  p.push(placeholderParagraph('[Add: international collaborations, research networks, and mobility.]'));
 
-  // Page count note
-  ensureSpace(10);
-  y += 3;
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'italic');
-  setColor(PLACEHOLDER_GRAY);
-  doc.text(
-    `This document currently spans ${doc.getNumberOfPages()} page(s). ERC CV target is 4 pages — trim placeholder sections before submission.`,
-    M, y
-  );
-
-  addFooter(doc, 'ERC CV & Track Record');
-  const safeName = data.name.replace(/[^a-zA-Z0-9]/g, '_');
-  const dateStr = new Date().toISOString().slice(0, 10);
-  doc.save(`ScholarFolio_ERC_CV_${safeName}_${dateStr}.pdf`);
-}
-
-// ============================================================
-// Shared helpers
-// ============================================================
-
-function drawPageHeader(
-  doc: jsPDF,
-  setFill: (c: readonly [number, number, number]) => void
-): void {
-  setFill(TEAL);
-  doc.rect(0, 0, PAGE_W, 3, 'F');
-}
-
-function addFooter(doc: jsPDF, label: string): void {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const totalPages = doc.getNumberOfPages();
-
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-
-    // Bottom accent bar
-    doc.setFillColor(TEAL[0], TEAL[1], TEAL[2]);
-    doc.rect(0, PAGE_H - 3, PAGE_W, 3, 'F');
-
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Generated by ScholarFolio · scholarfolio.org · ${label} · ${dateStr}`, M, PAGE_H - 6);
-    doc.text(`Page ${i} of ${totalPages}`, PAGE_W - M, PAGE_H - 6, { align: 'right' });
-  }
+  p.push(footerParagraph('ERC CV & Track Record'));
+  return p;
 }
