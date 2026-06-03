@@ -196,8 +196,8 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
               },
               {
                 icon: Gauge,
-                title: "Field-Normalized Impact",
-                description: "FWCI and Mean Journal Impact via OpenAlex. Compare your citation performance to the world average in your field.",
+                title: "Field-Normalized Impact & P-Index",
+                description: "FWCI, Mean Journal Impact, and the p-index — see how your papers perform relative to their field, venue, and publication year, with authorship weighting.",
                 color: '#6b5b8a',
                 bg: '#f3f0f8',
               },
@@ -214,13 +214,6 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
                 description: "See where your collaborators are — an interactive map of co-author institutions across the globe.",
                 color: '#2d7d7d',
                 bg: '#eaf4f4',
-              },
-              {
-                icon: Award,
-                title: "P-Index (Thought Leadership)",
-                description: "Within-journal citation percentile ranking with authorship weighting. See how your papers perform relative to their venue.",
-                color: '#7c3aed',
-                bg: '#f3f0ff',
               },
               {
                 icon: Unlock,
