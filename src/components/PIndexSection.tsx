@@ -1,0 +1,317 @@
+import React, { useState, useCallback } from 'react';
+import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { oaFetchJson, OA_API_URL, OA_EMAIL } from '../services/openalex/author-lookup';
+import { computePIndex, type PIndexResult } from '../services/openalex/pindex';
+import { MetricsCard } from './MetricsCard';
+
+interface OpenAlexSearchResult {
+  id: string;
+  display_name: string;
+  works_count: number;
+  cited_by_count: number;
+  last_known_institutions?: Array<{ display_name?: string }>;
+}
+
+interface PIndexSectionProps {
+  authorName: string;
+  affiliation: string;
+}
+
+export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
+  const [step, setStep] = useState<'idle' | 'searching' | 'select' | 'computing' | 'done' | 'error'>('idle');
+  const [searchResults, setSearchResults] = useState<OpenAlexSearchResult[]>([]);
+  const [selectedAuthor, setSelectedAuthor] = useState<OpenAlexSearchResult | null>(null);
+  const [result, setResult] = useState<PIndexResult | null>(null);
+  const [progress, setProgress] = useState({ pct: 0, status: '' });
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showDetails, setShowDetails] = useState(false);
+
+  // Search fields — pre-filled from the profile
+  const nameParts = authorName.split(' ');
+  const [firstName, setFirstName] = useState(nameParts.slice(0, -1).join(' '));
+  const [lastName, setLastName] = useState(nameParts[nameParts.length - 1] || '');
+  const [institution, setInstitution] = useState(
+    affiliation.replace(/,.*$/, '').replace(/^(Assistant|Associate|Full)?\s*Professor.*?,\s*/i, '').trim()
+  );
+
+  const handleSearch = useCallback(async () => {
+    if (!firstName.trim() || !lastName.trim()) return;
+    setStep('searching');
+    setErrorMsg('');
+
+    const query = `${firstName} ${lastName}`;
+    const data = await oaFetchJson<{ results: OpenAlexSearchResult[] }>(
+      `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`
+    );
+
+    if (!data?.results?.length) {
+      setErrorMsg('No authors found in OpenAlex. Try adjusting the name.');
+      setStep('error');
+      return;
+    }
+
+    setSearchResults(data.results);
+    setStep('select');
+  }, [firstName, lastName]);
+
+  const handleSelect = useCallback(async (author: OpenAlexSearchResult) => {
+    setSelectedAuthor(author);
+    setStep('computing');
+    setProgress({ pct: 0, status: 'Starting…' });
+
+    try {
+      const pIndex = await computePIndex(author.id, (pct, status) => {
+        setProgress({ pct, status });
+      });
+
+      if (pIndex) {
+        setResult(pIndex);
+        setStep('done');
+      } else {
+        setErrorMsg('Could not compute p-index. No publications with journal data found.');
+        setStep('error');
+      }
+    } catch {
+      setErrorMsg('Calculation failed. Please try again later.');
+      setStep('error');
+    }
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setStep('idle');
+    setResult(null);
+    setSelectedAuthor(null);
+    setSearchResults([]);
+    setErrorMsg('');
+    setProgress({ pct: 0, status: '' });
+  }, []);
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+        P-Index
+        <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">(Pham, Wu &amp; Wang, 2024)</span>
+      </h3>
+
+      {/* Info banner */}
+      {step === 'idle' && (
+        <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 rounded-xl p-4 mb-3">
+          <div className="flex gap-3">
+            <Info className="h-4 w-4 text-violet-500 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-violet-700 dark:text-violet-300 space-y-2">
+              <p>
+                The <strong>p-index</strong> measures where your papers rank in citation percentile
+                <em> within their own journal and publication year</em>. It indicates thought leadership
+                independent of field or career stage.
+              </p>
+              <p className="text-violet-500 dark:text-violet-400">
+                This uses OpenAlex data, which may differ from Google Scholar or Web of Science.
+                Calculation takes 10–30 seconds as it analyzes citation distributions for each journal-year.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <p className="text-[11px] font-medium text-violet-600 dark:text-violet-400">Confirm your details to calculate:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                placeholder="First name"
+                className="px-3 py-1.5 text-xs rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+              <input
+                type="text"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                placeholder="Last name"
+                className="px-3 py-1.5 text-xs rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+              <input
+                type="text"
+                value={institution}
+                onChange={e => setInstitution(e.target.value)}
+                placeholder="Institution (optional)"
+                className="px-3 py-1.5 text-xs rounded-lg border border-violet-200 dark:border-violet-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={!firstName.trim() || !lastName.trim()}
+              className="mt-1 flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              <Search className="h-3 w-3" />
+              Find Author in OpenAlex
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Searching spinner */}
+      {step === 'searching' && (
+        <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+          Searching OpenAlex…
+        </div>
+      )}
+
+      {/* Author selection */}
+      {step === 'select' && (
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-3">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Select your profile from OpenAlex:
+          </p>
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {searchResults.map(author => {
+              const inst = author.last_known_institutions?.[0]?.display_name || 'Unknown institution';
+              return (
+                <button
+                  key={author.id}
+                  onClick={() => handleSelect(author)}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30 border border-transparent hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
+                >
+                  <p className="text-xs font-medium text-gray-900 dark:text-gray-100">{author.display_name}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    {inst} · {author.works_count} works · {author.cited_by_count.toLocaleString()} citations
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={handleReset}
+            className="mt-3 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            ← Back to search
+          </button>
+        </div>
+      )}
+
+      {/* Computing with progress */}
+      {step === 'computing' && (
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+            <span className="text-xs text-gray-700 dark:text-gray-300">
+              Computing p-index for <strong>{selectedAuthor?.display_name}</strong>…
+            </span>
+          </div>
+          <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-1.5 mb-1.5">
+            <div
+              className="bg-violet-500 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${progress.pct}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-gray-400">{progress.status}</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {step === 'error' && (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-xs text-red-700 dark:text-red-300">{errorMsg}</span>
+          </div>
+          <button
+            onClick={handleReset}
+            className="mt-2 text-[10px] text-red-500 hover:text-red-700 dark:hover:text-red-400"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Results */}
+      {step === 'done' && result && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
+            <MetricsCard
+              title="P-Index (PI)"
+              value={result.rawPIndex ?? 0}
+              subtitle={
+                result.rawPIndex !== null
+                  ? result.rawPIndex >= 75 ? 'Excellent' : result.rawPIndex >= 60 ? 'Strong' : result.rawPIndex >= 50 ? 'Above average' : 'Average'
+                  : undefined
+              }
+              icon="pindex"
+            />
+            <MetricsCard
+              title="P-Index (OWPI)"
+              value={result.owpiPIndex ?? 0}
+              subtitle="Authorship-weighted"
+              icon="owpi"
+            />
+          </div>
+
+          {/* Source note */}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">
+            Based on {result.worksWithPercentile} of {result.worksAnalyzed} publications from OpenAlex.
+            Values may differ from Web of Science due to different coverage and indexing.
+            {selectedAuthor && (
+              <button onClick={handleReset} className="ml-2 text-violet-500 hover:text-violet-700 underline">
+                Recalculate
+              </button>
+            )}
+          </p>
+
+          {/* Expandable top publications */}
+          {result.topPublications.length > 0 && (
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 mb-2"
+            >
+              {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {showDetails ? 'Hide' : 'Show'} top publications by percentile
+            </button>
+          )}
+
+          {showDetails && (
+            <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-3 overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-slate-700">
+                    <th className="text-left py-1.5 pr-3 font-medium">Pctl</th>
+                    <th className="text-left py-1.5 pr-3 font-medium">Cit</th>
+                    <th className="text-left py-1.5 pr-3 font-medium">Pos</th>
+                    <th className="text-left py-1.5 pr-3 font-medium">Journal</th>
+                    <th className="text-left py-1.5 font-medium">Title</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.topPublications.map((pub, i) => (
+                    <tr key={i} className="border-b border-gray-50 dark:border-slate-700/50 last:border-0">
+                      <td className="py-1.5 pr-3 font-mono font-medium text-violet-600 dark:text-violet-400">
+                        {pub.percentileRank.toFixed(1)}%
+                      </td>
+                      <td className="py-1.5 pr-3 text-gray-600 dark:text-gray-400">{pub.citations}</td>
+                      <td className="py-1.5 pr-3 text-gray-500 dark:text-gray-500">
+                        {pub.authorPosition}/{pub.totalAuthors}
+                      </td>
+                      <td className="py-1.5 pr-3 text-gray-500 dark:text-gray-500 max-w-[150px] truncate">
+                        {pub.journal}
+                      </td>
+                      <td className="py-1.5 text-gray-700 dark:text-gray-300 max-w-[250px] truncate">
+                        {pub.title}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Idle state — show confirmed check if we already computed */}
+      {step === 'done' && selectedAuthor && (
+        <div className="flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400 mt-2">
+          <CheckCircle className="h-3 w-3" />
+          OpenAlex profile: {selectedAuthor.display_name}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -173,6 +173,18 @@ export const metricInfo = {
     cons: "Journal-level metric applied to individual researchers. Publishing in high-IF journals doesn't guarantee individual paper impact.",
     link: "https://en.wikipedia.org/wiki/Impact_factor"
   },
+  pindex: {
+    description: "The p-index measures the average citation percentile rank of a researcher's papers relative to other papers published in the same journal in the same year. A score of 70 means the researcher's papers are, on average, in the 70th percentile within their journals.\n\nBased on: Pham, Wu & Wang (2024), 'Benchmarking Scholarship in Consumer Research: The p-Index of Thought Leadership,' Journal of Consumer Research, 51(1), 191–203.",
+    pros: "Field-normalized and career-stage independent. Comparable across disciplines. Not inflated by publishing in high-citation fields. Resistant to manipulation.",
+    cons: "Computed from OpenAlex data, which may differ from Web of Science. Coverage varies by discipline. Conference papers and book chapters may have fewer reference papers in the distribution.",
+    link: "https://www.p-index.net/"
+  },
+  owpi: {
+    description: "Ownership-Weighted P-Index — a variant of the p-index that gives more weight to publications where the researcher is a lead or sole author, using the Abbas (2011) positional weighting formula.\n\nFirst author gets more credit than middle authors. For a paper with k authors, the weight of the j-th author is: w = 2(k−j+1) / k(k+1).",
+    pros: "Rewards intellectual leadership and first-authorship. Differentiates between leading research and contributing to large teams.",
+    cons: "Assumes author order reflects contribution, which varies by field (e.g., alphabetical ordering in economics). May disadvantage researchers in large collaborative teams.",
+    link: "https://www.p-index.net/"
+  },
   closedAccess: {
     description: "Publications behind a paywall, accessible only through subscriptions or individual purchase.",
     pros: "Traditional publishing model with established peer review processes.",
