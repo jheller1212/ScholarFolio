@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck, Globe, Gauge, TrendingUp, Unlock } from 'lucide-react';
+import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck, Globe, Gauge, TrendingUp, Unlock, Award } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { Logo } from './Logo';
@@ -174,7 +174,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
               Your research, one link away
             </h2>
             <p className="text-sm text-[#64748b] max-w-lg mx-auto">
-              A clear, honest picture of your research — built from your Google Scholar profile, shareable in one click.
+              A clear, honest picture of your research — impact metrics, p-index, collaboration network, and more — built from your Google Scholar profile, shareable in one click.
             </p>
           </div>
 
@@ -214,6 +214,13 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
                 description: "See where your collaborators are — an interactive map of co-author institutions across the globe.",
                 color: '#2d7d7d',
                 bg: '#eaf4f4',
+              },
+              {
+                icon: Award,
+                title: "P-Index (Thought Leadership)",
+                description: "Within-journal citation percentile ranking with authorship weighting. See how your papers perform relative to their venue.",
+                color: '#7c3aed',
+                bg: '#f3f0ff',
               },
               {
                 icon: Unlock,
