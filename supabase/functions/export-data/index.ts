@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // Fetch all user-related data in parallel
     const [credits, purchases, claimedProfiles, requestLogs] = await Promise.all([
       supabase.from('user_credits').select('*').eq('user_id', userId).maybeSingle(),
-      supabase.from('credit_purchases').select('pack_id, credits, amount, created_at').eq('user_id', userId),
+      supabase.from('credit_purchases').select('pack, credits, amount_cents, created_at').eq('user_id', userId),
       supabase.from('claimed_profiles').select('slug, author_id, display_name, bio, created_at').eq('user_id', userId),
       supabase.from('request_logs').select('created_at, source').eq('user_id', userId).order('created_at', { ascending: false }),
     ]);

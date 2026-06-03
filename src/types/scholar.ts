@@ -94,6 +94,7 @@ export interface Author {
   publications: Publication[];
   metrics: Metrics;
   openAccess?: OpenAccessStats;
+  openAccessFailed?: boolean;
   fieldMetrics?: FieldNormalizedMetrics;
   cacheStatus?: 'hit' | 'miss';
 }

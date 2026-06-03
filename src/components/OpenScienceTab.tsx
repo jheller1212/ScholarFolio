@@ -105,8 +105,17 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
     return (
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-8 text-center">
         <Unlock className="h-8 w-8 text-gray-300 mx-auto mb-3" />
-        <p className="text-sm text-gray-500">Loading Open Access data...</p>
-        <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
+        {data.openAccessFailed ? (
+          <>
+            <p className="text-sm text-gray-500">Open Access data unavailable</p>
+            <p className="text-xs text-gray-400 mt-1">Could not retrieve data from OpenAlex. Try refreshing the profile.</p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500">Loading Open Access data...</p>
+            <p className="text-xs text-gray-400 mt-1">This may take a few seconds</p>
+          </>
+        )}
       </div>
     );
   }

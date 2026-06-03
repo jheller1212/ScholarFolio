@@ -784,6 +784,12 @@ Deno.serve(async (req) => {
 
     // --- Author search by name (no credit cost, but rate limited) ---
     if (action === 'search' && query) {
+      if (typeof query !== 'string' || query.length > 200) {
+        return new Response(
+          JSON.stringify({ error: "Invalid search query" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       const { data: searchAllowed } = await supabase.rpc('check_search_rate_limit', {
         p_ip: clientIp, p_limit: RATE_LIMIT_MAX_SEARCH
       });
