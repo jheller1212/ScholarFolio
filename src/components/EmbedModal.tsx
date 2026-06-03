@@ -44,34 +44,42 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-2xl w-full">
-        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-xl">
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="embed-modal-title"
+      onClick={onClose}
+      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between rounded-t-xl">
           <div className="flex items-center space-x-2">
             <Code className="h-5 w-5 text-[#2d7d7d]" />
-            <h2 className="text-lg font-semibold text-gray-900">Embed Metrics</h2>
+            <h2 id="embed-modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">Embed Metrics</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Close"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
-        
+
         <div className="p-6 space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Copy and paste this code into your website to embed your Scholar Folio:
           </p>
-          
+
           <div className="relative">
-            <pre className="bg-gray-50 rounded-lg p-4 text-sm text-gray-800 font-mono overflow-x-auto">
+            <pre className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-sm text-gray-800 dark:text-gray-200 font-mono overflow-x-auto">
               {embedCode}
             </pre>
-            
+
             <button
               onClick={handleCopy}
-              className="absolute top-3 right-3 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors flex items-center space-x-1"
+              className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center space-x-1"
             >
               {copied ? (
                 <>
@@ -86,10 +94,10 @@ export function EmbedModal({ isOpen, onClose, scholarId }: EmbedModalProps) {
               )}
             </button>
           </div>
-          
-          <div className="bg-[#eaf4f4] rounded-lg p-4 text-sm text-[#1e293b]">
+
+          <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/10 rounded-lg p-4 text-sm text-[#1e293b] dark:text-gray-200">
             <h3 className="font-medium mb-2">Customization Options:</h3>
-            <ul className="list-disc list-inside space-y-1 text-[#334155]">
+            <ul className="list-disc list-inside space-y-1 text-[#334155] dark:text-gray-300">
               <li>Adjust the width and height attributes to fit your layout</li>
               <li>The embed automatically adapts to light/dark themes</li>
               <li>Metrics are updated in real-time as citations change</li>

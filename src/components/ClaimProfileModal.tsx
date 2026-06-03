@@ -170,16 +170,16 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
 
   if (existingClaim) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 modal-overlay" role="dialog" aria-modal="true" aria-labelledby="claim-existing-title" onClick={onClose} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden modal-card"
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden modal-card"
           onClick={e => e.stopPropagation()}
         >
           <div className="p-8 text-center">
-            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-7 w-7 text-amber-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Already claimed a profile</h2>
+            <h2 id="claim-existing-title" className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Already claimed a profile</h2>
             <p className="text-sm text-gray-600 mb-3">
               You already have a claimed profile at{' '}
               <a href={`/${existingClaim}`} className="font-medium text-[#2d7d7d] hover:underline">
@@ -294,9 +294,9 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="claim-profile-title" onClick={onClose} onKeyDown={e => { if (e.key === 'Escape') onClose(); }}>
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -304,6 +304,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
@@ -311,7 +312,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
             <Link className="h-5 w-5 text-amber-300" />
             <span className="text-xs font-medium uppercase tracking-wider text-white/80">Claim Profile</span>
           </div>
-          <h2 className="text-xl font-bold">Get your vanity URL</h2>
+          <h2 id="claim-profile-title" className="text-xl font-bold">Get your vanity URL</h2>
           <p className="text-sm text-white/80 mt-1">
             Claim this Scholar profile and share it with a memorable link.
           </p>
