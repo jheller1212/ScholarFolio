@@ -3,6 +3,7 @@ import type { Author, Publication, OpenAccessStats, CoAuthorGeoData } from '../t
 import { generateNarrativeParagraphs } from '../components/ResearcherNarrative';
 import { fetchOrcidProfile } from '../services/orcid';
 import type { OrcidProfile } from '../services/orcid';
+import { findOpenAlexAuthor } from '../services/openalex/author-lookup';
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -49,7 +50,12 @@ export async function exportNarrativeCv(
   format: 'nwo' | 'erc',
   geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
 ): Promise<void> {
-  const orcidId = data.openAccess?.orcid;
+  let orcidId = data.openAccess?.orcid;
+  // Fallback: if ORCID not in cached OA stats, try fetching from OpenAlex directly
+  if (!orcidId) {
+    const author = await findOpenAlexAuthor(data.name, data.affiliation);
+    orcidId = author?.orcid;
+  }
   const orcid = orcidId ? await fetchOrcidProfile(orcidId) : null;
 
   if (format === 'nwo') {
