@@ -21,7 +21,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-4">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: June 3, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: June 4, 2026</p>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
 
@@ -78,13 +78,29 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">6. Your Rights</h2>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">6. International Data Transfers</h2>
+            <p className="mb-3">
+              Some of our third-party processors are based in the United States. When your personal data is
+              transferred outside the European Economic Area (EEA), we ensure appropriate safeguards are in place:
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 ml-2">
+              <li><strong>Supabase, Stripe, Netlify, SerpAPI</strong> — transfers are covered by the EU-U.S. Data Privacy Framework and/or EU Standard Contractual Clauses (SCCs) as adopted by the European Commission.</li>
+              <li><strong>OpenAlex / ORCID</strong> — only public identifiers are sent to these APIs; no personal data is transferred.</li>
+            </ul>
+            <p className="mt-3">
+              You can request a copy of the applicable transfer safeguards by emailing{' '}
+              <a href="mailto:privacy@scholarfolio.org" className="text-[#2d7d7d] hover:underline">privacy@scholarfolio.org</a>.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">7. Your Rights</h2>
             <p className="mb-3">Under the GDPR, you have the right to:</p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
               <li><strong>Access</strong> — request a copy of the personal data we hold about you.</li>
               <li><strong>Rectification</strong> — correct inaccurate data.</li>
               <li><strong>Erasure</strong> — delete your account and all associated data. You can do this directly from the user menu in the app, or by emailing us.</li>
-              <li><strong>Data portability</strong> — receive your data in a machine-readable format.</li>
+              <li><strong>Data portability</strong> — download your data in JSON format from the user menu, or request it by email.</li>
               <li><strong>Object</strong> — object to processing based on legitimate interest.</li>
               <li><strong>Complaint</strong> — lodge a complaint with your local data protection authority. In the Netherlands, this is the <a href="https://autoriteitpersoonsgegevens.nl" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">Autoriteit Persoonsgegevens</a>.</li>
             </ul>
@@ -95,7 +111,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">7. Cookies & Local Storage</h2>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">8. Cookies & Local Storage</h2>
             <p>
               Scholar Folio does not use tracking cookies or third-party analytics. We use browser localStorage
               for two strictly functional purposes: storing your theme preference and counting anonymous searches
@@ -104,7 +120,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">8. No Advertising or Data Sales</h2>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">9. No Advertising or Data Sales</h2>
             <p>
               We do not use advertising, tracking pixels, or data brokers. We do not sell or share your personal
               data with third parties for marketing purposes.
@@ -112,7 +128,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">9. Changes to This Policy</h2>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">10. Changes to This Policy</h2>
             <p>
               We may update this policy to reflect changes in our practices or legal requirements. Material
               changes will be communicated via the app. The "last updated" date at the top indicates the

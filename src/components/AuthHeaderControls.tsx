@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2 } from 'lucide-react';
+import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -30,6 +31,32 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
       .eq('resolved', false)
       .then(({ count }) => { if (count != null) setUnresolvedCount(count); });
   }, [isAdmin]);
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL || ''}/functions/v1/export-data`,
+        {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scholarfolio-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Data export failed:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
@@ -124,6 +151,15 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
             >
               <Coins className="h-3.5 w-3.5" />
               Buy credits
+            </DropdownMenu.Item>
+
+            <DropdownMenu.Item
+              className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 outline-none cursor-pointer hover:bg-[#eaf4f4] dark:hover:bg-[#2d7d7d]/20 hover:text-[#2d7d7d] transition-colors"
+              onSelect={handleExportData}
+              disabled={exporting}
+            >
+              {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {exporting ? 'Exporting...' : 'Download my data'}
             </DropdownMenu.Item>
 
             {isAdmin && onAdmin && (
