@@ -65,6 +65,15 @@ export function ProfileView({
   const [showEmbed, setShowEmbed] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (exportError) {
+      const t = setTimeout(() => setExportError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [exportError]);
   const [tabKey, setTabKey] = useState(0);
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -258,14 +267,23 @@ export function ProfileView({
                   )}
                   <button
                     onClick={async () => {
-                      if (!data) return;
-                      const { exportProfilePdf } = await import('../utils/pdfExport');
-                      exportProfilePdf(data, scholarId || undefined, prefetchedGeo);
+                      if (!data || exportingPdf) return;
+                      setExportingPdf(true);
+                      try {
+                        const { exportProfilePdf } = await import('../utils/pdfExport');
+                        await exportProfilePdf(data, scholarId || undefined, prefetchedGeo);
+                      } catch (err) {
+                        console.error('PDF export failed:', err);
+                        setExportError('PDF export failed. Please try again.');
+                      } finally {
+                        setExportingPdf(false);
+                      }
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                    disabled={exportingPdf}
+                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors disabled:opacity-50"
                   >
                     <Download className="h-3 w-3" />
-                    PDF
+                    {exportingPdf ? 'Exporting...' : 'PDF'}
                   </button>
                   {claimedSlug ? (
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
@@ -299,6 +317,9 @@ export function ProfileView({
                     </a>
                   )}
                 </div>
+                {exportError && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{exportError}</p>
+                )}
                 {data.topics && data.topics.length > 0 && (
                   <TopicsList topics={data.topics} />
                 )}
@@ -350,7 +371,7 @@ export function ProfileView({
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="relative flex gap-1 p-1 bg-gray-100/80 dark:bg-slate-800 rounded-xl w-fit">
+          <div className="relative flex gap-1 p-1 bg-gray-100/80 dark:bg-slate-800 rounded-xl w-fit" role="tablist">
             {/* Sliding indicator */}
             <div
               className="tab-indicator absolute top-1 h-[calc(100%-8px)] bg-white dark:bg-slate-700 rounded-lg shadow-sm z-0"
@@ -360,6 +381,9 @@ export function ProfileView({
               <button
                 key={tab.id}
                 ref={el => { tabsRef.current[i] = el; }}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 onClick={() => { setActiveTab(tab.id); setTabKey(k => k + 1); }}
                 className={`relative z-10 flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
                   activeTab === tab.id

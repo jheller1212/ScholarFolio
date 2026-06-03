@@ -160,15 +160,6 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
         </div>
       )}
 
-      {error && !compact && (
-        <div className="mt-2 flex items-start space-x-1">
-          <div className="flex items-center space-x-1 text-[#64748b] text-xs">
-            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        </div>
-      )}
-
       {!error && !compact && (
         <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center space-x-1">

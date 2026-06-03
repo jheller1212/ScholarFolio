@@ -215,16 +215,16 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
     const linkedInText = `I just claimed my research portfolio on Scholar Folio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${profileUrl}`;
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="claim-success-title" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden max-h-[90vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
           <div className="p-6 text-center border-b border-gray-100">
             <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="h-7 w-7 text-emerald-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Profile Claimed!</h2>
+            <h2 id="claim-success-title" className="text-xl font-bold text-gray-900 mb-2">Profile Claimed!</h2>
             <p className="text-sm text-gray-600">
               Your profile is live at{' '}
               <a href={`/${slug}`} className="font-medium text-[#2d7d7d] hover:underline">scholarfolio.org/{slug}</a>

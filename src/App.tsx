@@ -276,7 +276,9 @@ function AppContent() {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
           }
         })
-        .catch(() => {}); // Silently ignore — OA stats are supplementary
+        .catch(() => {
+          setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
+        });
 
       // Fetch field-normalized metrics from OpenAlex + iCite (non-blocking)
       fetchFieldNormalizedMetrics(sanitizedData.name, sanitizedData.affiliation)

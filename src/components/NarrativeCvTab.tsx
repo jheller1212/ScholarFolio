@@ -50,14 +50,17 @@ const formats: Array<{
 export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
   const [exporting, setExporting] = useState<NarrativeCvFormat | null>(null);
   const [showTooltip, setShowTooltip] = useState<NarrativeCvFormat | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleExport = async (format: NarrativeCvFormat) => {
     setExporting(format);
+    setExportError(null);
     try {
       const { exportNarrativeCv } = await import('../utils/narrativeCvExport');
       await exportNarrativeCv(data, format, geoData);
     } catch (err) {
       console.error('Narrative CV export failed:', err);
+      setExportError('Export failed. Please try again.');
     } finally {
       setExporting(null);
     }
@@ -143,6 +146,12 @@ export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
           </div>
         ))}
       </div>
+
+      {exportError && (
+        <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+          {exportError}
+        </div>
+      )}
 
       <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 text-xs text-gray-500 dark:text-gray-400 space-y-1.5">
         <p className="font-medium text-gray-700 dark:text-gray-300">What's included automatically:</p>
