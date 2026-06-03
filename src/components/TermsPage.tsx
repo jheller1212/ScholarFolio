@@ -28,7 +28,9 @@ export function TermsPage({ onBack }: TermsPageProps) {
           </p>
 
           <p>
-            It uses publicly available data from Google Scholar. It does not store, sell, or share user data.
+            It uses publicly available data from Google Scholar. We store only the minimum data needed to
+            operate the service (see our Privacy Policy for details). We do not sell or share your data
+            with third parties for marketing purposes.
           </p>
 
           <p>
