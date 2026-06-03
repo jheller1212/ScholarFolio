@@ -290,9 +290,9 @@ export function ProfileView({
                     {showNarrativeCvMenu && (
                       <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg py-1 z-50 min-w-[200px]">
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (!data) return;
-                            exportNarrativeCv(data, 'nwo', prefetchedGeo);
+                            await exportNarrativeCv(data, 'nwo', prefetchedGeo);
                             setShowNarrativeCvMenu(false);
                           }}
                           className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -301,9 +301,9 @@ export function ProfileView({
                           <span className="text-gray-400 dark:text-gray-500 ml-1">— Evidence-Based CV</span>
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             if (!data) return;
-                            exportNarrativeCv(data, 'erc', prefetchedGeo);
+                            await exportNarrativeCv(data, 'erc', prefetchedGeo);
                             setShowNarrativeCvMenu(false);
                           }}
                           className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"

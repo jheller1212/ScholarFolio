@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf';
 import type { Author, Publication, OpenAccessStats, CoAuthorGeoData } from '../types/scholar';
 import { generateNarrativeParagraphs } from '../components/ResearcherNarrative';
+import { fetchOrcidProfile } from '../services/orcid';
+import type { OrcidProfile } from '../services/orcid';
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -42,16 +44,28 @@ function isOA(pub: Publication, openAccess?: OpenAccessStats): boolean {
   return !!entry && entry.status !== 'closed';
 }
 
-export function exportNarrativeCv(
+export async function exportNarrativeCv(
   data: Author,
   format: 'nwo' | 'erc',
   geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
-): void {
+): Promise<void> {
+  const orcidId = data.openAccess?.orcid;
+  const orcid = orcidId ? await fetchOrcidProfile(orcidId) : null;
+
   if (format === 'nwo') {
-    exportNwo(data, geoData);
+    exportNwo(data, geoData, orcid);
   } else {
-    exportErc(data, geoData);
+    exportErc(data, geoData, orcid);
   }
+}
+
+// ============================================================
+// ORCID formatting helpers
+// ============================================================
+
+function orcidDateRange(startYear: number | null, endYear: number | null): string {
+  if (!startYear) return '';
+  return endYear ? `${startYear}–${endYear}` : `${startYear}–present`;
 }
 
 // ============================================================
@@ -60,7 +74,8 @@ export function exportNarrativeCv(
 
 function exportNwo(
   data: Author,
-  _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
+  _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null,
+  orcid?: OrcidProfile | null
 ): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
@@ -222,6 +237,112 @@ function exportNwo(
 
   y += 3;
 
+  // --- ORCID: Education ---
+  if (orcid?.educations && orcid.educations.length > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    setColor(DARK);
+    doc.text('Education', M, y);
+    y += 5;
+    for (const ed of orcid.educations) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(ed.startYear, ed.endYear);
+      const degreeLabel = [ed.degree, ed.department].filter(Boolean).join(' in ');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      doc.text(degreeLabel, M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      const locationParts = [ed.city, ed.country].filter(Boolean).join(', ');
+      const institutionLine = [ed.institution, locationParts].filter(Boolean).join(', ');
+      bodyText(institutionLine, 0);
+      y += 1;
+    }
+    y += 2;
+  }
+
+  // --- ORCID: Employment ---
+  if (orcid?.employments && orcid.employments.length > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    setColor(DARK);
+    doc.text('Academic & Professional Positions', M, y);
+    y += 5;
+    for (const em of orcid.employments) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(em.startYear, em.endYear);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      doc.text(em.role || '(Role not specified)', M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      const locationParts = [em.city, em.country].filter(Boolean).join(', ');
+      const instLine = [em.institution, locationParts].filter(Boolean).join(', ');
+      bodyText(instLine, 0);
+      y += 1;
+    }
+    y += 2;
+  }
+
+  // --- ORCID: Grants & Funding ---
+  if (orcid?.fundings && orcid.fundings.length > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    setColor(DARK);
+    doc.text('Grants & Funding', M, y);
+    y += 5;
+    for (const fu of orcid.fundings) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(fu.startYear, fu.endYear);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      const titleLines = doc.splitTextToSize(fu.title || '(Untitled grant)', CW - 30);
+      doc.text(titleLines[0], M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      for (let i = 1; i < titleLines.length; i++) {
+        ensureSpace(4);
+        doc.setFont('helvetica', 'bold');
+        setColor(DARK);
+        doc.text(titleLines[i], M, y);
+        y += 4;
+      }
+      bodyText(fu.funder, 0);
+      y += 1;
+    }
+    y += 2;
+  }
+
+  // --- ORCID: Distinctions ---
+  if (orcid?.distinctions && orcid.distinctions.length > 0) {
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    setColor(DARK);
+    doc.text('Awards & Distinctions', M, y);
+    y += 5;
+    for (const dist of orcid.distinctions) {
+      ensureSpace(6);
+      const yearStr = dist.year ? ` (${dist.year})` : '';
+      bodyText(`${dist.title} — ${dist.organization}${yearStr}`);
+    }
+    y += 2;
+  }
+
   // NWO-specific placeholder prompts
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
@@ -233,7 +354,9 @@ function exportNwo(
     '[Describe your most significant scientific achievements and their broader societal relevance.]',
     '[Explain how your research profile fits the NWO programme or call you are applying to.]',
     '[Describe any scientific leadership roles, editorial boards, or programme committees you have held.]',
-    '[List any prizes, grants, or fellowships received (e.g. NWO Veni/Vidi/Vici, ERC, Marie Curie).]',
+    ...((!orcid?.fundings || orcid.fundings.length === 0)
+      ? ['[List any prizes, grants, or fellowships received (e.g. NWO Veni/Vidi/Vici, ERC, Marie Curie).]']
+      : []),
     '[Add information about research integrity, open science practices, and data management.]',
   ];
   for (const prompt of nwoPrompts) {
@@ -337,7 +460,8 @@ function exportNwo(
 
 function exportErc(
   data: Author,
-  _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null
+  _geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null,
+  orcid?: OrcidProfile | null
 ): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
@@ -494,10 +618,33 @@ function exportErc(
   // ==============================
   sectionTitle('B. Education & Key Qualifications');
 
-  placeholderText('[PhD degree, institution, year, thesis title]');
-  placeholderText('[MSc / MA degree, institution, year]');
-  placeholderText('[BSc / BA degree, institution, year]');
-  placeholderText('[Any additional qualifications, certifications, or relevant training]');
+  if (orcid?.educations && orcid.educations.length > 0) {
+    for (const ed of orcid.educations) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(ed.startYear, ed.endYear);
+      const degreeLabel = [ed.degree, ed.department].filter(Boolean).join(' in ');
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      doc.text(degreeLabel || '(Degree not specified)', M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      const locationParts = [ed.city, ed.country].filter(Boolean).join(', ');
+      const institutionLine = [ed.institution, locationParts].filter(Boolean).join(', ');
+      bodyText(institutionLine, 0);
+      y += 1;
+    }
+    placeholderText('[Add: thesis title or additional qualifications if relevant]');
+  } else {
+    placeholderText('[PhD degree, institution, year, thesis title]');
+    placeholderText('[MSc / MA degree, institution, year]');
+    placeholderText('[BSc / BA degree, institution, year]');
+    placeholderText('[Any additional qualifications, certifications, or relevant training]');
+  }
   y += 3;
 
   // ==============================
@@ -505,16 +652,37 @@ function exportErc(
   // ==============================
   sectionTitle('C. Current and Previous Positions');
 
-  if (data.affiliation) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    setColor(DARK);
-    doc.text(`Current: ${data.affiliation}`, M, y);
-    y += 5;
+  if (orcid?.employments && orcid.employments.length > 0) {
+    for (const em of orcid.employments) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(em.startYear, em.endYear);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      doc.text(em.role || '(Role not specified)', M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      const locationParts = [em.city, em.country].filter(Boolean).join(', ');
+      const instLine = [em.institution, locationParts].filter(Boolean).join(', ');
+      bodyText(instLine, 0);
+      y += 1;
+    }
+    placeholderText('[Add: visiting appointments or industry roles if relevant]');
+  } else {
+    if (data.affiliation) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      setColor(DARK);
+      doc.text(`Current: ${data.affiliation}`, M, y);
+      y += 5;
+    }
+    placeholderText('[Add: previous positions with institution name, role, and dates (YYYY–YYYY)]');
+    placeholderText('[Include postdoctoral positions, visiting appointments, and industry roles if relevant]');
   }
-
-  placeholderText('[Add: previous positions with institution name, role, and dates (YYYY–YYYY)]');
-  placeholderText('[Include postdoctoral positions, visiting appointments, and industry roles if relevant]');
   y += 3;
 
   // ==============================
@@ -547,10 +715,46 @@ function exportErc(
   }
 
   subHeading('Grants & funding');
-  placeholderText('[List research grants received, funding body, amount, and period (e.g. NWO Veni, ERC StG)]');
+  if (orcid?.fundings && orcid.fundings.length > 0) {
+    for (const fu of orcid.fundings) {
+      ensureSpace(10);
+      const dateRange = orcidDateRange(fu.startYear, fu.endYear);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      setColor(DARK);
+      const titleLines = doc.splitTextToSize(fu.title || '(Untitled grant)', CW - 30);
+      doc.text(titleLines[0], M, y);
+      if (dateRange) {
+        doc.setFont('helvetica', 'normal');
+        setColor(GRAY);
+        doc.text(dateRange, PAGE_W - M, y, { align: 'right' });
+      }
+      y += 4;
+      for (let i = 1; i < titleLines.length; i++) {
+        ensureSpace(4);
+        doc.setFont('helvetica', 'bold');
+        setColor(DARK);
+        doc.text(titleLines[i], M, y);
+        y += 4;
+      }
+      bodyText(fu.funder, 0);
+      y += 1;
+    }
+    placeholderText('[Add: funding amounts where relevant]');
+  } else {
+    placeholderText('[List research grants received, funding body, amount, and period (e.g. NWO Veni, ERC StG)]');
+  }
 
   subHeading('Awards & prizes');
-  placeholderText('[List academic awards, best paper prizes, teaching awards, etc.]');
+  if (orcid?.distinctions && orcid.distinctions.length > 0) {
+    for (const dist of orcid.distinctions) {
+      const yearStr = dist.year ? ` (${dist.year})` : '';
+      bodyText(`${dist.title} — ${dist.organization}${yearStr}`);
+    }
+    y += 1;
+  } else {
+    placeholderText('[List academic awards, best paper prizes, teaching awards, etc.]');
+  }
 
   subHeading('Editorial & professional roles');
   placeholderText('[List editorial board memberships, conference programme committee roles, society memberships]');
