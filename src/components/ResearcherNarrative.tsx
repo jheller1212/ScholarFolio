@@ -644,7 +644,8 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
         collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published **${metrics.topCoAuthorPapers}** papers.`;
       }
       const otherCoAuthors = (metrics.topCoAuthors ?? [])
-        .filter(a => a.papers >= 2 && a.name !== metrics.topCoAuthor);
+        .slice(1) // skip #1 (already mentioned above)
+        .filter(a => a.papers >= 2);
       if (otherCoAuthors.length > 0) {
         const names = otherCoAuthors.map(a => `${a.name} (${a.papers})`);
         const last = names.pop()!;
