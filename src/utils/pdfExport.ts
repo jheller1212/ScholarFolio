@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
-import type { Author } from '../types/scholar';
+import type { Author, CoAuthorGeoData } from '../types/scholar';
 import { extractLastName } from './names';
-import { generateNarrativeParagraphs } from '../components/ResearcherNarrative';
+import { generateNarrativeParagraphs, generateFieldMetricsParagraphText, generateGeoParagraphText, generateCitationDistributionParagraphText, generateOpenAccessParagraphText } from '../components/ResearcherNarrative';
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -12,7 +12,7 @@ const DARK = [30, 41, 59] as const; // #1e293b
 const GRAY = [100, 116, 139] as const; // #64748b
 const LIGHT_GRAY = [203, 213, 225] as const;
 
-export function exportProfilePdf(data: Author, scholarId?: string) {
+export function exportProfilePdf(data: Author, scholarId?: string, geoData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
 
@@ -174,12 +174,24 @@ export function exportProfilePdf(data: Author, scholarId?: string) {
 
   // === RESEARCH PROFILE NARRATIVE ===
   const narrativeParagraphs = generateNarrativeParagraphs(data);
-  if (narrativeParagraphs.length > 0) {
+  const fieldMetricsPara = generateFieldMetricsParagraphText(data.fieldMetrics);
+  const citDistPara = generateCitationDistributionParagraphText(data.metrics, data.totalCitations);
+  const geoPara = generateGeoParagraphText(geoData);
+  const oaPara = generateOpenAccessParagraphText(data);
+  const allNarrativeParagraphs = [
+    ...narrativeParagraphs,
+    fieldMetricsPara,
+    citDistPara,
+    geoPara,
+    oaPara,
+  ].filter(Boolean) as string[];
+
+  if (allNarrativeParagraphs.length > 0) {
     sectionTitle('Research Profile');
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     setColor(DARK);
-    for (const para of narrativeParagraphs) {
+    for (const para of allNarrativeParagraphs) {
       ensureSpace(12);
       const lines = doc.splitTextToSize(para, CW);
       doc.text(lines, M, y);
