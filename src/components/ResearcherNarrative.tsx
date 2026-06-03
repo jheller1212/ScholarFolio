@@ -175,6 +175,17 @@ function extractTitleThemes(publications: Author['publications']): string[] {
     'increasingly', 'different', 'various', 'several', 'multiple',
     'first', 'second', 'third', 'early', 'late', 'recent', 'current',
     'good', 'better', 'best', 'high', 'low', 'large', 'small', 'long', 'short',
+    // Additional common title words that don't indicate topics
+    'challenges', 'opportunities', 'strategies', 'practices', 'processes',
+    'outcomes', 'determinants', 'antecedents', 'consequences', 'dynamics',
+    'patterns', 'mechanisms', 'factors', 'dimensions', 'aspects',
+    'definition', 'overview', 'agenda', 'assessment', 'exploration',
+    'investigation', 'examination', 'discussion', 'considerations',
+    'automated', 'automatic', 'semi-automated', 'manual', 'digital',
+    'global', 'local', 'national', 'international', 'regional',
+    'potential', 'possible', 'proposed', 'alternative', 'traditional',
+    'comprehensive', 'preliminary', 'initial', 'advanced', 'novel',
+    'ethical', 'practical', 'theoretical', 'methodological',
   ]);
 
   const bigramCounts = new Map<string, number>();
@@ -185,48 +196,31 @@ function extractTitleThemes(publications: Author['publications']): string[] {
       .split(/\s+/)
       .filter(w => w.length > 2 && !stopWords.has(w));
 
-    // Count meaningful bigrams (these are the best topic indicators)
+    // Only count bigrams — they are far better topic labels than single words.
+    // "virtual reality" > "virtual"; "machine learning" > "learning"
     for (let i = 0; i < words.length - 1; i++) {
       const bigram = `${words[i]} ${words[i + 1]}`;
       bigramCounts.set(bigram, (bigramCounts.get(bigram) || 0) + 1);
     }
-    // Single words only if they are strong domain terms (≥6 chars, appear ≥3 times)
-    for (const w of words) {
-      if (w.length >= 6) {
-        bigramCounts.set(w, (bigramCounts.get(w) || 0) + 1);
-      }
-    }
   }
 
-  // Return themes that appear frequently, strongly preferring bigrams.
-  // Bigrams need ≥2 occurrences, single words need ≥3 to qualify.
+  // Only keep bigrams that appear in ≥2 papers
   const sorted = Array.from(bigramCounts.entries())
-    .filter(([term, count]) => term.includes(' ') ? count >= 2 : count >= 3)
-    .sort((a, b) => {
-      // Prefer bigrams over single words at same frequency
-      const aIsBigram = a[0].includes(' ') ? 1 : 0;
-      const bIsBigram = b[0].includes(' ') ? 1 : 0;
-      if (b[1] !== a[1]) return b[1] - a[1];
-      return bIsBigram - aIsBigram;
-    });
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1]);
 
+  // Deduplicate: skip bigrams that heavily overlap with already-selected ones
+  // e.g., if "virtual reality" is selected, skip "augmented virtual"
   const selected: string[] = [];
   for (const [term] of sorted) {
-    if (selected.length >= 8) break;
-    // If this is a single word, skip it if it's already covered by a selected bigram
-    if (!term.includes(' ')) {
-      const coveredByBigram = selected.some(s => s.includes(' ') && s.split(' ').includes(term));
-      if (coveredByBigram) continue;
-    }
-    // If this is a bigram, remove any previously selected single words it contains
-    if (term.includes(' ')) {
-      const parts = term.split(' ');
-      for (let i = selected.length - 1; i >= 0; i--) {
-        if (!selected[i].includes(' ') && parts.includes(selected[i])) {
-          selected.splice(i, 1);
-        }
-      }
-    }
+    if (selected.length >= 6) break;
+    const words = term.split(' ');
+    // Skip if either word in this bigram is already the key word in a selected bigram
+    const overlaps = selected.some(s => {
+      const sw = s.split(' ');
+      return words.some(w => sw.includes(w));
+    });
+    if (overlaps) continue;
     selected.push(term);
   }
   return selected;
