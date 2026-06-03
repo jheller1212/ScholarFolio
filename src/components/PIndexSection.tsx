@@ -264,7 +264,7 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
                 Review publications for <strong>{selectedAuthor?.display_name}</strong>
               </p>
               <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-                Uncheck any publications that don't belong to this researcher. {includedCount} of {allWorks.length} selected.
+                {includedCount} of {allWorks.length} selected.
               </p>
             </div>
             <div className="flex gap-2">
@@ -282,6 +282,15 @@ export function PIndexSection({ authorName, affiliation }: PIndexSectionProps) {
                 Deselect all
               </button>
             </div>
+          </div>
+
+          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-3">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+              <strong>Important:</strong> Please carefully review and uncheck any publications that are not yours.
+              OpenAlex may include papers from other researchers with similar names. Including wrong publications
+              will significantly affect your p-index score.
+            </p>
           </div>
 
           <div className="max-h-72 overflow-y-auto border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700/50">
