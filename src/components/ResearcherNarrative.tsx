@@ -14,7 +14,20 @@ interface ResearcherNarrativeProps {
 function getCareerSpan(publications: Author['publications']): { firstYear: number; lastYear: number; years: number } {
   const currentYear = new Date().getFullYear();
   // Filter out garbage years: must be after 1950 and not in the future
-  const years = publications.map(p => p.year).filter(y => y >= 1950 && y <= currentYear + 1);
+  let years = publications.map(p => p.year).filter(y => y >= 1950 && y <= currentYear + 1);
+  if (years.length === 0) return { firstYear: 0, lastYear: 0, years: 0 };
+
+  // Remove statistical outliers on the early end (misattributed old publications).
+  // Use IQR-based fence: if the earliest year(s) are far below Q1 - 1.5*IQR, drop them.
+  if (years.length >= 5) {
+    const sorted = [...years].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor(sorted.length * 0.25)];
+    const q3 = sorted[Math.floor(sorted.length * 0.75)];
+    const iqr = q3 - q1;
+    const lowerFence = q1 - 1.5 * iqr;
+    years = years.filter(y => y >= lowerFence);
+  }
+
   if (years.length === 0) return { firstYear: 0, lastYear: 0, years: 0 };
   const firstYear = years.reduce((a, b) => a < b ? a : b);
   const lastYear = years.reduce((a, b) => a > b ? a : b);
@@ -230,7 +243,24 @@ const THEME_STOP_WORDS = new Set([
     'der', 'die', 'das', 'und', 'ein', 'eine', 'einer', 'des', 'dem',
     'den', 'auf', 'aus', 'bei', 'mit', 'von', 'zum', 'zur', 'als',
     'les', 'des', 'une', 'dans', 'sur', 'par', 'pour', 'avec', 'aux',
-    'het', 'een', 'van', 'voor', 'met', 'niet', 'dat', 'zij',
+    'het', 'een', 'van', 'voor', 'met', 'niet', 'dat', 'zij', 'ook',
+    'wel', 'nog', 'maar', 'wat', 'hoe', 'wie', 'waar', 'naar', 'tot',
+    'over', 'door', 'kan', 'moet', 'mag', 'zal', 'zou', 'hebben', 'zijn',
+    'worden', 'deze', 'dit', 'die', 'ons', 'hun', 'uw', 'meer', 'veel',
+    'alle', 'geen', 'elk', 'zo', 'dan', 'dus', 'want', 'omdat',
+    'oude', 'dag', 'geld', 'financi', 'financieel', 'financiele',
+    'veerkracht', 'pensioen', 'pensioenen', 'sparen', 'beleggen',
+    'inkomen', 'schuld', 'schulden', 'huishouden', 'consument',
+    'onderzoek', 'studie', 'rapport', 'bijdrage', 'effect', 'effecten',
+    'zetten', 'mensen', 'geven', 'maken', 'nemen', 'doen', 'laten', 'zien',
+    'werken', 'denken', 'weten', 'vinden', 'kopen', 'keuze', 'gedrag',
+    'kinderen', 'jongeren', 'ouderen', 'vrouwen', 'mannen', 'klanten',
+    'aan', 'actie', 'punt', 'recht', 'deel', 'plaats', 'tijd', 'jaar',
+    'hulp', 'steun', 'weg', 'huis', 'land', 'stad', 'werk', 'leven',
+    'zwischen', 'oder', 'aber', 'wenn', 'weil', 'nach', 'kann', 'wird',
+    'sind', 'nicht', 'auch', 'noch', 'nur', 'sehr', 'schon', 'doch',
+    'unter', 'gegen', 'durch', 'ohne', 'jede', 'alle', 'sein', 'meine',
+    'ihre', 'seine', 'unser', 'wir', 'sie', 'sich',
     'theorie', 'antwort', 'briefe', 'sechzig', 'english', 'translation',
     'letter', 'jul', 'jan', 'feb', 'mar', 'apr', 'jun', 'aug', 'sep', 'oct', 'nov', 'dec',
 ]);
@@ -259,18 +289,18 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
     }
   }
 
-  // Build a set of words to exclude: author name parts + field/discipline words from topics
-  const excludeWords = new Set<string>();
+  // Build a set of author name words to exclude (e.g., "ruyter wetzels")
+  const authorWords = new Set<string>();
   if (authorName) {
     for (const part of authorName.toLowerCase().split(/\s+/)) {
-      if (part.length > 2) excludeWords.add(part);
+      if (part.length > 2) authorWords.add(part);
     }
   }
+  // Build a set of exact topic phrases to exclude (avoid repeating field labels as themes)
+  const topicPhrases = new Set<string>();
   if (fieldTopics) {
     for (const topic of fieldTopics) {
-      for (const word of topic.toLowerCase().split(/\s+/)) {
-        if (word.length > 2 && !THEME_STOP_WORDS.has(word)) excludeWords.add(word);
-      }
+      topicPhrases.add(topic.toLowerCase().trim());
     }
   }
 
@@ -282,7 +312,9 @@ function extractTitleThemes(publications: Author['publications'], authorName?: s
       if (count < minCount) return false;
       const words = term.split(' ');
       // Skip bigrams containing author name parts (e.g., "ruyter wetzels")
-      if (words.some(w => excludeWords.has(w))) return false;
+      if (words.some(w => authorWords.has(w))) return false;
+      // Skip bigrams that exactly match a field topic (avoid repeating discipline labels)
+      if (topicPhrases.has(term)) return false;
       // Skip bigrams where both words are ≤3 chars (likely noise)
       if (words.every(w => w.length <= 3)) return false;
       // Skip bigrams that are only Latin/non-English characters patterns
@@ -450,12 +482,27 @@ export function generateNarrativeParagraphs(data: Author): string[] {
 
     // Extract last name for natural pronoun alternation
     // Handle comma-inverted names like "García López, José" → "García López"
+    // Preserve surname prefixes: de, van, von, di, la, el, al, etc.
+    const SURNAME_PREFIXES = new Set(['de', 'van', 'von', 'di', 'da', 'del', 'della', 'la', 'le', 'el', 'al', 'bin', 'ben', 'ter', 'ten', 'den', 'der']);
     let lastName: string;
     if (name.includes(',')) {
       lastName = name.split(',')[0].trim().split(/\s+/).pop() || name;
     } else {
       const nameParts = name.trim().split(/\s+/);
-      lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
+      if (nameParts.length > 2) {
+        // Find where the surname starts (first prefix before the last word)
+        let surnameStart = nameParts.length - 1;
+        for (let i = nameParts.length - 2; i >= 1; i--) {
+          if (SURNAME_PREFIXES.has(nameParts[i].toLowerCase())) {
+            surnameStart = i;
+          } else {
+            break;
+          }
+        }
+        lastName = nameParts.slice(surnameStart).join(' ');
+      } else {
+        lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : name;
+      }
     }
 
     if (career.firstYear > 0) {
