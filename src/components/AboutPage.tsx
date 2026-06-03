@@ -28,7 +28,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <p>
               Scholar Folio is a free, open-source research portfolio tool. Paste your Google Scholar URL
               and get a shareable page with your publication history, citation metrics, collaboration network,
-              co-author world map, open access profile, and field-normalized impact — all generated automatically.
+              co-author world map, open access profile, field-normalized impact, and p-index (thought leadership score) — all generated automatically.
             </p>
           </section>
 
@@ -40,6 +40,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
               <li><strong>Citation trends</strong> — year-by-year charts, cumulative growth, publication output, and momentum analysis</li>
               <li><strong>Co-author network</strong> — interactive visualization of your collaboration patterns and key partnerships</li>
               <li><strong>World map</strong> — where your co-authors are, mapped by institution location</li>
+              <li><strong>P-Index</strong> — thought leadership score based on within-journal citation percentile ranks (Pham, Wu &amp; Wang, 2024), with Abbas (2011) authorship weighting. Computed on-demand from OpenAlex data after selecting and reviewing your publications</li>
               <li><strong>Open access profile</strong> — gold, green, hybrid, and bronze OA breakdown with per-paper status</li>
             </ul>
           </section>
@@ -48,8 +49,8 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
             <p className="mb-2">
               Profile data is sourced from <strong>Google Scholar</strong> (via SerpAPI, with direct scraping as fallback).
-              Open access stats, co-author geography, ORCID, and field-normalized metrics come from <strong>OpenAlex</strong>, an
-              open bibliometric database.
+              Open access stats, co-author geography, ORCID, field-normalized metrics, and p-index journal citation
+              distributions come from <strong>OpenAlex</strong>, an open bibliometric database.
             </p>
             <p>
               No data is stored beyond a 7-day cache to reduce API calls. ScholarFolio does not scrape, store,
