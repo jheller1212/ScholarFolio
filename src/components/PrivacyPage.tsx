@@ -43,6 +43,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Technical logs</strong> — IP address, user agent, request timestamp, and the Google Scholar profile ID searched. These are used for rate limiting, abuse prevention, and debugging. Logs are automatically deleted after 30 days.</li>
               <li><strong>Local storage</strong> — We store a theme preference (<code>sf_theme</code>) and an anonymous search counter (<code>sf_searches</code>) in your browser's localStorage. These are strictly functional and contain no personal identifiers.</li>
               <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 7 days to reduce redundant API calls.</li>
+              <li><strong>Admin access</strong> — The site administrator may access account-level data (email address, credit balance) for service administration, user support, abuse prevention, and credit adjustments (e.g., granting credits for helpful feedback).</li>
             </ul>
           </section>
 
