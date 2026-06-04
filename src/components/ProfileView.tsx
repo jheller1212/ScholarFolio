@@ -251,7 +251,7 @@ export function ProfileView({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleShare}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
                   >
                     {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
                     {copied ? 'Link copied!' : 'Share profile'}
@@ -259,7 +259,7 @@ export function ProfileView({
                   {scholarId && (
                     <button
                       onClick={() => setShowEmbed(true)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
                     >
                       <Code className="h-3 w-3" />
                       Embed
@@ -280,13 +280,13 @@ export function ProfileView({
                       }
                     }}
                     disabled={exportingPdf}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors disabled:opacity-50"
                   >
                     <Download className="h-3 w-3" />
                     {exportingPdf ? 'Exporting...' : 'PDF'}
                   </button>
                   {claimedSlug ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full font-medium">
                       <BadgeCheck className="h-3.5 w-3.5" />
                       {claimedByCurrentUser ? (
                         <a href={`/${claimedSlug}`} className="hover:underline">scholarfolio.org/{claimedSlug}</a>
@@ -297,7 +297,7 @@ export function ProfileView({
                   ) : user && scholarId ? (
                     <button
                       onClick={() => setShowClaimModal(true)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] hover:text-[#1a5c5c] bg-[#eaf4f4] hover:bg-[#d5ecec] px-2.5 py-1 rounded-full transition-colors"
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
                     >
                       <Link className="h-3 w-3" />
                       Claim profile
@@ -334,7 +334,7 @@ export function ProfileView({
               ].map(({ value, label }) => (
                 <div key={label} className="text-center">
                   <div className="text-2xl font-bold gradient-text">{value}</div>
-                  <div className="text-xs text-gray-400 font-medium mt-0.5">{label}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 font-medium mt-0.5">{label}</div>
                 </div>
               ))}
             </div>

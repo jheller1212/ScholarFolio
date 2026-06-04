@@ -108,10 +108,10 @@ export function SearchBar({ onSearch, isLoading = false, compact = false, error:
           disabled={isLoading}
           className={`w-full ${
             compact
-              ? 'py-1.5 pl-9 pr-16 text-xs'
-              : 'py-3 pl-12 pr-24 text-sm'
-          } text-gray-700 bg-white border ${
-            error ? 'border-[#64748b] focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20' : 'border-gray-200 focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20'
+              ? 'py-1.5 pl-9 pr-24 text-xs'
+              : 'py-3 pl-12 pr-28 text-sm'
+          } text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border ${
+            error ? 'border-[#64748b] focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20' : 'border-gray-200 dark:border-slate-600 focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20'
           } rounded-lg focus:outline-none focus:ring-2 transition-all`}
           autoComplete="off"
           spellCheck="false"
