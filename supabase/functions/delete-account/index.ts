@@ -58,6 +58,12 @@ Deno.serve(async (req) => {
       .update({ ip: null, user_agent: null })
       .eq('user_id', userId);
 
+    // Anonymise feedback records (GDPR Art. 17 — nullify user_id, keep content for product analytics)
+    await supabase
+      .from('feedback')
+      .update({ user_id: null })
+      .eq('user_id', userId);
+
     // Delete claimed profiles (CASCADE should handle this, but be explicit)
     await supabase
       .from('claimed_profiles')
