@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare } from 'lucide-react';
 import { NarrativeCvTab } from './NarrativeCvTab';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
@@ -21,6 +21,9 @@ import type { Author, CoAuthorGeoData } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { extractLastName } from '../utils/names';
+import { useFeedback } from '../hooks/useFeedback';
+import { FeedbackModal } from './FeedbackModal';
+import { FeedbackPromptBanner } from './FeedbackPromptBanner';
 import packageJson from '../../package.json';
 
 interface ProfileViewProps {
@@ -58,7 +61,8 @@ export function ProfileView({
   authControls,
   onSupport
 }: ProfileViewProps) {
-  const { user } = useAuth();
+  const { user, refreshCredits } = useAuth();
+  const feedback = useFeedback(user?.id ?? null);
   const [activeTab, setActiveTab] = useState<TabId>('metrics');
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -130,6 +134,11 @@ export function ProfileView({
     };
     checkClaim();
   }, [scholarId, user?.id]);
+
+  // Track profile views for feedback prompt
+  useEffect(() => {
+    if (scholarId) feedback.trackProfileView(scholarId);
+  }, [scholarId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update document title and OG meta tags for link previews
   useEffect(() => {
@@ -547,6 +556,41 @@ export function ProfileView({
           authorId={scholarId}
           authorName={data.name}
           onClaimed={handleClaimed}
+        />
+      )}
+
+      {/* Feedback prompt banner */}
+      {feedback.showPromptBanner && user && (
+        <FeedbackPromptBanner
+          onOpenFeedback={() => feedback.openModal('prompt')}
+          onDismiss={feedback.dismissBanner}
+          creditsAmount={feedback.hasSubmittedBefore ? 2 : 5}
+        />
+      )}
+
+      {/* Floating feedback button */}
+      {user && !feedback.showPromptBanner && (
+        <button
+          onClick={() => feedback.openModal('button')}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-full shadow-lg transition-colors"
+          aria-label="Share feedback"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          Feedback
+        </button>
+      )}
+
+      {/* Feedback modal */}
+      {feedback.showModal && (
+        <FeedbackModal
+          mode={feedback.modalMode}
+          onClose={feedback.closeModal}
+          onSuccess={(credits) => {
+            feedback.onSubmitSuccess(credits);
+            refreshCredits();
+          }}
+          profileViewed={scholarId}
+          isFirstFeedback={!feedback.hasSubmittedBefore}
         />
       )}
     </div>
