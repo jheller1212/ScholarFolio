@@ -31,7 +31,7 @@ export function TopicsList({ topics = [], compact = false }: TopicsListProps) {
             href={topic.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center space-x-1 px-1.5 py-0.5 bg-[#eaf4f4] hover:bg-[#d5ecec] text-[#2d7d7d] rounded-full transition-colors ${
+            className={`inline-flex items-center space-x-1 px-1.5 py-0.5 bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 text-[#2d7d7d] dark:text-[#5bbdbd] rounded-full transition-colors ${
               compact ? 'text-[10px]' : 'text-xs'
             }`}
             title={topicName}
