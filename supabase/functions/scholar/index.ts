@@ -636,32 +636,105 @@ function extractScholarUserId(url) {
 }
 
 // --- Author search by name via SerpAPI ---
+// google_scholar_profiles engine was discontinued; use google_scholar with author:"name"
+// to extract unique author_ids from paper results, then fetch their profiles.
 async function searchAuthorsByNameSerpAPI(query: string) {
   if (!SERPAPI_KEY) {
     throw new Error("SERPAPI_KEY not configured");
   }
 
+  // Step 1: Search papers by this author to discover author_ids
   const serpUrl = new URL('https://serpapi.com/search.json');
   serpUrl.searchParams.set('api_key', SERPAPI_KEY);
-  serpUrl.searchParams.set('engine', 'google_scholar_profiles');
-  serpUrl.searchParams.set('mauthors', query);
+  serpUrl.searchParams.set('engine', 'google_scholar');
+  serpUrl.searchParams.set('q', `author:"${query}"`);
+  serpUrl.searchParams.set('hl', 'en');
+  serpUrl.searchParams.set('num', '10');
 
+  console.log(`[Search-SerpAPI] Calling google_scholar engine for: ${query}`);
   const response = await fetch(serpUrl.toString());
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');
-    throw new Error(`SerpAPI profiles search error: ${response.status} — ${errBody}`);
+    throw new Error(`SerpAPI search error: ${response.status} — ${errBody}`);
   }
 
   const data = await response.json();
-  const profiles = (data.profiles || []).slice(0, 8).map((p: any) => ({
-    name: p.name || '',
-    affiliation: p.affiliations || '',
-    imageUrl: p.thumbnail || '',
-    authorId: p.author_id || '',
-    citedBy: p.cited_by ?? 0,
-    interests: (p.interests || []).map((i: any) => i.title || ''),
-  }));
+  if (data.error) {
+    throw new Error(`SerpAPI error: ${data.error}`);
+  }
 
+  const organicResults = data.organic_results || [];
+  console.log(`[Search-SerpAPI] Got ${organicResults.length} organic results`);
+
+  // Extract unique author_ids that match the query name
+  // Handles abbreviated names: query "Jonas Heller" matches "J Heller"
+  const queryLower = query.toLowerCase().trim();
+  const queryParts = queryLower.split(/\s+/);
+  const seenIds = new Set<string>();
+  const matchedAuthors: Array<{ author_id: string; name: string }> = [];
+
+  function namePartsMatch(queryPart: string, authorParts: string[]): boolean {
+    return authorParts.some(ap =>
+      ap.includes(queryPart) || queryPart.includes(ap) ||
+      (ap.length === 1 && queryPart.startsWith(ap)) ||
+      (queryPart.length === 1 && ap.startsWith(queryPart))
+    );
+  }
+
+  for (const result of organicResults) {
+    const authors = result.publication_info?.authors || [];
+    for (const author of authors) {
+      if (!author.author_id || seenIds.has(author.author_id)) continue;
+      const authorLower = (author.name || '').toLowerCase();
+      const authorParts = authorLower.split(/\s+/);
+      const isMatch = queryParts.every((p: string) => namePartsMatch(p, authorParts));
+      if (isMatch) {
+        seenIds.add(author.author_id);
+        matchedAuthors.push({ author_id: author.author_id, name: author.name });
+      }
+    }
+  }
+
+  console.log(`[Search-SerpAPI] Matched ${matchedAuthors.length} unique authors`);
+  if (matchedAuthors.length === 0) return [];
+
+  // Step 2: Fetch full profile for each unique author_id (max 4)
+  const profiles: any[] = [];
+  for (const match of matchedAuthors.slice(0, 4)) {
+    try {
+      const authorUrl = new URL('https://serpapi.com/search.json');
+      authorUrl.searchParams.set('api_key', SERPAPI_KEY);
+      authorUrl.searchParams.set('engine', 'google_scholar_author');
+      authorUrl.searchParams.set('author_id', match.author_id);
+
+      console.log(`[Search-SerpAPI] Fetching profile for ${match.name} (${match.author_id})`);
+      const profileResp = await fetch(authorUrl.toString());
+      if (!profileResp.ok) {
+        console.warn(`[Search-SerpAPI] Profile fetch failed: ${profileResp.status}`);
+        continue;
+      }
+      const profileData = await profileResp.json();
+
+      const authorInfo = profileData.author;
+      if (!authorInfo) {
+        console.warn(`[Search-SerpAPI] No author info in profile response`);
+        continue;
+      }
+
+      profiles.push({
+        name: authorInfo.name || match.name,
+        affiliation: authorInfo.affiliations || '',
+        imageUrl: authorInfo.thumbnail || '',
+        authorId: match.author_id,
+        citedBy: profileData.cited_by?.table?.[0]?.citations?.all ?? 0,
+        interests: (authorInfo.interests || []).map((i: any) => i.title || ''),
+      });
+    } catch (e) {
+      console.warn(`[Search-SerpAPI] Error fetching profile for ${match.author_id}:`, e);
+    }
+  }
+
+  console.log(`[Search-SerpAPI] Returning ${profiles.length} profiles`);
   return profiles;
 }
 
@@ -784,32 +857,45 @@ Deno.serve(async (req) => {
 
     // --- Author search by name (no credit cost, but rate limited) ---
     if (action === 'search' && query) {
-      if (typeof query !== 'string' || query.length > 200) {
+      try {
+        if (typeof query !== 'string' || query.length > 200) {
+          return new Response(
+            JSON.stringify({ error: "Invalid search query" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const { data: searchAllowed, error: rlError } = await supabase.rpc('check_search_rate_limit', {
+          p_ip: clientIp, p_limit: RATE_LIMIT_MAX_SEARCH
+        });
+        if (rlError) {
+          console.error(`[Search] Rate limit RPC error:`, rlError);
+        }
+        if (searchAllowed === false) {
+          return new Response(
+            JSON.stringify({ error: "Too many searches. Please try again later." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // Log the search request for rate limiting
+        try {
+          await supabase.from('request_logs').insert({
+            ip: clientIp, source: 'search', user_id: userId || null,
+            author_id: null, origin: req.headers.get('Origin'), user_agent: req.headers.get('User-Agent')
+          });
+        } catch (_) {}
+        console.log(`[Search] Searching for authors: ${query}`);
+        const results = await searchAuthorsByName(query);
         return new Response(
-          JSON.stringify({ error: "Invalid search query" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ profiles: results }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (searchErr) {
+        console.error(`[Search] Error:`, searchErr);
+        return new Response(
+          JSON.stringify({ error: "Author search is temporarily unavailable. Please try again later." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const { data: searchAllowed } = await supabase.rpc('check_search_rate_limit', {
-        p_ip: clientIp, p_limit: RATE_LIMIT_MAX_SEARCH
-      });
-      if (searchAllowed === false) {
-        return new Response(
-          JSON.stringify({ error: "Too many searches. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      // Log the search request for rate limiting
-      await supabase.from('request_logs').insert({
-        ip: clientIp, source: 'search', user_id: userId || null,
-        author_id: null, origin: req.headers.get('Origin'), user_agent: req.headers.get('User-Agent')
-      }).catch(() => {});
-      console.log(`[Search] Searching for authors: ${query}`);
-      const results = await searchAuthorsByName(query);
-      return new Response(
-        JSON.stringify({ profiles: results }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     if (!profileUrl) {
