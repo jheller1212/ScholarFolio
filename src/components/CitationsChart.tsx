@@ -94,7 +94,7 @@ const YoYLabel = (props: any) => {
   );
 };
 
-const tooltipStyle = "bg-white/95 backdrop-blur-sm shadow-lg border border-gray-100 rounded-lg p-3 text-xs";
+const tooltipStyle = "bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg border border-gray-100 dark:border-slate-700 rounded-lg p-3 text-xs";
 
 export function CitationsChart({ citationsPerYear, citationGraphSource, publications = [] }: CitationsChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
@@ -253,7 +253,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
   // --- Empty data guard (after all hooks) ---
   if (!hasData) {
     return (
-      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+      <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
         <Info className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
         <div>
           <p className="font-medium">Citation graph unavailable</p>
@@ -272,7 +272,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
           key={tr}
           onClick={() => setTimeRange(tr)}
           className={`px-2 py-1 text-xs rounded-md transition-colors ${
-            timeRange === tr ? 'bg-[#eaf4f4] text-[#2d7d7d] font-medium' : 'text-gray-500 hover:bg-gray-100'
+            timeRange === tr ? 'bg-[#eaf4f4] text-[#2d7d7d] font-medium' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
           }`}
         >
           {tr === '5y' ? '5Y' : tr === '10y' ? '10Y' : 'All'}
@@ -286,49 +286,49 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       {/* Summary stat cards + time range */}
       <div className="flex items-start justify-between">
         <div className="grid grid-cols-4 gap-3 flex-1 mr-4">
-          <div className="bg-[#eaf4f4] rounded-lg p-3">
+          <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/15 rounded-lg p-3">
             <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
               <TrendingUp className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
               Avg Growth
             </div>
-            <div className="text-lg font-semibold text-[#1e293b]">
+            <div className="text-lg font-semibold text-[#1e293b] dark:text-gray-100">
               {stats.avgGrowthRate > 0 ? '+' : ''}{stats.avgGrowthRate}%
             </div>
-            <div className="text-[10px] text-[#64748b]">per year ({timeRangeText})</div>
+            <div className="text-[10px] text-[#64748b] dark:text-gray-400">per year ({timeRangeText})</div>
           </div>
-          <div className="bg-[#eaf4f4] rounded-lg p-3">
+          <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/15 rounded-lg p-3">
             <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
               <Citation className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
               Avg Citations
             </div>
-            <div className="text-lg font-semibold text-[#1e293b]">
+            <div className="text-lg font-semibold text-[#1e293b] dark:text-gray-100">
               {stats.avgCitations.toLocaleString()}
             </div>
-            <div className="text-[10px] text-[#64748b]">per year ({timeRangeText})</div>
+            <div className="text-[10px] text-[#64748b] dark:text-gray-400">per year ({timeRangeText})</div>
           </div>
-          <div className="bg-[#eaf4f4] rounded-lg p-3">
+          <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/15 rounded-lg p-3">
             <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
               <Calendar className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
               Peak Year
             </div>
-            <div className="text-lg font-semibold text-[#1e293b]">{stats.peakYear}</div>
-            <div className="text-[10px] text-[#64748b]">{stats.peakCitations.toLocaleString()} citations</div>
+            <div className="text-lg font-semibold text-[#1e293b] dark:text-gray-100">{stats.peakYear}</div>
+            <div className="text-[10px] text-[#64748b] dark:text-gray-400">{stats.peakCitations.toLocaleString()} citations</div>
           </div>
-          <div className="bg-[#eaf4f4] rounded-lg p-3">
+          <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/15 rounded-lg p-3">
             <div className="flex items-center text-xs text-[#2d7d7d] mb-1">
               <Layers className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
               Total
             </div>
-            <div className="text-lg font-semibold text-[#1e293b]">{stats.totalCumulative.toLocaleString()}</div>
-            <div className="text-[10px] text-[#64748b]">cumulative ({timeRangeText})</div>
+            <div className="text-lg font-semibold text-[#1e293b] dark:text-gray-100">{stats.totalCumulative.toLocaleString()}</div>
+            <div className="text-[10px] text-[#64748b] dark:text-gray-400">cumulative ({timeRangeText})</div>
           </div>
         </div>
         {timeRangeButtons}
       </div>
 
       {/* Citations per year bar chart — mirrors Google Scholar */}
-      <div className="bg-white border border-gray-100 rounded-xl p-4">
-        <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
+      <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-4">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center mb-3">
           <BarChart3 className="h-4 w-4 text-[#2d7d7d] mr-2" />
           Citations per Year
         </h4>
@@ -343,7 +343,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
                 const d = payload[0].payload;
                 return (
                   <div className={tooltipStyle}>
-                    <div className="font-medium text-gray-900 mb-1">{d.year}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">{d.year}</div>
                     <div className="text-gray-600">Citations: {d.actual.toLocaleString()}</div>
                     {d.yoyGrowth != null && (
                       <div className={d.yoyGrowth >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
@@ -381,8 +381,8 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       {/* Row 2: Two charts side by side */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Cumulative citations */}
-        <div className="bg-white border border-gray-100 rounded-xl p-4">
-          <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
+        <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center mb-3">
             <Layers className="h-4 w-4 text-[#2d7d7d] mr-2" />
             Cumulative Citations
           </h4>
@@ -397,7 +397,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
                   const d = payload[0].payload;
                   return (
                     <div className={tooltipStyle}>
-                      <div className="font-medium text-gray-900 mb-1">{d.year}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">{d.year}</div>
                       <div className="text-gray-600">Cumulative: {d.cumulative.toLocaleString()}</div>
                       <div className="text-gray-500">This year: +{d.yearly.toLocaleString()}</div>
                     </div>
@@ -416,8 +416,8 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
         </div>
 
         {/* Citation velocity */}
-        <div className="bg-white border border-gray-100 rounded-xl p-4">
-          <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
+        <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center mb-3">
             <Activity className="h-4 w-4 text-[#2d7d7d] mr-2" />
             Citation Velocity
           </h4>
@@ -432,7 +432,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
                   const d = payload[0].payload;
                   return (
                     <div className={tooltipStyle}>
-                      <div className="font-medium text-gray-900 mb-1">{d.year}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">{d.year}</div>
                       <div className="text-gray-600">Citations: {d.citations.toLocaleString()}</div>
                       <div className="text-gray-500">3-yr avg: {d.movingAvg.toLocaleString()}</div>
                       {d.yoyChange !== 0 && (
@@ -461,8 +461,8 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
 
       {/* Publication output + h-index trajectory */}
       {productivityData.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-xl p-4">
-          <h4 className="text-sm font-medium text-gray-900 flex items-center mb-3">
+        <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl p-4">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center mb-3">
             <TrendingUp className="h-4 w-4 text-[#2d7d7d] mr-2" />
             Publication Output & h-index Trajectory
           </h4>
@@ -478,7 +478,7 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
                   const d = payload[0].payload;
                   return (
                     <div className={tooltipStyle}>
-                      <div className="font-medium text-gray-900 mb-1">{d.year}</div>
+                      <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">{d.year}</div>
                       <div className="text-gray-600">Publications: {d.publications}</div>
                       <div className="text-gray-500">Total papers: {d.totalPubs}</div>
                       <div className="text-[#e07a5f]">h-index: {d.hIndex}</div>

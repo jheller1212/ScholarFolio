@@ -975,13 +975,13 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900 flex items-center">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center">
           <FileText className="h-4 w-4 text-[#2d7d7d] mr-2" />
           Research Profile
         </h3>
         <button
           onClick={() => setShowReport(!showReport)}
-          className="inline-flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
+          className="inline-flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           title="Report an error in this profile"
         >
           <Flag className="h-3 w-3" />
@@ -990,7 +990,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
       </div>
 
       {showReport && (
-        <div className="mb-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div className="mb-4 bg-gray-50 dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
           {reportStatus === 'sent' ? (
             <div className="flex items-center gap-2 text-sm text-emerald-600">
               <Check className="h-4 w-4" />
@@ -998,7 +998,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
             </div>
           ) : (
             <>
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 Spotted something wrong? Let us know and we'll fix it.
               </p>
               <textarea
@@ -1006,7 +1006,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
                 onChange={e => setReportMsg(e.target.value)}
                 placeholder="Describe the error (e.g., 'Wrong affiliation', 'Missing publications'...)"
                 rows={2}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none resize-none mb-2"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none resize-none mb-2"
                 maxLength={1000}
               />
               <input
@@ -1014,7 +1014,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
                 value={reportEmail}
                 onChange={e => setReportEmail(e.target.value)}
                 placeholder="Your email (optional, for follow-up)"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none mb-2"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none mb-2"
               />
               <div className="flex items-center gap-2">
                 <button
@@ -1028,7 +1028,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
                 </button>
                 <button
                   onClick={() => { setShowReport(false); setReportMsg(''); setReportEmail(''); }}
-                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                  className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1166,7 +1166,7 @@ function NarrativeBody({
   return (
     <div
       ref={containerRef}
-      className="space-y-2 text-sm text-gray-600 leading-relaxed"
+      className="space-y-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed"
       onClick={isAnimating ? skipAnimation : undefined}
       style={isAnimating ? { cursor: 'pointer' } : undefined}
     >
@@ -1175,7 +1175,7 @@ function NarrativeBody({
         <span className="inline-block w-0.5 h-4 bg-[#2d7d7d] animate-pulse align-text-bottom ml-0.5" />
       )}
       {isAnimating && (
-        <p className="text-[10px] text-gray-400 mt-2 italic">Click anywhere to skip animation</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 italic">Click anywhere to skip animation</p>
       )}
     </div>
   );

@@ -353,7 +353,7 @@ export function ProfileView({
                 <Heart className="h-4 w-4 text-[#2d7d7d]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Support open research tools</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Support open research tools</p>
                 <p className="text-xs text-gray-500 mt-0.5 max-w-2xl">
                   Scholar Folio is built for researchers, not ranking systems. If this helped you understand or share your research profile, a small contribution helps cover paid Scholar data access.
                 </p>
