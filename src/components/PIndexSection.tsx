@@ -45,9 +45,29 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
   const [showDetails, setShowDetails] = useState(false);
   const [matchStatuses, setMatchStatuses] = useState<Map<string, MatchStatus>>(new Map());
 
-  const nameParts = authorName.split(' ');
-  const [firstName, setFirstName] = useState(nameParts.slice(0, -1).join(' '));
-  const [lastName, setLastName] = useState(nameParts[nameParts.length - 1] || '');
+  const [firstName, setFirstName] = useState(() => {
+    const parts = authorName.trim().split(/\s+/);
+    if (parts.length <= 1) return '';
+    // Find where surname starts: detect surname prefixes (van, de, von, etc.)
+    const prefixes = new Set(['de', 'van', 'von', 'di', 'da', 'del', 'della', 'la', 'le', 'el', 'al', 'bin', 'ben', 'ter', 'ten', 'den', 'der']);
+    let surnameStart = parts.length - 1;
+    for (let i = parts.length - 2; i >= 1; i--) {
+      if (prefixes.has(parts[i].toLowerCase())) surnameStart = i;
+      else break;
+    }
+    return parts.slice(0, surnameStart).join(' ');
+  });
+  const [lastName, setLastName] = useState(() => {
+    const parts = authorName.trim().split(/\s+/);
+    if (parts.length <= 1) return authorName;
+    const prefixes = new Set(['de', 'van', 'von', 'di', 'da', 'del', 'della', 'la', 'le', 'el', 'al', 'bin', 'ben', 'ter', 'ten', 'den', 'der']);
+    let surnameStart = parts.length - 1;
+    for (let i = parts.length - 2; i >= 1; i--) {
+      if (prefixes.has(parts[i].toLowerCase())) surnameStart = i;
+      else break;
+    }
+    return parts.slice(surnameStart).join(' ');
+  });
   const [institution, setInstitution] = useState(() => {
     const stripped = affiliation.replace(/^(Assistant|Associate|Full|Adjunct|Visiting|Emeritus)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor)\s*(of|in|for|,)\s*/i, '');
     if (stripped !== affiliation) return stripped.replace(/^,\s*/, '').trim();
