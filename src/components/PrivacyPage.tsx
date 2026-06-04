@@ -63,7 +63,9 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Stripe</strong> (US) — payment processing. Subject to <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">Stripe's Privacy Policy</a>.</li>
               <li><strong>Netlify</strong> (US) — web hosting and CDN.</li>
               <li><strong>SerpAPI</strong> (US) — Google Scholar data retrieval.</li>
-              <li><strong>OpenAlex / ORCID</strong> — public academic APIs used to enrich profile data. No personal data is sent to these services beyond the public identifiers being looked up.</li>
+              <li><strong>OpenAlex</strong> — open academic API used for open access data, field-normalized metrics, co-author geography, and p-index computation. Only public author/work identifiers are queried.</li>
+              <li><strong>ORCID</strong> — public API used to retrieve education, employment, and grant records when an ORCID identifier is available. No personal data is sent beyond the public ORCID iD.</li>
+              <li><strong>NIH iCite</strong> — public API used to retrieve Relative Citation Ratios for PubMed-indexed papers. Only PubMed identifiers are queried.</li>
             </ul>
           </section>
 
@@ -85,7 +87,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             </p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
               <li><strong>Supabase, Stripe, Netlify, SerpAPI</strong> — transfers are covered by the EU-U.S. Data Privacy Framework and/or EU Standard Contractual Clauses (SCCs) as adopted by the European Commission.</li>
-              <li><strong>OpenAlex / ORCID</strong> — only public identifiers are sent to these APIs; no personal data is transferred.</li>
+              <li><strong>OpenAlex, ORCID, NIH iCite</strong> — only public academic identifiers are sent to these APIs; no personal data is transferred.</li>
             </ul>
             <p className="mt-3">
               You can request a copy of the applicable transfer safeguards by emailing{' '}
