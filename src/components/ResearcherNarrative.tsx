@@ -508,11 +508,14 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       }
     }
 
+    // Dutch naming convention: capitalize prefix at sentence start (e.g. "van Roekel" → "Van Roekel")
+    const lastNameCap = lastName.charAt(0).toUpperCase() + lastName.slice(1);
+
     if (career.firstYear > 0) {
       if (career.years <= 2) {
-        careerParagraph += ` ${lastName}'s first indexed publication appeared in **${career.firstYear}**.`;
+        careerParagraph += ` ${lastNameCap}'s first indexed publication appeared in **${career.firstYear}**.`;
       } else {
-        careerParagraph += ` ${lastName}'s publication record spans **${career.years}** years, from ${career.firstYear} to ${career.lastYear}.`;
+        careerParagraph += ` ${lastNameCap}'s publication record spans **${career.years}** years, from ${career.firstYear} to ${career.lastYear}.`;
       }
     }
 
@@ -525,7 +528,7 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       } else {
         methodsText = methods.slice(0, -1).join(', ') + ' and ' + methods[methods.length - 1];
       }
-      careerParagraph += ` Based on publication titles, ${lastName}'s work draws on ${methodsText}.`;
+      careerParagraph += ` Based on publication titles, ${lastNameCap}'s work draws on ${methodsText}.`;
     }
 
     paragraphs.push(careerParagraph);
@@ -533,11 +536,11 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
     // Impact paragraph
     let impactParagraph = '';
     if (totalCitations === 0 && publications.length <= 3) {
-      impactParagraph = `${lastName} has **${publications.length}** indexed publication${publications.length !== 1 ? 's' : ''} and has not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastNameCap} has **${publications.length}** indexed publication${publications.length !== 1 ? 's' : ''} and has not yet accumulated citations in Google Scholar.`;
     } else if (totalCitations === 0) {
-      impactParagraph = `${lastName} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} but has not yet accumulated citations in Google Scholar.`;
+      impactParagraph = `${lastNameCap} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} but has not yet accumulated citations in Google Scholar.`;
     } else {
-      impactParagraph = `Over the course of their career, ${lastName} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} and accumulated **${totalCitations.toLocaleString()}** citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of **${metrics.hIndex}**`;
+      impactParagraph = `Over the course of their career, ${lastNameCap} has published **${publications.length}** work${publications.length !== 1 ? 's' : ''} and accumulated **${totalCitations.toLocaleString()}** citation${totalCitations !== 1 ? 's' : ''}, yielding an h-index of **${metrics.hIndex}**`;
       if (metrics.i10Index > 0) {
         impactParagraph += ` and an i10-index of **${metrics.i10Index}** (${metrics.i10Index} publication${metrics.i10Index !== 1 ? 's' : ''} with 10 or more citations)`;
       }
@@ -558,13 +561,13 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
 
     let trendParagraph = '';
     if (phase === 'accelerating') {
-      trendParagraph = `${lastName}'s publication output has been accelerating, averaging **${recentRate}** publications per year recently compared to **${olderRate}** in the preceding period.`;
+      trendParagraph = `${lastNameCap}'s publication output has been accelerating, averaging **${recentRate}** publications per year recently compared to **${olderRate}** in the preceding period.`;
     } else if (phase === 'steady') {
-      trendParagraph = `${lastName} maintains a steady publication pace of approximately **${recentRate}** publications per year, indicating a sustained and active research program.`;
+      trendParagraph = `${lastNameCap} maintains a steady publication pace of approximately **${recentRate}** publications per year, indicating a sustained and active research program.`;
     } else if (phase === 'decelerating') {
-      trendParagraph = `${lastName}'s recent publication rate has slowed to **${recentRate}** per year, compared to **${olderRate}** in the preceding three-year period.`;
+      trendParagraph = `${lastNameCap}'s recent publication rate has slowed to **${recentRate}** per year, compared to **${olderRate}** in the preceding three-year period.`;
     } else if (phase === 'emerging') {
-      trendParagraph = `${lastName} appears to be in the early stages of their publication career.`;
+      trendParagraph = `${lastNameCap} appears to be in the early stages of their publication career.`;
     } else if (phase === 'inactive') {
       trendParagraph = 'There are no publications in the most recent three years in the indexed record.';
     }
@@ -602,21 +605,21 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       // Only include evolution paragraph if we have at least 2 good themes per period
       if (earlyOnly.length >= 2 && recentOnly.length >= 2) {
         paragraphs.push(
-          `${lastName}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
+          `${lastNameCap}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
         );
       } else if (earlyOnly.length > 0 && recentOnly.length > 0) {
         paragraphs.push(
-          `${lastName}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
+          `${lastNameCap}'s earlier work focused on topics such as ${formatList(earlyOnly)}, while more recent publications have shifted towards ${formatList(recentOnly)}.`
         );
       } else if (recentOnly.length > 0) {
         paragraphs.push(
-          `${lastName}'s recent work has increasingly focused on ${formatList(recentOnly)}.`
+          `${lastNameCap}'s recent work has increasingly focused on ${formatList(recentOnly)}.`
         );
       } else if (earlyThemes.length > 0 && recentThemes.length > 0) {
         const shared = earlyThemes.filter(t => recentSet.has(t)).slice(0, 3);
         if (shared.length > 0) {
           paragraphs.push(
-            `Throughout their career, ${lastName}'s research has consistently centered on ${formatList(shared)}.`
+            `Throughout their career, ${lastNameCap}'s research has consistently centered on ${formatList(shared)}.`
           );
         }
       }
@@ -639,9 +642,9 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       } else {
         collabPct = `A small fraction (${metrics.collaborationScore}%)`;
       }
-      collabParagraph = `${collabPct} of ${lastName}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
+      collabParagraph = `${collabPct} of ${lastNameCap}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
       if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
-        collabParagraph += ` ${lastName}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published **${metrics.topCoAuthorPapers}** papers.`;
+        collabParagraph += ` ${lastNameCap}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published **${metrics.topCoAuthorPapers}** papers.`;
       }
       const otherCoAuthors = (metrics.topCoAuthors ?? [])
         .slice(1) // skip #1 (already mentioned above)
@@ -661,8 +664,8 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
     if (topVenues.length > 0) {
       const venueList = topVenues.map(v => `${v.name} (${v.count} publication${v.count !== 1 ? 's' : ''})`);
       let venuesParagraph = topVenues.length === 1
-        ? `${lastName}'s most frequent publication outlet is `
-        : `${lastName}'s most frequent publication outlets include `;
+        ? `${lastNameCap}'s most frequent publication outlet is `
+        : `${lastNameCap}'s most frequent publication outlets include `;
       if (venueList.length === 1) {
         venuesParagraph += venueList[0];
       } else {
@@ -677,7 +680,7 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       const rawVal = pIndexResult.rawPIndex !== null ? `**${pIndexResult.rawPIndex}**` : 'N/A';
       const owpiVal = pIndexResult.owpiPIndex !== null ? `**${pIndexResult.owpiPIndex}**` : 'N/A';
       paragraphs.push(
-        `Based on OpenAlex data, ${lastName} achieves a p-index of ${rawVal} (average citation percentile within journal and year), with an authorship-weighted p-index of ${owpiVal}.`
+        `Based on OpenAlex data, ${lastNameCap} achieves a p-index of ${rawVal} (average citation percentile within journal and year), with an authorship-weighted p-index of ${owpiVal}.`
       );
     }
 
