@@ -878,14 +878,19 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
   const handleAuthorClick = useCallback(async (authorName: string) => {
     if (searchingAuthor) return;
     setSearchingAuthor(authorName);
+    // Open window immediately during user click to avoid popup blocker
+    const newWindow = window.open('about:blank', '_blank');
     try {
       const results = await scholarService.searchAuthors(authorName);
-      if (results.length >= 1) {
+      if (results.length >= 1 && newWindow) {
         const userId = encodeURIComponent(results[0].authorId);
-        window.open(`${window.location.origin}?user=${userId}`, '_blank');
+        newWindow.location.href = `${window.location.origin}?user=${userId}`;
+      } else {
+        newWindow?.close();
       }
     } catch (err) {
       console.warn('[Narrative] Author search failed for:', authorName, err);
+      newWindow?.close();
     } finally {
       setSearchingAuthor(null);
     }
