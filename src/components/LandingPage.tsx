@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck, Globe, Gauge, TrendingUp, Unlock, Award } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
+import { ThemeToggle } from './ThemeToggle';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -57,12 +58,12 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
   return (
     <main className="flex-1 mesh-bg">
       {/* Navbar */}
-      <nav className="border-b border-gray-200/60 bg-white/60 backdrop-blur-lg sticky top-0 z-10">
+      <nav className="border-b border-gray-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo size={28} />
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 text-sm tracking-tight">Scholar Folio</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">Scholar Folio</span>
               <span className="text-[11px] text-[#94a3b8] hidden sm:inline">Your research, at a glance</span>
               <span className="text-[9px] text-transparent hidden sm:inline select-all" title="Build time">
                 {new Date(__BUILD_TIME__).toLocaleString()}
@@ -70,52 +71,54 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-5">
-            <a href="#features" className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
+            <a href="#features" className="nav-link text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
               What it shows
             </a>
-            <button onClick={() => onNavigate?.('about')} className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
+            <button onClick={() => onNavigate?.('about')} className="nav-link text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
               About
             </button>
             <a
               href="https://github.com/JonasHeller1212/ResearchFolio"
               target="_blank"
               rel="noopener noreferrer"
-              className="nav-link text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
+              className="nav-link text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors inline-flex items-center gap-1"
             >
               GitHub <ExternalLink className="h-3 w-3" />
             </a>
+            <ThemeToggle />
             {authControls && (
               <>
-                <div className="h-4 w-px bg-gray-200" />
+                <div className="h-4 w-px bg-gray-200 dark:bg-slate-700" />
                 {authControls}
               </>
             )}
           </div>
           <div className="sm:hidden flex items-center gap-2">
+            <ThemeToggle />
             {authControls}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              {mobileMenuOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
+              {mobileMenuOpen ? <X className="h-5 w-5 text-gray-600 dark:text-gray-400" /> : <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />}
             </button>
           </div>
         </div>
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-100 bg-white/90 backdrop-blur-lg">
+          <div className="sm:hidden border-t border-gray-100 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg">
             <div className="px-6 py-4 space-y-3">
-              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-sm text-gray-600 hover:text-gray-900">
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 What it shows
               </a>
-              <button onClick={() => { onNavigate?.('about'); setMobileMenuOpen(false); }} className="block text-sm text-gray-600 hover:text-gray-900">
+              <button onClick={() => { onNavigate?.('about'); setMobileMenuOpen(false); }} className="block text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 About
               </button>
               <a
                 href="https://github.com/JonasHeller1212/ResearchFolio"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-sm text-gray-600 hover:text-gray-900"
+                className="block text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
               >
                 GitHub
               </a>
@@ -127,13 +130,13 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       {/* Hero */}
       <section className="relative pt-16 pb-6 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] mb-4 leading-[1.05]">
+          <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] dark:text-gray-100 mb-4 leading-[1.05]">
             Claim your
             <br />
             <span className="gradient-text">research profile</span>
           </h1>
 
-          <p className="animate-fade-up animate-delay-250 text-base md:text-lg text-[#64748b] max-w-xl mx-auto mb-8 leading-relaxed">
+          <p className="animate-fade-up animate-delay-250 text-base md:text-lg text-[#64748b] dark:text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
             Get a shareable portfolio page for your research — your publications, citations, and collaboration network at a memorable URL like <span className="font-medium text-[#2d7d7d]">scholarfolio.org/your-name</span>.
           </p>
 
@@ -143,7 +146,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
           </div>
 
           {!user && (
-            <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] mb-3">
+            <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] dark:text-gray-400 mb-3">
               <span className="inline-flex items-center gap-1">
                 <User className="h-3 w-3" />
                 Sign up to <strong>claim your profile</strong> and get a permanent URL.
@@ -151,13 +154,13 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
           )}
 
-          <p className="animate-fade-up animate-delay-350 text-xs text-[#94a3b8] italic mb-4">
+          <p className="animate-fade-up animate-delay-350 text-xs text-[#94a3b8] dark:text-gray-500 italic mb-4">
             Numbers here are context, not verdict. Use them to tell your story.
           </p>
 
           <button
             onClick={() => setShowScholarSearch(true)}
-            className="animate-fade-up animate-delay-350 inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#2d7d7d] transition-colors group"
+            className="animate-fade-up animate-delay-350 inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#2d7d7d] transition-colors group"
           >
             <Search className="h-3.5 w-3.5" />
             <span>Or search by author name</span>
@@ -170,10 +173,10 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       <section id="features" className="py-14 px-6" ref={featuresRef}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10 scroll-reveal">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] mb-3">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] dark:text-gray-100 mb-3">
               Your research, one link away
             </h2>
-            <p className="text-sm text-[#64748b] max-w-lg mx-auto">
+            <p className="text-sm text-[#64748b] dark:text-gray-400 max-w-lg mx-auto">
               A clear, honest picture of your research — impact metrics, p-index, collaboration network, and more — built from your Google Scholar profile, shareable in one click.
             </p>
           </div>
@@ -225,14 +228,14 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             ].map((feature, index) => (
               <div
                 key={index}
-                className="scroll-reveal group relative bg-white rounded-2xl p-5 border border-gray-100 shadow-card hover-lift"
+                className="scroll-reveal group relative bg-white dark:bg-slate-800 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-card hover-lift"
                 style={{ borderLeftWidth: '3px', borderLeftColor: feature.color }}
               >
                 <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg mb-2.5" style={{ backgroundColor: feature.bg }}>
                   <feature.icon className="h-4 w-4" style={{ color: feature.color }} />
                 </div>
-                <h3 className="text-sm font-semibold text-[#1e293b] mb-1.5">{feature.title}</h3>
-                <p className="text-xs text-[#64748b] leading-relaxed">{feature.description}</p>
+                <h3 className="text-sm font-semibold text-[#1e293b] dark:text-gray-100 mb-1.5">{feature.title}</h3>
+                <p className="text-xs text-[#64748b] dark:text-gray-400 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
