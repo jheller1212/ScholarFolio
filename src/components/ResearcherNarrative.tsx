@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
@@ -1035,21 +1035,145 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
         </div>
       )}
 
-      <div className="space-y-2 text-sm text-gray-600 leading-relaxed">
-        {narrative.map((paragraph, i) => (
-          <p key={i}>
-            {paragraph.split(/\*\*(.*?)\*\*/g).map((part, j) =>
-              j % 2 === 1
-                ? <strong key={j} className="font-semibold text-gray-900 dark:text-gray-100">{part}</strong>
-                : linkifyText(part)
-            )}
-          </p>
-        ))}
-        {fieldMetricsParagraph && <p>{fieldMetricsParagraph}</p>}
-        {citationDistParagraph && <p>{citationDistParagraph}</p>}
-        {geoParagraph && <p>{geoParagraph}</p>}
-        {oaParagraph && <p>{oaParagraph}</p>}
-      </div>
+      <NarrativeBody
+        narrative={narrative}
+        extras={[fieldMetricsParagraph, citationDistParagraph, geoParagraph, oaParagraph]}
+        linkifyText={linkifyText}
+        authorName={data.name}
+      />
+    </div>
+  );
+}
+
+/** Animated narrative body — typewriter on first render, instant on revisit */
+function NarrativeBody({
+  narrative,
+  extras,
+  linkifyText,
+  authorName,
+}: {
+  narrative: string[];
+  extras: (React.ReactNode | null | undefined)[];
+  linkifyText: (text: string) => React.ReactNode;
+  authorName: string;
+}) {
+  // Track which author narratives have already been animated this session
+  const animatedRef = useRef(false);
+  const [revealedChars, setRevealedChars] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Build flat text for character counting
+  const allParagraphs = useMemo(() => {
+    const texts = [...narrative];
+    // extras are ReactNodes — we skip them for typewriter (they appear after)
+    return texts;
+  }, [narrative]);
+
+  const totalChars = useMemo(() => allParagraphs.reduce((sum, p) => sum + p.replace(/\*\*/g, '').length, 0), [allParagraphs]);
+
+  // Animate on first mount for this author
+  useEffect(() => {
+    if (animatedRef.current || totalChars === 0) {
+      setRevealedChars(null); // null = show all
+      return;
+    }
+    animatedRef.current = true;
+    setRevealedChars(0);
+
+    const duration = Math.min(5000, Math.max(3000, totalChars * 8));
+    const charsPerFrame = totalChars / (duration / 16);
+    let current = 0;
+
+    const frame = () => {
+      current += charsPerFrame;
+      if (current >= totalChars) {
+        setRevealedChars(null);
+        return;
+      }
+      setRevealedChars(Math.floor(current));
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, [authorName, totalChars]);
+
+  // Allow clicking to skip animation
+  const skipAnimation = useCallback(() => {
+    setRevealedChars(null);
+  }, []);
+
+  const isAnimating = revealedChars !== null;
+
+  // Render paragraphs with character-level reveal
+  function renderParagraphs() {
+    if (!isAnimating) {
+      // Show everything instantly
+      return (
+        <>
+          {allParagraphs.map((paragraph, i) => (
+            <p key={i}>
+              {paragraph.split(/\*\*(.*?)\*\*/g).map((part, j) =>
+                j % 2 === 1
+                  ? <strong key={j} className="font-semibold text-gray-900 dark:text-gray-100">{part}</strong>
+                  : linkifyText(part)
+              )}
+            </p>
+          ))}
+          {extras.map((extra, i) => extra ? <p key={`e${i}`}>{extra}</p> : null)}
+        </>
+      );
+    }
+
+    // Typewriter mode: reveal characters across paragraphs
+    let charsLeft = revealedChars!;
+    const elements: React.ReactNode[] = [];
+
+    for (let i = 0; i < allParagraphs.length; i++) {
+      const raw = allParagraphs[i];
+      const plainText = raw.replace(/\*\*/g, '');
+
+      if (charsLeft <= 0) break;
+
+      const visibleCount = Math.min(charsLeft, plainText.length);
+      charsLeft -= visibleCount;
+
+      // We need to slice the original markdown-formatted text respecting bold markers
+      const parts = raw.split(/\*\*(.*?)\*\*/g);
+      let charBudget = visibleCount;
+      const rendered: React.ReactNode[] = [];
+
+      for (let j = 0; j < parts.length; j++) {
+        if (charBudget <= 0) break;
+        const part = parts[j];
+        const slice = part.slice(0, charBudget);
+        charBudget -= slice.length;
+
+        if (j % 2 === 1) {
+          rendered.push(<strong key={j} className="font-semibold text-gray-900 dark:text-gray-100">{slice}</strong>);
+        } else {
+          rendered.push(<span key={j}>{slice}</span>);
+        }
+      }
+
+      elements.push(<p key={i}>{rendered}</p>);
+    }
+
+    return <>{elements}</>;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="space-y-2 text-sm text-gray-600 leading-relaxed"
+      onClick={isAnimating ? skipAnimation : undefined}
+      style={isAnimating ? { cursor: 'pointer' } : undefined}
+    >
+      {renderParagraphs()}
+      {isAnimating && (
+        <span className="inline-block w-0.5 h-4 bg-[#2d7d7d] animate-pulse align-text-bottom ml-0.5" />
+      )}
+      {isAnimating && (
+        <p className="text-[10px] text-gray-400 mt-2 italic">Click anywhere to skip animation</p>
+      )}
     </div>
   );
 }
