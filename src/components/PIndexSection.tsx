@@ -298,7 +298,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
 
       {/* Step 2: Searching */}
       {step === 'searching' && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-4">
           <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
           Searching OpenAlex…
         </div>
@@ -335,7 +335,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
 
       {/* Step 3b: Loading publications */}
       {step === 'loading-works' && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 py-4">
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-4">
           <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
           Loading publications for {selectedAuthor?.display_name}…
         </div>

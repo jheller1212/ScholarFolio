@@ -866,25 +866,25 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
 
       {/* Network Insights */}
       {insights && (
-        <div className="mt-6 border-t border-gray-100 pt-6">
-          <h4 className="text-sm font-semibold text-[#1e293b] mb-4 flex items-center gap-2">
+        <div className="mt-6 border-t border-gray-100 dark:border-slate-700 pt-6">
+          <h4 className="text-sm font-semibold text-[#1e293b] dark:text-gray-100 mb-4 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#2d7d7d]" />
             Collaboration Insights
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+            <div className="bg-[#eaf4f4]/50 dark:bg-slate-700/30 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.totalCoAuthors}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Unique co-authors</p>
             </div>
-            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+            <div className="bg-[#eaf4f4]/50 dark:bg-slate-700/30 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.avgAuthors}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Avg. authors per paper</p>
             </div>
-            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+            <div className="bg-[#eaf4f4]/50 dark:bg-slate-700/30 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.collabPapers}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Collaborative papers</p>
             </div>
-            <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
+            <div className="bg-[#eaf4f4]/50 dark:bg-slate-700/30 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.soloPapers}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">Solo papers ({insights.soloPercent}%)</p>
             </div>
