@@ -406,7 +406,7 @@ export function ProfileView({
         <div className={activeTab === 'metrics' ? 'tab-content-enter' : 'hidden'}>
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-impact-from"></span>Impact Metrics</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-impact-from"></span>Impact Metrics</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 <MetricsCard title="Total Citations" value={data.totalCitations.toLocaleString()} icon="citations" />
                 <MetricsCard title="h-index" value={data.metrics.hIndex} icon="hIndex" />
@@ -446,7 +446,7 @@ export function ProfileView({
 
             {data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null) && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-field-from"></span>Field-Normalized Metrics</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-field-from"></span>Field-Normalized Metrics</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {data.fieldMetrics.fwci !== null && (
                     <MetricsCard
@@ -479,7 +479,7 @@ export function ProfileView({
             )}
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-collab-from"></span>Collaboration Metrics</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-collab-from"></span>Collaboration Metrics</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 <MetricsCard title="Co-authors" value={data.metrics.totalCoAuthors} icon="coAuthors" />
                 <MetricsCard title="Avg Authors/Paper" value={data.metrics.averageAuthors} icon="avgAuthors" />
