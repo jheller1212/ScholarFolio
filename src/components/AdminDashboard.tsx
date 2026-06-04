@@ -17,6 +17,7 @@ interface RawData {
   searches: Array<{ id: string; source: string; created_at: string; user_id: string | null; author_id: string | null }>;
   users: Array<{ user_id: string; credits_remaining: number; total_purchased: number; created_at: string }>;
   purchases: Array<{ pack: string; amount_cents: number; credits: number; created_at: string }>;
+  dailyStats: Array<{ day: string; total_searches: number; auth_searches: number; anon_searches: number; unique_profiles: number }>;
 }
 
 function getPeriodStart(period: Period): Date | null {
@@ -85,11 +86,12 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           return allLogs;
         }
 
-        const [searchesData, usersRes, purchasesRes, reportsRes] = await Promise.all([
+        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes] = await Promise.all([
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
           supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
+          supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
         ]);
 
         if (usersRes.error) throw usersRes.error;
@@ -99,6 +101,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           searches: searchesData,
           users: usersRes.data || [],
           purchases: purchasesRes.data || [],
+          dailyStats: dailyStatsRes.data || [],
         });
         if (reportsRes.data) setReports(reportsRes.data);
       } catch (err) {
@@ -130,12 +133,18 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     const authedSearches = searches.filter(s => s.user_id).length;
     const uniqueProfiles = new Set(searches.map(s => s.author_id).filter(Boolean)).size;
 
-    // Activity by day (searches + sign-ups)
+    // Activity by day — use daily_search_stats (persists beyond 30-day log retention)
+    // Merge with today's live data from request_logs (cron aggregates yesterday at 01:00 UTC)
     const daySearchMap: Record<string, number> = {};
-    rawData.searches.forEach(s => {
-      const day = s.created_at?.slice(0, 10) || '';
-      if (day) daySearchMap[day] = (daySearchMap[day] || 0) + 1;
+    rawData.dailyStats.forEach(s => {
+      daySearchMap[s.day] = s.total_searches;
     });
+    // Overlay today's live logs (not yet aggregated by cron)
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayLiveCount = rawData.searches.filter(s => s.created_at?.slice(0, 10) === todayStr).length;
+    if (todayLiveCount > 0) {
+      daySearchMap[todayStr] = Math.max(daySearchMap[todayStr] || 0, todayLiveCount);
+    }
     const daySignupMap: Record<string, number> = {};
     rawData.users.forEach(u => {
       const day = u.created_at?.slice(0, 10) || '';
@@ -152,7 +161,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     return {
       searches: searches.length,
-      searchesAllTime: rawData.searches.length,
+      searchesAllTime: rawData.dailyStats.reduce((sum, d) => sum + d.total_searches, 0) + todayLiveCount,
       bySources,
       authedSearches,
       anonSearches: searches.length - authedSearches,
@@ -591,7 +600,7 @@ function ActivityChart({ data }: { data: Array<{ day: string; searches: number; 
       {/* Note about log retention */}
       <div className="flex items-start gap-2 mt-3 p-2 bg-amber-50 rounded-lg">
         <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-        <p className="text-[10px] text-amber-600">Search logs are retained for 30 days (GDPR). Sign-up data is retained permanently.</p>
+        <p className="text-[10px] text-amber-600">Raw search logs are retained for 30 days (GDPR). Aggregated daily counts are retained permanently.</p>
       </div>
     </div>
   );
