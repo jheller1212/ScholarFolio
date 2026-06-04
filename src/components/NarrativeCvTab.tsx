@@ -25,7 +25,7 @@ const formats: Array<{
     description: 'Narrative academic profile + max 10 key outputs. NWO explicitly bans Journal Impact Factors and h-indices — the export strips these automatically.',
     grants: 'Veni, Vidi, Vici, Rubicon, and all other NWO programmes',
     metrics: 'No h-index, no JIF, no citation counts',
-    color: 'border-orange-200 bg-orange-50/50',
+    color: 'border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/30',
   },
   {
     id: 'erc',
@@ -34,7 +34,7 @@ const formats: Array<{
     description: 'Structured CV (4-page target) with 6 sections covering personal info, education, positions, achievements, publications, and a narrative track record. Journal Impact Factors are discouraged, but citation counts are acceptable as evidence.',
     grants: 'Starting Grant, Consolidator Grant, Advanced Grant',
     metrics: 'No JIF; citation counts allowed',
-    color: 'border-blue-200 bg-blue-50/50',
+    color: 'border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30',
   },
   {
     id: 'msca',
@@ -43,7 +43,7 @@ const formats: Array<{
     description: 'Part B2 researcher CV for MSCA Postdoctoral Fellowship applications. Focuses on research experience, publications, international mobility, and transferable skills. No strict page limit but should be concise.',
     grants: 'MSCA Postdoctoral Fellowships (European & Global)',
     metrics: 'Citation counts allowed; focus on quality over quantity',
-    color: 'border-purple-200 bg-purple-50/50',
+    color: 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30',
   },
 ];
 

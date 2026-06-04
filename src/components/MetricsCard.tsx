@@ -233,7 +233,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
           <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 leading-none">{title}</p>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1.5 truncate">{display}</p>
           {subtitle && (
-            <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">{subtitle}</p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
           )}
         </div>
       </div>

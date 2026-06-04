@@ -185,15 +185,15 @@ export function ProfileView({
           <div className="flex items-center gap-4">
             <button
               onClick={onReset}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-4 w-4 text-gray-500" />
+              <ArrowLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
 
             <div className="flex items-center gap-2">
               <Logo size={24} />
-              <span className="font-semibold text-sm text-gray-900 hidden sm:inline">Scholar Folio</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 hidden sm:inline">Scholar Folio</span>
               <span className="text-[10px] font-medium text-primary-start bg-primary-start/8 px-1.5 py-0.5 rounded hidden sm:inline">
                 v{packageJson.version.replace('-beta', '')} <span className="text-[8px] opacity-60">beta</span>
               </span>
@@ -232,7 +232,7 @@ export function ProfileView({
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-xl font-bold text-gray-900 mb-1 truncate">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1 truncate">
                   {profileUrl ? (
                     <a
                       href={profileUrl}
@@ -247,7 +247,7 @@ export function ProfileView({
                     data.name
                   )}
                 </h2>
-                <p className="text-sm text-gray-500 mb-2">{data.affiliation}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.affiliation}</p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleShare}
@@ -341,20 +341,20 @@ export function ProfileView({
           </div>
 
           {/* Researcher Narrative */}
-          <div className="mt-5 pt-5 border-t border-gray-100">
+          <div className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-700">
             <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} pIndexResult={pIndexResult} />
           </div>
         </div>
 
         {onSupport && (
-          <div className="bg-white rounded-xl border border-[#2d7d7d]/15 shadow-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#2d7d7d]/15 shadow-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
                 <Heart className="h-4 w-4 text-[#2d7d7d]" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Support open research tools</p>
-                <p className="text-xs text-gray-500 mt-0.5 max-w-2xl">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-2xl">
                   Scholar Folio is built for researchers, not ranking systems. If this helped you understand or share your research profile, a small contribution helps cover paid Scholar data access.
                 </p>
               </div>
@@ -387,8 +387,8 @@ export function ProfileView({
                 onClick={() => { setActiveTab(tab.id); setTabKey(k => k + 1); }}
                 className={`relative z-10 flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
                   activeTab === tab.id
-                    ? 'text-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 <tab.icon className="h-3.5 w-3.5" />
