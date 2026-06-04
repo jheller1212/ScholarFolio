@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,6 +18,7 @@ interface RawData {
   users: Array<{ user_id: string; credits_remaining: number; total_purchased: number; created_at: string }>;
   purchases: Array<{ pack: string; amount_cents: number; credits: number; created_at: string }>;
   dailyStats: Array<{ day: string; total_searches: number; auth_searches: number; anon_searches: number; unique_profiles: number }>;
+  feedback: Array<{ id: string; rating: number | null; comment: string | null; credits_granted: number; source: string; profile_viewed: string | null; created_at: string }>;
 }
 
 function getPeriodStart(period: Period): Date | null {
@@ -86,12 +87,13 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           return allLogs;
         }
 
-        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes] = await Promise.all([
+        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes] = await Promise.all([
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
           supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
           supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
+          supabase.from('feedback').select('id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
         ]);
 
         if (usersRes.error) throw usersRes.error;
@@ -102,6 +104,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           users: usersRes.data || [],
           purchases: purchasesRes.data || [],
           dailyStats: dailyStatsRes.data || [],
+          feedback: feedbackRes.data || [],
         });
         if (reportsRes.data) setReports(reportsRes.data);
       } catch (err) {
@@ -389,6 +392,51 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                       </button>
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* User Feedback */}
+        {rawData && rawData.feedback.length > 0 && (
+          <div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-card p-5">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <MessageSquare className="h-4 w-4 text-[#2d7d7d]" />
+              User Feedback ({rawData.feedback.length})
+            </h3>
+            <div className="space-y-3">
+              {rawData.feedback.map(fb => (
+                <div key={fb.id} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {fb.rating && (
+                        <p className="text-sm mb-1">
+                          {'★'.repeat(fb.rating)}{'☆'.repeat(5 - fb.rating)}
+                        </p>
+                      )}
+                      {fb.comment && (
+                        <p className="text-sm text-gray-700">{fb.comment}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                        <span>{new Date(fb.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{fb.source}</span>
+                        {fb.credits_granted > 0 && (
+                          <span className="text-emerald-600">+{fb.credits_granted} credits</span>
+                        )}
+                        {fb.profile_viewed && (
+                          <a
+                            href={`?user=${fb.profile_viewed}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#2d7d7d] hover:underline"
+                          >
+                            {fb.profile_viewed}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
