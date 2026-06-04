@@ -3,8 +3,6 @@ import { findJournalRanking } from '../../data/journalRankings';
 import { metricsCalculator } from '../metrics';
 import { ApiError, timeoutSignal } from '../../utils/api';
 import { normalizeAuthorNames } from '../../utils/names';
-import { scholarFetcher } from './fetcher';
-import { scholarParser } from './parser';
 import { supabase } from '../../lib/supabase';
 
 export interface AuthorSearchResult {
@@ -59,16 +57,7 @@ export const scholarService = {
       errors.push(msg);
     }
 
-    // Fallback: scrape Google Scholar author search via CORS proxy
-    try {
-      return await searchAuthorsClientSide(query);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn('[ScholarService] Client-side author search also failed:', msg);
-      errors.push(msg);
-    }
-
-    console.error('[ScholarService] All search methods failed:', errors);
+    console.error('[ScholarService] Author search failed:', errors);
     throw new Error('Author search is temporarily unavailable. Please try again later or contact the site administrator.');
   },
 
@@ -89,29 +78,16 @@ export const scholarService = {
   fetchProfile: async (profileUrl: string, options?: { cacheOnly?: boolean }): Promise<Author> => {
     const normalizedUrl = normalizeScholarUrl(profileUrl);
 
-    // Try the Supabase edge function first (SerpAPI + server-side scraping)
-    let edgeError: unknown = null;
+    // All fetching is performed server-side by the Supabase edge function.
     try {
       const data = await fetchViaEdgeFunction(normalizedUrl, options?.cacheOnly);
       return buildAuthorResult(data);
     } catch (err) {
-      edgeError = err;
-      // If the edge function returned a user-actionable error (credits, rate limit),
-      // surface it directly instead of falling back to client-side scraping
+      // Surface user-actionable errors directly
       if (err instanceof ApiError && (err.code === 'CREDITS_EXHAUSTED' || err.code === 'RATE_LIMITED')) {
         throw err;
       }
-      console.warn('[ScholarService] Edge function failed, falling back to client-side scraping:', err);
-    }
-
-    // Fallback: client-side scraping via CORS proxies
-    try {
-      const data = await fetchViaClientScraping(normalizedUrl);
-      return buildAuthorResult(data);
-    } catch (scrapeError) {
-      console.error('[ScholarService] Client-side scraping also failed:', scrapeError);
-      // Surface the original edge function error if it had a specific message
-      const edgeMsg = edgeError instanceof ApiError ? edgeError.message : '';
+      const edgeMsg = err instanceof ApiError ? err.message : '';
       throw new ApiError(
         edgeMsg || 'Unable to fetch profile data. The service may be temporarily unavailable. Please try again later or contact the site administrator.',
         'FETCH_ERROR'
@@ -163,80 +139,6 @@ async function fetchViaEdgeFunction(normalizedUrl: string, cacheOnly?: boolean) 
   return data;
 }
 
-async function fetchViaClientScraping(normalizedUrl: string) {
-  console.log('[ScholarService] Attempting client-side scraping for:', normalizedUrl);
-  const html = await scholarFetcher.fetch(normalizedUrl);
-  const parser = scholarParser;
-  const doc = parser.createDOM(html);
-
-  const name = doc.querySelector('#gsc_prf_in')?.textContent?.trim() || '';
-  const affiliation = doc.querySelector('.gsc_prf_il')?.textContent?.trim() || '';
-  const imageUrl = doc.querySelector('#gsc_prf_pup-img')?.getAttribute('src') || '';
-
-  const topicEls = doc.querySelectorAll('#gsc_prf_int a');
-  const topics = Array.from(topicEls).map(el => ({
-    name: (el as HTMLElement).textContent?.trim() || '',
-    url: `https://scholar.google.com${el.getAttribute('href') || ''}`,
-    paperCount: 0
-  }));
-
-  const publications = await parser.parsePublications(html);
-
-  if (!name && publications.length === 0) {
-    throw new ApiError('Could not parse any data from Scholar profile', 'DATA_ERROR');
-  }
-
-  // Merge near-duplicate author names (case, middle names, initials)
-  normalizeAuthorNames(publications);
-
-  const totalCitations = publications.reduce((sum, p) => sum + p.citations, 0);
-
-  // Extract actual citations-per-year from the Google Scholar bar chart.
-  // The main profile page renders the chart inside #gsc_rsb_cit with
-  // .gsc_g_t for year labels and .gsc_g_al for bar values.
-  // The modal (if present) uses .gsc_md_hist_b as a wrapper.
-  // Extract actual citations-per-year from the Google Scholar bar chart.
-  // Never fall back to publication-year sums — that's a different metric.
-  const citationsPerYear: Record<string, number> = {};
-  let citationGraphSource: 'scraped_chart' | undefined;
-
-  // Try the main profile chart first, then fall back to modal chart
-  let yearEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_t');
-  let barEls = doc.querySelectorAll('#gsc_rsb_cit .gsc_g_al');
-  if (!yearEls.length || yearEls.length !== barEls.length) {
-    yearEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_t');
-    barEls = doc.querySelectorAll('.gsc_md_hist_b .gsc_g_al');
-  }
-  if (yearEls.length > 0 && yearEls.length === barEls.length) {
-    for (let i = 0; i < yearEls.length; i++) {
-      const year = (yearEls[i] as HTMLElement).textContent?.trim();
-      const citations = parseInt((barEls[i] as HTMLElement).textContent?.trim() || '0') || 0;
-      if (year) {
-        citationsPerYear[year] = citations;
-      }
-    }
-    citationGraphSource = 'scraped_chart';
-  }
-
-  const citations = publications.map(p => p.citations).sort((a, b) => b - a);
-  let hIndex = 0;
-  for (let i = 0; i < citations.length; i++) {
-    if (citations[i] >= i + 1) hIndex = i + 1;
-    else break;
-  }
-
-  return {
-    name,
-    affiliation,
-    imageUrl,
-    topics,
-    hIndex,
-    totalCitations,
-    publications,
-    metrics: { citationsPerYear, citationGraphSource }
-  };
-}
-
 function buildAuthorResult(data: any): Author {
   const publications = (data.publications || []).map(pub => ({
     ...pub,
@@ -268,52 +170,6 @@ function buildAuthorResult(data: any): Author {
     metrics,
     cacheStatus: data.cacheStatus
   };
-}
-
-async function searchAuthorsClientSide(query: string): Promise<AuthorSearchResult[]> {
-  const searchUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(query)}&hl=en`;
-
-  console.log('[ScholarService] Client-side author search for:', query);
-
-  const html = await scholarFetcher.fetchRaw(searchUrl);
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  const profiles: AuthorSearchResult[] = [];
-  const profileCards = doc.querySelectorAll('.gsc_1usr');
-
-  for (const card of Array.from(profileCards)) {
-    const nameEl = card.querySelector('.gs_ai_name a');
-    const name = nameEl?.textContent?.trim() || '';
-    const profileLink = nameEl?.getAttribute('href') || '';
-
-    // Extract author ID from profile link
-    const authorIdMatch = profileLink.match(/user=([^&]+)/);
-    const authorId = authorIdMatch ? authorIdMatch[1] : '';
-
-    if (!name || !authorId) continue;
-
-    const affiliation = card.querySelector('.gs_ai_aff')?.textContent?.trim() || '';
-    const citedByText = card.querySelector('.gs_ai_cby')?.textContent?.trim() || '';
-    const citedByMatch = citedByText.match(/(\d+)/);
-    const citedBy = citedByMatch ? parseInt(citedByMatch[1]) : 0;
-
-    const imageUrl = card.querySelector('.gs_ai_pho img')?.getAttribute('src') || '';
-
-    const interestsEls = card.querySelectorAll('.gs_ai_one_int');
-    const interests = Array.from(interestsEls).map(el => el.textContent?.trim() || '').filter(Boolean);
-
-    profiles.push({
-      name,
-      affiliation,
-      imageUrl: imageUrl.startsWith('http') ? imageUrl : imageUrl ? `https://scholar.google.com${imageUrl}` : '',
-      authorId,
-      citedBy,
-      interests
-    });
-  }
-
-  return profiles;
 }
 
 /**
