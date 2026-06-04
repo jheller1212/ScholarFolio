@@ -259,6 +259,8 @@ function AppContent() {
         .then(oaStats => {
           if (oaStats) {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
+          } else {
+            setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
           }
         })
         .catch(() => {

@@ -884,8 +884,8 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
         const userId = encodeURIComponent(results[0].authorId);
         window.open(`${window.location.origin}?user=${userId}`, '_blank');
       }
-    } catch {
-      // Silently fail — author might not have a Scholar profile
+    } catch (err) {
+      console.warn('[Narrative] Author search failed for:', authorName, err);
     } finally {
       setSearchingAuthor(null);
     }
