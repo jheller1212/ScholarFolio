@@ -15,6 +15,7 @@ interface ChangelogEntry {
 interface ChangelogWeek {
   label: string;
   date: string;
+  headline: string;
   entries: ChangelogEntry[];
 }
 
@@ -28,95 +29,70 @@ const changelog: ChangelogWeek[] = [
   {
     label: 'June 2–4, 2026',
     date: 'This week',
+    headline: 'Narrative CV export, P-Index, GDPR compliance',
     entries: [
-      { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV export (Beta) — one-click Word export for NWO, ERC, and MSCA grant formats, pre-filled from your Scholar profile and ORCID', tag: 'new' },
-      { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV now includes research themes, co-author network, geographic collaboration, citation distribution, and field-normalized metrics', tag: 'improved' },
-      { icon: <FileText className="h-4 w-4" />, text: 'Auto-fill CV from ORCID: education, employment, grants, and awards pulled automatically', tag: 'new' },
-      { icon: <FileText className="h-4 w-4" />, text: 'Smarter theme extraction — bigram-based, with proper handling of surname prefixes, Dutch/German stop words, and discipline-aware language', tag: 'improved' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'P-Index — thought leadership metric by Pham, Wu & Wang (2024, JCR) measuring citation percentile rank within journal and year, with Abbas (2011) authorship weighting', tag: 'new' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Publication review step before P-Index calculation — filter misattributed papers before scoring', tag: 'new' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Field-normalized metrics: FWCI, mean citedness, and Relative Citation Ratio from OpenAlex', tag: 'new' },
-      { icon: <Shield className="h-4 w-4" />, text: 'Full GDPR compliance: account deletion, JSON data export, 30-day log retention, privacy policy with international transfer disclosures', tag: 'new' },
-      { icon: <Zap className="h-4 w-4" />, text: '40% bundle size reduction (1.9MB → 1.15MB) through code splitting and lazy loading', tag: 'improved' },
-      { icon: <Eye className="h-4 w-4" />, text: 'ARIA-compliant modals and tabs, keyboard navigation, dark mode improvements across all components', tag: 'improved' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed co-author network crash caused by variable shadowing', tag: 'fix' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed credit system race conditions with database-level rate limiting', tag: 'fix' },
-      { icon: <Shield className="h-4 w-4" />, text: 'Anti-scraping protections: robots.txt blocking AI crawlers, X-Robots-Tag headers', tag: 'new' },
+      { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV overhaul — smarter research themes, ORCID auto-fill, geographic & field-normalized context, typewriter animation on first view', tag: 'improved' },
+      { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV export (Beta) — one-click Word download for NWO, ERC, and MSCA grant formats', tag: 'new' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'P-Index and field-normalized metrics (FWCI, RCR) with publication review step', tag: 'new' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Full GDPR compliance — account deletion, data export, 30-day log retention, privacy policy', tag: 'new' },
+      { icon: <Zap className="h-4 w-4" />, text: '40% bundle size reduction and accessibility improvements (ARIA, keyboard nav, dark mode)', tag: 'improved' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed co-author network crash and credit system race conditions', tag: 'fix' },
     ],
   },
   {
-    label: 'May 19–22, 2026',
-    date: '2 weeks ago',
+    label: 'May 12–22, 2026',
+    date: '2–3 weeks ago',
+    headline: 'Field metrics, world map improvements, user menu redesign',
     entries: [
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'Field-normalized metrics card — FWCI, mean journal impact, and Relative Citation Ratio', tag: 'new' },
+      { icon: <Globe className="h-4 w-4" />, text: 'World map now prefetches data on load and works on mobile with touch support', tag: 'improved' },
       { icon: <Users className="h-4 w-4" />, text: 'Redesigned user menu with Radix UI dropdown', tag: 'improved' },
-    ],
-  },
-  {
-    label: 'May 12–18, 2026',
-    date: '3 weeks ago',
-    entries: [
-      { icon: <Globe className="h-4 w-4" />, text: 'World map prefetches geo data on profile load for instant tab switching', tag: 'improved' },
-      { icon: <Globe className="h-4 w-4" />, text: 'Consolidated OpenAlex author lookup into shared cached service', tag: 'improved' },
-      { icon: <Globe className="h-4 w-4" />, text: 'Fixed world map on mobile: touch support, timeout handling, responsive legend', tag: 'fix' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed OpenAlex author matching — prioritize display_name match over search rank', tag: 'fix' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Fixed RCR data — iCite API only supports PMIDs, not DOIs', tag: 'fix' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Field-normalized metrics card: FWCI, mean journal impact, and RCR on one card', tag: 'new' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Safari compatibility fixes and increased co-author map to 50 connections', tag: 'fix' },
-      { icon: <Eye className="h-4 w-4" />, text: 'Updated About page with current features, data sources, and pricing', tag: 'improved' },
-      { icon: <Sparkles className="h-4 w-4" />, text: 'Semantic color accents and expanded landing page feature cards', tag: 'improved' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed OpenAlex author matching, Safari compatibility, and RCR data source', tag: 'fix' },
     ],
   },
   {
     label: 'May 7–11, 2026',
     date: '4 weeks ago',
+    headline: 'Co-author World Map',
     entries: [
-      { icon: <Globe className="h-4 w-4" />, text: 'Co-author World Map — interactive globe showing geographic distribution of collaborators with OpenAlex institution data', tag: 'new' },
-      { icon: <Globe className="h-4 w-4" />, text: 'Continent coloring, zoom controls, and region presets for the world map', tag: 'improved' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed author name deduplication for surname prefix variations (van, de, von)', tag: 'fix' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed world map showing wrong institutions, self as co-author, and arcs wrapping around globe', tag: 'fix' },
+      { icon: <Globe className="h-4 w-4" />, text: 'Co-author World Map — interactive globe showing where your collaborators are based, with continent coloring and region presets', tag: 'new' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed author name deduplication for surname prefixes (van, de, von)', tag: 'fix' },
     ],
   },
   {
     label: 'April 26–27, 2026',
     date: '5 weeks ago',
+    headline: 'Claim your profile, visual redesign',
     entries: [
-      { icon: <Sparkles className="h-4 w-4" />, text: 'Visual redesign: skeleton loaders, animations, and dark mode foundation', tag: 'improved' },
-      { icon: <Users className="h-4 w-4" />, text: 'Claim your profile — vanity URLs (scholarfolio.org/profile/yourname) with verified badge', tag: 'new' },
-      { icon: <Users className="h-4 w-4" />, text: 'Share snippets after claiming a profile for easy social sharing', tag: 'new' },
-      { icon: <Users className="h-4 w-4" />, text: 'Collaboration insights panel in co-author network — top collaborators, one-time collaborator impact', tag: 'new' },
-      { icon: <BookOpen className="h-4 w-4" />, text: 'Error reporting for research profile narratives with admin resolution workflow', tag: 'new' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed network text overlap and node crowding', tag: 'fix' },
-      { icon: <Zap className="h-4 w-4" />, text: 'Claimed profiles served from cache to avoid unnecessary API costs', tag: 'improved' },
+      { icon: <Users className="h-4 w-4" />, text: 'Claim your profile — get a vanity URL (scholarfolio.org/profile/yourname) with verified badge and share snippets', tag: 'new' },
+      { icon: <Sparkles className="h-4 w-4" />, text: 'Visual redesign — skeleton loaders, animations, dark mode, and collaboration insights panel', tag: 'improved' },
+      { icon: <BookOpen className="h-4 w-4" />, text: 'Error reporting for research narratives with admin resolution workflow', tag: 'new' },
     ],
   },
   {
     label: 'March 18–20, 2026',
     date: '~11 weeks ago',
+    headline: 'Open Science tab, admin dashboard',
     entries: [
-      { icon: <BookOpen className="h-4 w-4" />, text: 'Open Science tab — per-publication OA badges, OA trend chart, ORCID integration via OpenAlex', tag: 'new' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Admin dashboard with time filters, conversion funnel, and search analytics', tag: 'new' },
-      { icon: <Shield className="h-4 w-4" />, text: 'Security hardening: fixed critical and high severity issues from code review', tag: 'fix' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed email sign-up flow and Google OAuth duplicate account handling', tag: 'fix' },
-      { icon: <Sparkles className="h-4 w-4" />, text: 'Interactive OA trend chart with hover breakdown', tag: 'improved' },
+      { icon: <BookOpen className="h-4 w-4" />, text: 'Open Science tab — per-publication OA badges, interactive OA trend chart, ORCID integration via OpenAlex', tag: 'new' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'Admin dashboard with time filters and conversion funnel', tag: 'new' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Security hardening and auth flow fixes', tag: 'fix' },
     ],
   },
   {
     label: 'March 5–7, 2026',
     date: 'Launch week',
+    headline: 'ScholarFolio launched',
     entries: [
       { icon: <Sparkles className="h-4 w-4" />, text: 'ScholarFolio launched — paste any Google Scholar URL to generate a visual academic portfolio', tag: 'new' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'Impact metrics: h-index, g-index, i10-index, citation trends, collaboration scores', tag: 'new' },
-      { icon: <Users className="h-4 w-4" />, text: 'Interactive co-author network with D3.js force graph, cluster detection, and bridge author identification', tag: 'new' },
-      { icon: <FileText className="h-4 w-4" />, text: 'Auto-generated researcher narrative summarizing career, themes, and impact', tag: 'new' },
-      { icon: <BookOpen className="h-4 w-4" />, text: 'Publication list with sortable columns and journal ranking badges', tag: 'new' },
-      { icon: <Zap className="h-4 w-4" />, text: 'PDF export of full portfolio', tag: 'new' },
-      { icon: <Shield className="h-4 w-4" />, text: 'Supabase edge functions for secure Google Scholar scraping via SerpAPI', tag: 'new' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'Impact metrics, citation trends, interactive co-author network, and auto-generated researcher narrative', tag: 'new' },
+      { icon: <BookOpen className="h-4 w-4" />, text: 'Sortable publication list with journal ranking badges and PDF export', tag: 'new' },
     ],
   },
 ];
 
 export function ChangelogPage({ onBack }: ChangelogPageProps) {
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0, 1, 2]));
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set([0, 1]));
 
   const toggleWeek = (idx: number) => {
     setExpandedWeeks(prev => {
@@ -126,8 +102,6 @@ export function ChangelogPage({ onBack }: ChangelogPageProps) {
       return next;
     });
   };
-
-  const totalUpdates = changelog.reduce((sum, w) => sum + w.entries.length, 0);
 
   return (
     <main className="flex-1 mesh-bg min-h-screen">
@@ -145,7 +119,7 @@ export function ChangelogPage({ onBack }: ChangelogPageProps) {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">What's New</h1>
           <p className="text-sm text-gray-500">
-            {totalUpdates} updates shipped since launch. ScholarFolio is actively developed — new features land every week.
+            ScholarFolio is actively developed. Here's what shipped since launch.
           </p>
         </div>
 
@@ -164,7 +138,7 @@ export function ChangelogPage({ onBack }: ChangelogPageProps) {
                 >
                   <div>
                     <h2 className="text-sm font-semibold text-gray-900">{week.label}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{week.date}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{week.headline}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {newCount > 0 && (
