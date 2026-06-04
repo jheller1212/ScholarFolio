@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 const ADMIN_EMAIL = 'jonasheller89@gmail.com';
 
 type Period = 'day' | 'week' | 'month' | 'all';
+type ChartPeriod = 'week' | 'month' | 'all';
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -64,19 +65,38 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     async function fetchData() {
       try {
-        const [searchesRes, usersRes, purchasesRes, reportsRes] = await Promise.all([
-          supabase.from('request_logs').select('id,source,created_at,user_id,author_id').order('created_at', { ascending: false }).limit(5000),
+        // Fetch all request_logs in batches to avoid Supabase row limits
+        async function fetchAllLogs() {
+          const allLogs: RawData['searches'] = [];
+          let from = 0;
+          const batchSize = 1000;
+          while (true) {
+            const { data, error } = await supabase
+              .from('request_logs')
+              .select('id,source,created_at,user_id,author_id')
+              .order('created_at', { ascending: false })
+              .range(from, from + batchSize - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            allLogs.push(...data);
+            if (data.length < batchSize) break;
+            from += batchSize;
+          }
+          return allLogs;
+        }
+
+        const [searchesData, usersRes, purchasesRes, reportsRes] = await Promise.all([
+          fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
           supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
         ]);
 
-        if (searchesRes.error) throw searchesRes.error;
         if (usersRes.error) throw usersRes.error;
         if (purchasesRes.error) throw purchasesRes.error;
 
         setRawData({
-          searches: searchesRes.data || [],
+          searches: searchesData,
           users: usersRes.data || [],
           purchases: purchasesRes.data || [],
         });
@@ -110,15 +130,21 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     const authedSearches = searches.filter(s => s.user_id).length;
     const uniqueProfiles = new Set(searches.map(s => s.author_id).filter(Boolean)).size;
 
-    // Searches by day
-    const dayMap: Record<string, number> = {};
-    searches.forEach(s => {
+    // Activity by day (searches + sign-ups)
+    const daySearchMap: Record<string, number> = {};
+    rawData.searches.forEach(s => {
       const day = s.created_at?.slice(0, 10) || '';
-      if (day) dayMap[day] = (dayMap[day] || 0) + 1;
+      if (day) daySearchMap[day] = (daySearchMap[day] || 0) + 1;
     });
-    const searchesByDay = Object.entries(dayMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, count]) => ({ day, count }));
+    const daySignupMap: Record<string, number> = {};
+    rawData.users.forEach(u => {
+      const day = u.created_at?.slice(0, 10) || '';
+      if (day) daySignupMap[day] = (daySignupMap[day] || 0) + 1;
+    });
+    const allDays = new Set([...Object.keys(daySearchMap), ...Object.keys(daySignupMap)]);
+    const activityByDay = [...allDays]
+      .sort((a, b) => a.localeCompare(b))
+      .map(day => ({ day, searches: daySearchMap[day] || 0, signups: daySignupMap[day] || 0 }));
 
     // Revenue
     const revenue = purchases.reduce((sum, p) => sum + (p.amount_cents || 0), 0) / 100;
@@ -137,7 +163,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       revenue,
       creditsSold,
       purchases,
-      searchesByDay,
+      activityByDay,
     };
   }, [rawData, period]);
 
@@ -255,28 +281,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               />
             </div>
 
-            {/* Searches chart */}
-            {stats.searchesByDay.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Searches by Day</h3>
-                <div className="space-y-1">
-                  {stats.searchesByDay.map(({ day, count }) => {
-                    const max = Math.max(...stats.searchesByDay.map(d => d.count));
-                    return (
-                      <div key={day} className="flex items-center gap-3 text-sm">
-                        <span className="text-gray-500 w-20 text-xs shrink-0">{formatDay(day)}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
-                          <div
-                            className="h-full bg-[#2d7d7d] rounded-full transition-all duration-300"
-                            style={{ width: `${Math.max((count / max) * 100, 2)}%` }}
-                          />
-                        </div>
-                        <span className="text-gray-700 font-medium w-8 text-right text-xs">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Activity chart */}
+            {stats.activityByDay.length > 0 && (
+              <ActivityChart data={stats.activityByDay} />
             )}
 
             {/* Purchase history */}
@@ -430,6 +437,162 @@ function Row({ label, value }: { label: string; value: string | number }) {
     <div className="flex justify-between">
       <span className="text-gray-500">{label}</span>
       <span className="font-medium text-gray-900">{value}</span>
+    </div>
+  );
+}
+
+function ActivityChart({ data }: { data: Array<{ day: string; searches: number; signups: number }> }) {
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('month');
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  const filteredData = useMemo(() => {
+    if (chartPeriod === 'all') return data;
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (chartPeriod === 'week') cutoff.setDate(cutoff.getDate() - 6);
+    else cutoff.setDate(cutoff.getDate() - 29);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return data.filter(d => d.day >= cutoffStr);
+  }, [data, chartPeriod]);
+
+  const maxValue = Math.max(...filteredData.map(d => d.searches + d.signups), 1);
+  const hasSignups = filteredData.some(d => d.signups > 0);
+  const totalSearches = filteredData.reduce((s, d) => s + d.searches, 0);
+  const totalSignups = filteredData.reduce((s, d) => s + d.signups, 0);
+  const hoveredData = hoveredIdx !== null ? filteredData[hoveredIdx] : null;
+
+  const chartPeriodLabels: Record<ChartPeriod, string> = { week: '7 days', month: '30 days', all: 'All time' };
+
+  // Calculate bar width based on number of days
+  const barCount = filteredData.length;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-900">Daily Activity</h3>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          {(['week', 'month', 'all'] as ChartPeriod[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setChartPeriod(p)}
+              className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+                chartPeriod === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {chartPeriodLabels[p]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hover detail or summary */}
+      <div className="h-8 mb-2">
+        {hoveredData ? (
+          <div className="flex items-center gap-4 text-xs animate-in fade-in duration-100">
+            <span className="font-semibold text-gray-900">{formatDay(hoveredData.day)}</span>
+            <span className="text-[#2d7d7d] font-medium">{hoveredData.searches} searches</span>
+            {hoveredData.signups > 0 && (
+              <span className="text-violet-600 font-medium">{hoveredData.signups} sign-ups</span>
+            )}
+            <span className="text-gray-400">Total: {hoveredData.searches + hoveredData.signups}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-4 text-xs text-gray-400">
+            <span>{totalSearches} searches</span>
+            {totalSignups > 0 && <span>{totalSignups} sign-ups</span>}
+            <span>over {filteredData.length} days</span>
+            <span className="ml-auto">Hover over bars for details</span>
+          </div>
+        )}
+      </div>
+
+      {/* Column chart */}
+      <div className="relative">
+        {/* Y-axis labels */}
+        <div className="flex flex-col justify-between h-48 absolute left-0 top-0 bottom-6 text-[10px] text-gray-400 w-8">
+          <span>{maxValue}</span>
+          <span>{Math.round(maxValue / 2)}</span>
+          <span>0</span>
+        </div>
+
+        {/* Chart area */}
+        <div className="ml-10">
+          {/* Grid lines */}
+          <div className="relative h-48 border-b border-gray-100">
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+              <div className="border-t border-gray-50 w-full" />
+              <div className="border-t border-dashed border-gray-100 w-full" />
+              <div />
+            </div>
+
+            {/* Bars */}
+            <div
+              className="absolute inset-0 flex items-end"
+              style={{ gap: barCount > 60 ? '0px' : barCount > 30 ? '1px' : '2px' }}
+            >
+              {filteredData.map((d, i) => {
+                const searchHeight = (d.searches / maxValue) * 100;
+                const signupHeight = (d.signups / maxValue) * 100;
+                const isHovered = hoveredIdx === i;
+                return (
+                  <div
+                    key={d.day}
+                    className="flex-1 flex flex-col justify-end h-full cursor-pointer group relative"
+                    onMouseEnter={() => setHoveredIdx(i)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                  >
+                    {d.signups > 0 && (
+                      <div
+                        className={`w-full rounded-t transition-all duration-150 ${isHovered ? 'bg-violet-500' : 'bg-violet-400'}`}
+                        style={{ height: `${Math.max(signupHeight, 1)}%`, minHeight: '2px' }}
+                      />
+                    )}
+                    <div
+                      className={`w-full transition-all duration-150 ${
+                        isHovered ? 'bg-[#1f5c5c]' : 'bg-[#2d7d7d]'
+                      } ${d.signups > 0 ? '' : 'rounded-t'}`}
+                      style={{ height: `${Math.max(searchHeight, 0.5)}%`, minHeight: d.searches > 0 ? '2px' : '0px' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* X-axis labels */}
+          <div className="flex justify-between mt-1.5 text-[10px] text-gray-400">
+            {filteredData.length > 0 && (
+              <>
+                <span>{formatDay(filteredData[0].day)}</span>
+                {filteredData.length > 14 && (
+                  <span>{formatDay(filteredData[Math.floor(filteredData.length / 2)].day)}</span>
+                )}
+                <span>{formatDay(filteredData[filteredData.length - 1].day)}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mt-3 text-[10px] text-gray-400">
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-2 rounded bg-[#2d7d7d] inline-block" />
+          Searches
+        </span>
+        {hasSignups && (
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-2 rounded bg-violet-400 inline-block" />
+            Sign-ups
+          </span>
+        )}
+      </div>
+
+      {/* Note about log retention */}
+      <div className="flex items-start gap-2 mt-3 p-2 bg-amber-50 rounded-lg">
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+        <p className="text-[10px] text-amber-600">Search logs are retained for 30 days (GDPR). Sign-up data is retained permanently.</p>
+      </div>
     </div>
   );
 }
