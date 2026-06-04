@@ -18,6 +18,7 @@ import { SignUpWall } from './components/SignUpWall';
 import { ProfileSkeleton } from './components/ProfileSkeleton';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
+import { ADMIN_EMAIL } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService } from './services/openalex';
@@ -140,6 +141,7 @@ function AppContent() {
   const requestInProgressRef = useRef(false);
   const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
   const [initialUrlHandled, setInitialUrlHandled] = useState(false);
@@ -331,7 +333,10 @@ function AppContent() {
   );
 
   const renderPage = () => {
-    if (page === 'admin') return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'admin') {
+      if (!isAdmin) { handleNavigate('home'); return null; }
+      return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
+    }
     if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;

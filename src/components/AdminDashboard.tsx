@@ -3,8 +3,7 @@ import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, 
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-
-const ADMIN_EMAIL = 'jonasheller89@gmail.com';
+import { ADMIN_EMAIL } from '../lib/constants';
 
 type Period = 'day' | 'week' | 'month' | 'all';
 type ChartPeriod = 'week' | 'month' | 'all';

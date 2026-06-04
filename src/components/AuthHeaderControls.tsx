@@ -4,8 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-
-const ADMIN_EMAIL = 'jonasheller89@gmail.com';
+import { ADMIN_EMAIL } from '../lib/constants';
 
 interface AuthHeaderControlsProps {
   onBuyCredits: () => void;
