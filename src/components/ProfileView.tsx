@@ -393,6 +393,9 @@ export function ProfileView({
               >
                 <tab.icon className="h-3.5 w-3.5" />
                 {tab.label}
+                {tab.id === 'narrativecv' && (
+                  <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 rounded-full leading-none">Beta</span>
+                )}
               </button>
             ))}
           </div>

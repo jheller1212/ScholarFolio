@@ -69,13 +69,22 @@ export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          Narrative CV Export
-        </h3>
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Narrative CV Export
+          </h3>
+          <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 rounded-full leading-none">Beta</span>
+        </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           Generate an editable Word document (.docx) pre-filled with your profile data, ORCID records, and selected publications.
           Complete the placeholder sections before submission.
         </p>
+        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mb-4">
+          <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            This feature is currently in beta and actively being developed. Exported documents are a starting point — always review and edit before submission. Feedback welcome!
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
