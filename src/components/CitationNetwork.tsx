@@ -3,7 +3,7 @@ import { select, selectAll } from 'd3-selection';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
 import type { Simulation as D3Simulation, SimulationNodeDatum as D3SimulationNode } from 'd3-force';
 import { drag, type D3DragEvent } from 'd3-drag';
-import { zoom, zoomIdentity } from 'd3-zoom';
+import { zoom as d3Zoom, zoomIdentity } from 'd3-zoom';
 import { scaleSequential } from 'd3-scale';
 import { interpolateRdYlGn, interpolateViridis } from 'd3-scale-chromatic';
 import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
@@ -596,17 +596,17 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
     });
 
     // Zoom — only transform the container, not individual node groups
-    const zoom = zoom<SVGSVGElement, unknown>()
+    const zoomBehavior = d3Zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on('zoom', (event) => {
         container.attr('transform', event.transform);
       });
 
-    svg.call(zoom);
+    svg.call(zoomBehavior);
 
     const initialScale = 0.8;
     svg.call(
-      zoom.transform,
+      zoomBehavior.transform,
       zoomIdentity
         .translate(width / 2, height / 2)
         .scale(initialScale)
