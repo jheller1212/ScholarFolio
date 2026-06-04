@@ -30,7 +30,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             <p>
               Scholar Folio is operated by Jonas Heller, Assistant Professor at Maastricht University, the Netherlands.
               For questions about this policy or your data, contact:{' '}
-              <a href="mailto:privacy@scholarfolio.org" className="text-[#2d7d7d] hover:underline">privacy@scholarfolio.org</a>.
+              <a href="mailto:info@scholarfolio.org" className="text-[#2d7d7d] hover:underline">info@scholarfolio.org</a>.
             </p>
           </section>
 
@@ -91,7 +91,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             </ul>
             <p className="mt-3">
               You can request a copy of the applicable transfer safeguards by emailing{' '}
-              <a href="mailto:privacy@scholarfolio.org" className="text-[#2d7d7d] hover:underline">privacy@scholarfolio.org</a>.
+              <a href="mailto:info@scholarfolio.org" className="text-[#2d7d7d] hover:underline">info@scholarfolio.org</a>.
             </p>
           </section>
 
@@ -108,7 +108,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             </ul>
             <p className="mt-3">
               To exercise any of these rights, email{' '}
-              <a href="mailto:privacy@scholarfolio.org" className="text-[#2d7d7d] hover:underline">privacy@scholarfolio.org</a>.
+              <a href="mailto:info@scholarfolio.org" className="text-[#2d7d7d] hover:underline">info@scholarfolio.org</a>.
             </p>
           </section>
 

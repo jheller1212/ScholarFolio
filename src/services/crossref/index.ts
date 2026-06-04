@@ -3,10 +3,10 @@ import type { JournalRanking } from '../../types/scholar';
 
 export class CrossrefService {
   private readonly API_URL = 'https://api.crossref.org/works';
-  private readonly EMAIL = 'your-email@domain.com'; // For polite pool
+  private readonly EMAIL = 'info@scholarfolio.org';
 
   private readonly headers = {
-    'User-Agent': 'ResearchPortfolio/1.0 (mailto:your-email@domain.com)'
+    'User-Agent': 'ScholarFolio/1.0 (mailto:info@scholarfolio.org)'
   };
 
   public async getJournalMetadata(doi: string): Promise<JournalRanking | null> {

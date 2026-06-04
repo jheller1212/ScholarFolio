@@ -96,6 +96,12 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
             Changelog
           </button>
           <a
+            href="mailto:info@scholarfolio.org"
+            className="text-sm text-[#3d9494] hover:text-white transition-colors"
+          >
+            Contact
+          </a>
+          <a
             href={SOCIAL_LINKS.linkedin}
             target="_blank"
             rel="noopener noreferrer"

@@ -2,7 +2,7 @@ import { timeoutSignal } from '../../utils/api';
 import { RateLimiter } from '../scholar/rate-limiter';
 
 const API_URL = 'https://api.openalex.org';
-const EMAIL = 'scholarfolio@scholarfolio.org';
+const EMAIL = 'info@scholarfolio.org';
 export const OA_HEADERS = { 'User-Agent': `ScholarFolio/1.0 (mailto:${EMAIL})` };
 export const OA_EMAIL = EMAIL;
 export const OA_API_URL = API_URL;
