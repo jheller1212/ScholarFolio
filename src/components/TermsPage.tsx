@@ -124,7 +124,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">10. Contact</h2>
             <p>
               Questions about these terms? Contact:{' '}
-              <a href="mailto:privacy@scholarfolio.org" className="text-[#2d7d7d] hover:underline">privacy@scholarfolio.org</a>
+              <a href="mailto:info@scholarfolio.org" className="text-[#2d7d7d] hover:underline">info@scholarfolio.org</a>
               {' '}or{' '}
               <a
                 href="https://www.linkedin.com/in/hellerjonas/"
