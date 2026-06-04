@@ -9,6 +9,7 @@ import { AboutPage } from './components/AboutPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
+import { ChangelogPage } from './components/ChangelogPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
@@ -26,7 +27,7 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
-type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin';
+type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog';
 
 function SocialLinks() {
   return (
@@ -87,6 +88,12 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             Privacy
+          </button>
+          <button
+            onClick={() => onNavigate('changelog')}
+            className="text-sm text-[#3d9494] hover:text-white transition-colors"
+          >
+            Changelog
           </button>
           <a
             href={SOCIAL_LINKS.linkedin}
@@ -348,6 +355,7 @@ function AppContent() {
     if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'changelog') return <div className="page-enter"><ChangelogPage onBack={() => handleNavigate('home')} /></div>;
 
     if (loading && !data) {
       return <ProfileSkeleton />;
