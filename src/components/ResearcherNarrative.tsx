@@ -876,20 +876,20 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
   const [searchingAuthor, setSearchingAuthor] = useState<string | null>(null);
 
   const handleAuthorClick = useCallback(async (authorName: string) => {
-    if (!onSearch || searchingAuthor) return;
+    if (searchingAuthor) return;
     setSearchingAuthor(authorName);
     try {
       const results = await scholarService.searchAuthors(authorName);
       if (results.length >= 1) {
-        const url = `https://scholar.google.com/citations?user=${encodeURIComponent(results[0].authorId)}`;
-        onSearch(url);
+        const userId = encodeURIComponent(results[0].authorId);
+        window.open(`${window.location.origin}?user=${userId}`, '_blank');
       }
     } catch {
       // Silently fail — author might not have a Scholar profile
     } finally {
       setSearchingAuthor(null);
     }
-  }, [onSearch, searchingAuthor]);
+  }, [searchingAuthor]);
 
   /** Replace known co-author names in text with clickable buttons */
   const linkifyText = useCallback((text: string): React.ReactNode => {
