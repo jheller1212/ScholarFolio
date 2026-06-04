@@ -14,11 +14,10 @@
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",
-    "@supabase/supabase-js": "^2.39.3",
+    "@supabase/supabase-js": "^2.107.0",
     "@types/topojson-client": "^3.1.5",
     "d3": "^7.8.5",
     "docx": "^9.7.1",
-    "dompurify": "^3.0.8",
     "file-saver": "^2.0.5",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.344.0",
@@ -31,18 +30,19 @@
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
     "@types/d3": "^7.4.3",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "^3.2.0",
     "@types/file-saver": "^2.0.7",
     "@types/react": "^18.2.52",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
+    "dompurify": "^3.4.8",
     "eslint": "^8.56.0",
     "jsdom": "^29.0.2",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4",
-    "vitest": "^1.2.2"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.8"
   }
 }
