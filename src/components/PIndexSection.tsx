@@ -235,7 +235,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
         P-Index
         <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">(Pham, Wu &amp; Wang, 2024)</span>
