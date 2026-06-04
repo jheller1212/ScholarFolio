@@ -178,7 +178,7 @@ export function ProfileView({
   if (!data) return null;
 
   return (
-    <div className="min-h-screen mesh-bg">
+    <div className="min-h-screen mesh-bg overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-100/80 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 py-2.5">
@@ -248,7 +248,7 @@ export function ProfileView({
                   )}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.affiliation}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={handleShare}
                     className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
@@ -370,7 +370,7 @@ export function ProfileView({
         )}
 
         {/* Tabs */}
-        <div className="mb-6">
+        <div className="mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide">
           <div className="relative flex gap-1 p-1 bg-gray-100/80 dark:bg-slate-800 rounded-xl w-fit" role="tablist">
             {/* Sliding indicator */}
             <div
@@ -385,14 +385,14 @@ export function ProfileView({
                 aria-selected={activeTab === tab.id}
                 tabIndex={activeTab === tab.id ? 0 : -1}
                 onClick={() => { setActiveTab(tab.id); setTabKey(k => k + 1); }}
-                className={`relative z-10 flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
+                className={`relative z-10 flex items-center gap-1.5 px-2 sm:px-4 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'text-gray-900 dark:text-gray-100'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                 }`}
               >
-                <tab.icon className="h-3.5 w-3.5" />
-                {tab.label}
+                <tab.icon className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
                 {tab.id === 'narrativecv' && (
                   <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 rounded-full leading-none">Beta</span>
                 )}
