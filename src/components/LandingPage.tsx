@@ -9,7 +9,7 @@ interface LandingPageProps {
   onSearch: (url: string) => void;
   loading: boolean;
   error?: string | null;
-  onNavigate?: (page: 'home' | 'about' | 'terms' | 'privacy') => void;
+  onNavigate?: (page: 'home' | 'about' | 'terms' | 'privacy' | 'changelog') => void;
   authControls?: React.ReactNode;
 }
 
