@@ -204,6 +204,9 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
 
         {/* Trust signals */}
         <div className="px-6 py-4 mt-2">
+          <p className="text-[10px] text-gray-400 text-center mb-3">
+            By purchasing, you agree that credits are delivered immediately as digital content and you waive your 14-day EU withdrawal right (Consumer Rights Directive Art. 16(m)).
+          </p>
           <div className="flex items-center justify-center gap-5 text-[11px] text-gray-400">
             <span className="flex items-center gap-1">
               <Shield className="h-3.5 w-3.5" />
