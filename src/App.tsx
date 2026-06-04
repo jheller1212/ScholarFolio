@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Linkedin, Github, ExternalLink, Moon, Sun } from 'lucide-react';
+import { Linkedin, Github, ExternalLink } from 'lucide-react';
+import { ThemeToggle } from './components/ThemeToggle';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
@@ -32,7 +33,7 @@ type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog';
 function SocialLinks() {
   return (
     <div className="flex items-center gap-2">
-      <DarkModeToggle />
+      <ThemeToggle />
       <a
         href={SOCIAL_LINKS.linkedin}
         target="_blank"
@@ -126,35 +127,6 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
   );
 }
 
-function DarkModeToggle() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
-
-  const toggle = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('sf_theme', next ? 'dark' : 'light');
-  };
-
-  useEffect(() => {
-    const saved = localStorage.getItem('sf_theme');
-    if (saved === 'dark') {
-      setDark(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
-  return (
-    <button
-      onClick={toggle}
-      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-      aria-label="Toggle dark mode"
-      title={dark ? 'Light mode' : 'Dark mode'}
-    >
-      {dark ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-gray-400" />}
-    </button>
-  );
-}
 
 function AppContent() {
   const [loading, setLoading] = useState(false);

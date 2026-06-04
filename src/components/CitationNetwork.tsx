@@ -709,7 +709,7 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
   }, [publications]);
 
   return (
-    <div className={`bg-white/80 backdrop-blur-xl rounded-xl border border-primary-start/10 p-6 hover:shadow-lg transition-all ${
+    <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-primary-start/10 dark:border-slate-700 p-6 hover:shadow-lg transition-all ${
       fullScreen ? 'min-h-[600px]' : ''
     }`}>
       <div className="flex items-center justify-between mb-4">
@@ -726,13 +726,13 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   connectionLimit === 10
                     ? 'bg-[#eaf4f4] text-[#2d7d7d]'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>Top 10</span>
               </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
-                <p className="text-gray-700">Show top 10 co-authors</p>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-100 dark:border-slate-700 text-xs hidden group-hover:block z-20">
+                <p className="text-gray-700 dark:text-gray-300">Show top 10 co-authors</p>
               </div>
             </div>
             <div className="group relative">
@@ -741,17 +741,17 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                 className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
                   connectionLimit === 20
                     ? 'bg-[#eaf4f4] text-[#2d7d7d]'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <span>Top 20</span>
               </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
-                <p className="text-gray-700">Show top 20 co-authors</p>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-100 dark:border-slate-700 text-xs hidden group-hover:block z-20">
+                <p className="text-gray-700 dark:text-gray-300">Show top 20 co-authors</p>
               </div>
             </div>
           </div>
-          <div className="h-4 w-px bg-gray-200" />
+          <div className="h-4 w-px bg-gray-200 dark:bg-slate-600" />
           {/* View mode buttons */}
           <div className="flex items-center space-x-1">
             <ViewModeButton
@@ -839,12 +839,12 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         />
       </div>
 
-      <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
+      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 bg-[#eaf4f4]/50 dark:bg-[#2d7d7d]/10 rounded-lg p-3">
         <div className="flex items-start space-x-2">
           <Info className="h-4 w-4 text-[#2d7d7d] flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-[#1e293b] mb-1">Network Visualization Guide</p>
-            <ul className="space-y-1 text-[#64748b]">
+            <p className="font-medium text-[#1e293b] dark:text-gray-100 mb-1">Network Visualization Guide</p>
+            <ul className="space-y-1 text-[#64748b] dark:text-gray-400">
               <li>• Node size represents {viewMode === 'citations' ? 'shared citations' : 'shared publications'}</li>
               <li>• Line thickness shows collaboration strength{viewMode === 'citations' ? ' (citation flow)' : ''}</li>
               {viewMode === 'temporal' && (
@@ -874,19 +874,19 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.totalCoAuthors}</p>
-              <p className="text-xs text-gray-500">Unique co-authors</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Unique co-authors</p>
             </div>
             <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.avgAuthors}</p>
-              <p className="text-xs text-gray-500">Avg. authors per paper</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Avg. authors per paper</p>
             </div>
             <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.collabPapers}</p>
-              <p className="text-xs text-gray-500">Collaborative papers</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Collaborative papers</p>
             </div>
             <div className="bg-[#eaf4f4]/50 rounded-lg p-3">
               <p className="text-2xl font-bold text-[#2d7d7d]">{insights.soloPapers}</p>
-              <p className="text-xs text-gray-500">Solo papers ({insights.soloPercent}%)</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Solo papers ({insights.soloPercent}%)</p>
             </div>
           </div>
 
@@ -897,10 +897,10 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                   <Users className="h-3.5 w-3.5 text-[#2d7d7d]" />
                 </div>
                 <div>
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 dark:text-gray-100">
                     <span className="font-medium">{insights.topByPapers.name}</span> is your most frequent collaborator
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {insights.topByPapers.papers} shared papers · {insights.topByPapers.citations.toLocaleString()} shared citations
                   </p>
                 </div>
@@ -913,10 +913,10 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                   <TrendingUp className="h-3.5 w-3.5 text-[#2d7d7d]" />
                 </div>
                 <div>
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 dark:text-gray-100">
                     <span className="font-medium">{insights.topByCitations.name}</span> is your highest-impact collaborator
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     {insights.topByCitations.papers} shared papers · {insights.topByCitations.citations.toLocaleString()} shared citations
                   </p>
                 </div>
@@ -929,14 +929,14 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
                   <UserCheck className="h-3.5 w-3.5 text-[#2d7d7d]" />
                 </div>
                 <div>
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 dark:text-gray-100">
                     <span className="font-medium">{insights.oneTimeCollaborators}</span> one-time collaborators
                     {insights.oneTimeCitations > 0 && (
                       <> — together they account for <span className="font-medium">{insights.oneTimeCitations.toLocaleString()}</span> citations</>
                     )}
                   </p>
                   {insights.topOneTimer && insights.topOneTimer.citations > 0 && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Highest impact: {insights.topOneTimer.name} ({insights.topOneTimer.citations.toLocaleString()} citations from 1 paper)
                     </p>
                   )}
@@ -965,14 +965,14 @@ function ViewModeButton({ active, onClick, icon, label, tooltip }: {
         className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs transition-colors ${
           active
             ? 'bg-[#eaf4f4] text-[#2d7d7d]'
-            : 'text-gray-600 hover:bg-gray-100'
+            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
         }`}
       >
         {icon}
         <span>{label}</span>
       </button>
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 bg-white rounded-lg shadow-lg border border-gray-100 text-xs hidden group-hover:block z-20">
-        <p className="text-gray-700">{tooltip}</p>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-100 dark:border-slate-700 text-xs hidden group-hover:block z-20">
+        <p className="text-gray-700 dark:text-gray-300">{tooltip}</p>
       </div>
     </div>
   );
