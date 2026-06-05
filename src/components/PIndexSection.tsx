@@ -266,7 +266,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
         P-Index
-        <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">(Pham, Wu &amp; Wang, 2024)</span>
+        <a href="https://academic.oup.com/jcr/article-abstract/51/1/191/7672992" target="_blank" rel="noopener noreferrer" className="text-[10px] font-normal text-gray-400 dark:text-gray-500 hover:text-[#2d7d7d] transition-colors">(Pham, Wu &amp; Wang, 2024)</a>
       </h3>
 
       {/* Step 1: Idle — info + search form */}
