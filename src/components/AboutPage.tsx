@@ -4,21 +4,23 @@ import { Logo } from './Logo';
 
 interface AboutPageProps {
   onBack: () => void;
-  headerControls?: React.ReactNode;
+  socialLinks?: React.ReactNode;
+  authControls?: React.ReactNode;
 }
 
-export function AboutPage({ onBack, headerControls }: AboutPageProps) {
+export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps) {
   return (
     <main className="flex-1 mesh-bg min-h-screen">
-      <nav className="border-b border-gray-200/60 bg-white/60 backdrop-blur-lg sticky top-0 z-10">
+      <nav className="border-b border-gray-200/60 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center">
-          <button onClick={onBack} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors mr-3">
+          <button onClick={onBack} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors mr-3">
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">Scholar Folio</span>
-          <div className="ml-auto flex items-center gap-2">
-            {headerControls}
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <div className="ml-auto flex items-center gap-3">
+            {socialLinks}
+            {authControls}
           </div>
         </div>
       </nav>

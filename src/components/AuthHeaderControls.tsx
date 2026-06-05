@@ -203,8 +203,8 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
       </DropdownMenu.Root>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => { if (!deleting) { setShowDeleteConfirm(false); setDeleteError(null); setDeleteConfirmText(''); } }}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm mx-4 w-full" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto p-4 bg-black/50 backdrop-blur-sm" onClick={() => { if (!deleting) { setShowDeleteConfirm(false); setDeleteError(null); setDeleteConfirmText(''); } }}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full m-auto" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">Delete your account?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               This will permanently delete your account, credits, and all associated data. This action cannot be undone.
