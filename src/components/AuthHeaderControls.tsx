@@ -20,6 +20,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -202,12 +203,25 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
       </DropdownMenu.Root>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm mx-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => { if (!deleting) { setShowDeleteConfirm(false); setDeleteError(null); setDeleteConfirmText(''); } }}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm mx-4 w-full" onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">Delete your account?</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               This will permanently delete your account, credits, and all associated data. This action cannot be undone.
             </p>
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1.5">
+                Type <span className="font-mono font-semibold text-red-600">DELETE</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                autoFocus
+              />
+            </div>
             {deleteError && (
               <p className="text-xs text-red-600 dark:text-red-400 mb-3 bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
                 {deleteError}
@@ -215,7 +229,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
             )}
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); setDeleteConfirmText(''); }}
                 disabled={deleting}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
               >
@@ -223,8 +237,8 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                disabled={deleting || deleteConfirmText !== 'DELETE'}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {deleting ? (
                   <>
