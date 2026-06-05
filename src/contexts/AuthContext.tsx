@@ -27,6 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const dismissWelcome = () => setShowWelcome(false);
 
   const fetchCredits = async (userId: string) => {
+    // Try to claim a free monthly credit if eligible (0 credits, >30 days since last grant)
+    await supabase.rpc('claim_monthly_credit', { p_user_id: userId }).catch(() => {});
+
     const { data, error } = await supabase
       .from('user_credits')
       .select('credits_remaining')

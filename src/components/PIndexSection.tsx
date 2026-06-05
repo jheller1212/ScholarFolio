@@ -44,6 +44,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
   const [errorMsg, setErrorMsg] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [matchStatuses, setMatchStatuses] = useState<Map<string, MatchStatus>>(new Map());
+  const [reviewTab, setReviewTab] = useState<'review' | 'confirmed'>('review');
 
   const [firstName, setFirstName] = useState(() => {
     const parts = authorName.trim().split(/\s+/);
@@ -98,6 +99,24 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       return b.year - a.year || b.citations - a.citations;
     });
   }, [allWorks, matchStatuses]);
+
+  const filteredWorks = useMemo(() => {
+    if (matchStatuses.size === 0) return sortedWorks;
+    if (reviewTab === 'confirmed') {
+      return sortedWorks.filter(w => matchStatuses.get(w.id) === 'confirmed');
+    }
+    return sortedWorks.filter(w => matchStatuses.get(w.id) !== 'confirmed');
+  }, [sortedWorks, matchStatuses, reviewTab]);
+
+  const reviewTabCounts = useMemo(() => {
+    if (matchStatuses.size === 0) return null;
+    let needsReview = 0, confirmed = 0;
+    for (const status of matchStatuses.values()) {
+      if (status === 'confirmed') confirmed++;
+      else needsReview++;
+    }
+    return { needsReview, confirmed };
+  }, [matchStatuses]);
 
   const handleSearch = useCallback(async () => {
     if (!firstName.trim() || !lastName.trim()) return;
@@ -231,6 +250,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     setAllWorks([]);
     setExcludedIds(new Set());
     setMatchStatuses(new Map());
+    setReviewTab('review');
     setErrorMsg('');
     setProgress({ pct: 0, status: '' });
     oaRateLimiter.clear();
@@ -383,13 +403,40 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
             </div>
           </div>
 
-          {matchStatuses.size > 0 ? (
-            <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 mb-3">
-              <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-              <p className="text-[11px] text-green-700 dark:text-green-300">
-                Items needing your review appear first. Confirmed matches (green) are at the bottom. Unmatched items are unchecked — review and include any that are yours.
-              </p>
-            </div>
+          {matchStatuses.size > 0 && reviewTabCounts ? (
+            <>
+              <div className="flex gap-1 mb-3 border-b border-gray-200 dark:border-slate-700">
+                <button
+                  onClick={() => setReviewTab('review')}
+                  className={`px-3 py-1.5 text-[11px] font-medium border-b-2 transition-colors ${
+                    reviewTab === 'review'
+                      ? 'border-violet-500 text-violet-700 dark:text-violet-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Needs Review ({reviewTabCounts.needsReview})
+                </button>
+                <button
+                  onClick={() => setReviewTab('confirmed')}
+                  className={`px-3 py-1.5 text-[11px] font-medium border-b-2 transition-colors ${
+                    reviewTab === 'confirmed'
+                      ? 'border-green-500 text-green-700 dark:text-green-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Confirmed ({reviewTabCounts.confirmed})
+                </button>
+              </div>
+              {reviewTab === 'review' ? (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mb-2">
+                  Check any publications below that are yours. Unchecked items will be excluded from the p-index.
+                </p>
+              ) : (
+                <p className="text-[11px] text-green-600 dark:text-green-400 mb-2">
+                  These publications matched your Google Scholar profile and are included automatically.
+                </p>
+              )}
+            </>
           ) : (
             <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 mb-3">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
@@ -402,7 +449,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
           )}
 
           <div className="max-h-72 overflow-y-auto border border-gray-100 dark:border-slate-700 rounded-lg divide-y divide-gray-50 dark:divide-slate-700/50">
-            {sortedWorks.map(work => {
+            {filteredWorks.map(work => {
               const excluded = excludedIds.has(work.id);
               const matchStatus = matchStatuses.get(work.id);
               return (
