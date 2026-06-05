@@ -48,12 +48,12 @@ export function AboutPage({ onBack }: AboutPageProps) {
           <section>
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
             <p className="mb-2">
-              Profile data is sourced from <strong>Google Scholar</strong> (via SerpAPI, with direct scraping as fallback).
+              Profile data is sourced from <strong>Google Scholar</strong> via SerpAPI.
               Open access stats, co-author geography, ORCID, field-normalized metrics, and p-index journal citation
               distributions come from <strong>OpenAlex</strong>, an open bibliometric database.
             </p>
             <p>
-              No data is stored beyond a 7-day cache to reduce API calls. ScholarFolio does not scrape, store,
+              No data is stored beyond a 7-day cache to reduce API calls. ScholarFolio does not store
               or sell researcher data.
             </p>
           </section>
