@@ -8,7 +8,10 @@ interface AuthState {
   credits: number | null;
   loading: boolean;
   showWelcome: boolean;
+  showPasswordReset: boolean;
   dismissWelcome: () => void;
+  dismissPasswordReset: () => void;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
@@ -24,7 +27,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [credits, setCredits] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const dismissWelcome = () => setShowWelcome(false);
+  const dismissPasswordReset = () => setShowPasswordReset(false);
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: error.message };
+    setShowPasswordReset(false);
+    return { error: null };
+  };
 
   const fetchCredits = async (userId: string) => {
     // Try to claim a free monthly credit if eligible (0 credits, >30 days since last grant)
@@ -63,6 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchCredits(session.user.id);
+          // Show password reset modal when user clicks recovery link
+          if (event === 'PASSWORD_RECOVERY') {
+            setShowPasswordReset(true);
+          }
           // Detect new Google sign-up (user just created, signed in via OAuth)
           if (event === 'SIGNED_IN') {
             const createdAt = new Date(session.user.created_at).getTime();
@@ -114,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, credits, loading, showWelcome, dismissWelcome, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, session, credits, loading, showWelcome, showPasswordReset, dismissWelcome, dismissPasswordReset, updatePassword, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );

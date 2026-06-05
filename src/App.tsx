@@ -16,6 +16,7 @@ import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
 import { SignUpWall } from './components/SignUpWall';
 import { ProfileSkeleton } from './components/ProfileSkeleton';
+import { PasswordResetModal } from './components/PasswordResetModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
 import { ADMIN_EMAIL } from './lib/constants';
@@ -140,7 +141,7 @@ function AppContent() {
   const [page, setPage] = useState<Page>('home');
   const requestInProgressRef = useRef(false);
   const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean) => void) | null>(null);
-  const { user, credits, refreshCredits, showWelcome, dismissWelcome } = useAuth();
+  const { user, credits, refreshCredits, showWelcome, dismissWelcome, showPasswordReset, dismissPasswordReset, updatePassword } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
@@ -382,6 +383,7 @@ function AppContent() {
           </button>
         </div>
       )}
+      {showPasswordReset && <PasswordResetModal onSubmit={updatePassword} onClose={dismissPasswordReset} />}
       <div className="flex-1">
         {renderPage()}
       </div>
