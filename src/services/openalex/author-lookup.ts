@@ -7,8 +7,8 @@ export const OA_HEADERS = { 'User-Agent': `ScholarFolio/1.0 (mailto:${EMAIL})` }
 export const OA_EMAIL = EMAIL;
 export const OA_API_URL = API_URL;
 
-/** Shared rate limiter for all OpenAlex calls */
-export const oaRateLimiter = new RateLimiter(5000, 10);
+/** Shared rate limiter for all OpenAlex calls (polite pool allows ~100/sec) */
+export const oaRateLimiter = new RateLimiter(5000, 100);
 
 /** Generic JSON fetcher with rate limiting and timeout */
 export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
