@@ -16,13 +16,19 @@ Scholar Folio turns a Google Scholar profile into a shareable research portfolio
 Sign in, pick a slug, and get a permanent URL. Claimed profiles are always public and free to view — no login needed for visitors. Each claimed profile is served from cache, so it costs nothing to host.
 
 ### Research Reach
-Citation counts, h-index, g-index, i10-index, h5-index, growth trends, and per-year citation breakdowns. Metrics animate into view with count-up effects.
+Citation counts, h-index, g-index, i10-index, h5-index, growth trends, and per-year citation breakdowns. Field-normalized impact (FWCI) and Relative Citation Ratio (RCR) for cross-discipline comparison.
+
+### P-Index
+Publication-level percentile metric (Pham, Wu & Wang, 2024) that ranks papers within their own journal and publication year. Includes a review step so researchers control which publications are included.
 
 ### Collaboration Network
 Interactive co-authorship graph (D3.js) with four view modes: publications, citations, temporal, and cluster detection. Includes collaboration insights — most frequent collaborator, highest-impact collaborator, one-time collaborator analysis, and bridge author detection.
 
+### Co-Author World Map
+Interactive globe showing where your collaborators are based, with continent coloring and region presets. Data sourced from OpenAlex institution affiliations.
+
 ### Open Science
-Open access stats via OpenAlex — gold, green, hybrid, bronze breakdown with per-publication OA badges and ORCID linking.
+Open access stats via OpenAlex — gold, green, hybrid, bronze breakdown with per-publication OA badges, interactive OA trend chart, and ORCID integration.
 
 ### Citation Trends
 Year-by-year citation charts with interactive hover breakdown.
@@ -31,16 +37,19 @@ Year-by-year citation charts with interactive hover breakdown.
 Sortable, filterable table with venue, year, citation counts, and journal rankings (FT50, ABS, SJR).
 
 ### Researcher Narrative
-Auto-generated plain-language summary of career stage, collaboration patterns, publication venues, and impact trajectory. Users can report errors directly from the profile.
+Auto-generated plain-language summary of career stage, collaboration patterns, publication venues, and impact trajectory. Includes a typewriter animation on first view. Users can report errors directly from the profile.
+
+### Narrative CV Export
+One-click Word download formatted for NWO, ERC, and MSCA grant applications. Auto-fills from ORCID (education, employment, grants, awards).
 
 ---
 
 ## How It Works
 
 1. Paste a Google Scholar profile URL (or search by author name)
-2. Scholar Folio fetches profile data via SerpAPI (with direct scraping fallback)
-3. Results are cached for 72 hours; claimed profiles serve from cache indefinitely
-4. Data is visualized across five tabs: Impact Metrics, Citation Trends, Co-author Network, Open Science, and Publications
+2. Scholar Folio fetches profile data via SerpAPI
+3. Results are cached for 7 days; claimed profiles serve from cache indefinitely
+4. Data is visualized across multiple tabs: Impact Metrics, Citation Trends, Co-author Network, Open Science, Publications, and more
 5. After viewing, sign in to claim the profile with a vanity URL
 
 ### Usage Model
@@ -49,10 +58,11 @@ Auto-generated plain-language summary of career stage, collaboration patterns, p
 |------|-----------|------|
 | Guest | 5 | Free |
 | Signed-up | 5 more | Free |
+| Monthly credit | 1/month (when at 0) | Free |
 | Supporter | 25 | EUR 5 |
 | Open Science Supporter | 75 | EUR 10 |
 
-Cache hits and claimed profile views don't consume credits. Credits never expire. This is an open science project — supporter packs cover SerpAPI costs, not profit.
+Cache hits and claimed profile views don't consume credits. Credits never expire. You can also earn free credits by reporting bugs or suggesting features. This is an open science project — supporter packs cover API costs, not profit.
 
 ---
 
@@ -61,12 +71,13 @@ Cache hits and claimed profile views don't consume credits. Credits never expire
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 18, TypeScript, Tailwind CSS, Vite |
-| Visualization | Recharts (charts), D3.js (network graphs) |
+| Visualization | Recharts (charts), D3.js (network graphs, world map) |
 | Backend | Supabase Edge Functions (Deno) |
 | Database | Supabase PostgreSQL |
 | Auth | Supabase Auth (email/password + Google OAuth) |
 | Payments | Stripe Checkout (EUR) |
-| Data Sources | SerpAPI (primary), OpenAlex (OA stats), direct scraping (fallback) |
+| Email | Resend (custom SMTP for branded transactional emails) |
+| Data Sources | SerpAPI (Google Scholar), OpenAlex (OA stats, affiliations, field metrics) |
 | Hosting | Netlify (auto-deploy on push to main) |
 
 ---
@@ -79,7 +90,7 @@ src/
   contexts/           Auth context (Supabase session + credits)
   services/
     scholar/           Profile fetching, parsing, caching
-    openalex/          Open access stats
+    openalex/          Open access stats, field metrics, affiliations
     metrics/           h-index, g-index, i10-index, collaboration scores
   types/              TypeScript type definitions
   utils/              Name normalization, URL validation, PDF export
@@ -90,6 +101,8 @@ supabase/
     scholar/           Main data-fetching edge function
     create-checkout/   Stripe checkout session creation
     stripe-webhook/    Payment webhook handler
+    delete-account/    GDPR account deletion
+    export-data/       GDPR data export
 ```
 
 ---
@@ -98,13 +111,14 @@ supabase/
 
 | Table | Purpose |
 |-------|---------|
-| `scholar_cache` | Cached profile data with 72-hour TTL |
-| `user_credits` | Per-user credit balance (5 free on signup) |
+| `scholar_cache` | Cached profile data with 7-day TTL |
+| `user_credits` | Per-user credit balance (5 free on signup, monthly credit system) |
 | `credit_purchases` | Stripe purchase records |
 | `request_logs` | Usage analytics (user, source, IP, timestamp) |
 | `claimed_profiles` | Vanity URL claims (slug, author_id, user_id) |
 | `profile_reports` | User-submitted error reports with resolve status |
 | `analytics_events` | Page view tracking |
+| `feedback` | Bug reports and feature requests (with credit rewards) |
 
 Row-level security is enabled on all tables.
 
@@ -116,7 +130,7 @@ Row-level security is enabled on all tables.
 
 - Node.js 18+
 - A [Supabase](https://supabase.com) project
-- A [SerpAPI](https://serpapi.com) key (optional — falls back to direct scraping)
+- A [SerpAPI](https://serpapi.com) key
 - A [Stripe](https://stripe.com) account (only needed for supporter packs)
 
 ### Setup
@@ -163,8 +177,8 @@ npm run build
 - **One claim per user** — Each account can claim one profile to prevent abuse.
 - **Vanity URLs are public** — No login needed to view a claimed profile.
 - **Error reporting** — Users can flag inaccuracies in auto-generated narratives. Reports appear in the admin dashboard.
-- **Fallback scraping** — If SerpAPI is unavailable, the app falls back to direct HTML scraping.
 - **Open science commitment** — Any surplus after costs is donated to open science initiatives. Transparency report published quarterly.
+- **No data monetization** — Nothing is stored permanently beyond a 7-day cache. No researcher data is sold, shared, or monetized.
 
 ---
 

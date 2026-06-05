@@ -48,8 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('user_id', userId)
       .maybeSingle();
 
-    console.log('[ScholarFolio] fetchCredits:', { userId, data, error });
-
     if (!error && data) {
       setCredits(data.credits_remaining);
     } else {

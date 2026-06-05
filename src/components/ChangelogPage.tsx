@@ -27,6 +27,22 @@ const TAG_STYLES = {
 
 const changelog: ChangelogWeek[] = [
   {
+    label: 'June 5, 2026',
+    date: 'Today',
+    headline: 'Password reset, monthly credits, About page rewrite',
+    entries: [
+      { icon: <Shield className="h-4 w-4" />, text: 'Forgot password flow with branded email templates via custom SMTP (Resend)', tag: 'new' },
+      { icon: <Sparkles className="h-4 w-4" />, text: 'Monthly free credit for signed-up users (1 credit when balance is 0)', tag: 'new' },
+      { icon: <Users className="h-4 w-4" />, text: 'Delete account now requires typing DELETE to confirm', tag: 'improved' },
+      { icon: <Eye className="h-4 w-4" />, text: 'Credits badge redesigned with brand colors, visible on all pages including About', tag: 'improved' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'P-Index citation reference now links to the original JCR paper', tag: 'improved' },
+      { icon: <Globe className="h-4 w-4" />, text: 'Co-author links now show a branded loading screen instead of a blank page', tag: 'improved' },
+      { icon: <FileText className="h-4 w-4" />, text: 'About page rewritten in first-person conversational tone', tag: 'improved' },
+      { icon: <Shield className="h-4 w-4" />, text: 'SerpAPI usage tracker added to admin dashboard', tag: 'new' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed credits not loading (Supabase RPC TypeError), CSP blocking Google Fonts', tag: 'fix' },
+    ],
+  },
+  {
     label: 'June 2–4, 2026',
     date: 'This week',
     headline: 'Narrative CV export, P-Index, GDPR compliance',
