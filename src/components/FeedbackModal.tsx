@@ -86,7 +86,7 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
     }
   };
 
-  const headerTitle = mode === 'prompt' ? "How's your experience?" : 'Share Feedback';
+  const headerTitle = mode === 'prompt' ? 'Help us improve' : 'Share Feedback';
   const buttonLabel = successMessage
     ? successMessage
     : submitting
@@ -120,7 +120,7 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
           <h2 id="feedback-modal-title" className="text-lg font-bold pr-8">{headerTitle}</h2>
           {mode === 'prompt' && (
             <p className="text-sm text-white/80 mt-1">
-              Earn {creditsAmount} credits for sharing a quick thought.
+              Report a bug or request a feature — earn {creditsAmount} credits.
             </p>
           )}
         </div>
@@ -161,13 +161,13 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
           {/* Textarea */}
           <div>
             <label htmlFor="feedback-comment" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {mode === 'prompt' ? 'Your feedback' : 'Any additional thoughts? (optional)'}
+              {mode === 'prompt' ? 'What can we improve?' : 'What can we improve? (optional)'}
             </label>
             <textarea
               id="feedback-comment"
               value={comment}
               onChange={e => setComment(e.target.value)}
-              placeholder={mode === 'prompt' ? 'What do you think of Scholar Folio so far?' : 'Tell us what you think...'}
+              placeholder="Found a bug? Missing a feature? Let us know what's broken or what you'd like to see."
               rows={3}
               className="w-full px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none transition-colors resize-none"
               maxLength={1000}
