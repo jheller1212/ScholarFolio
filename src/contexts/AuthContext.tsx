@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchCredits = async (userId: string) => {
     // Fire-and-forget: try to claim a free monthly credit (don't block credit fetch)
-    supabase.rpc('claim_monthly_credit', { p_user_id: userId }).catch(() => {});
+    supabase.rpc('claim_monthly_credit', { p_user_id: userId }).then(() => {}).catch(() => {});
 
     const { data, error } = await supabase
       .from('user_credits')
