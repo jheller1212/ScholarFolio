@@ -24,52 +24,68 @@ export function AboutPage({ onBack }: AboutPageProps) {
 
         <div className="space-y-10 text-[15px] text-[#334155] leading-relaxed">
           <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What it is</h2>
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">The short version</h2>
             <p>
-              Scholar Folio is a free, open-source research portfolio tool. Paste your Google Scholar URL
-              and get a shareable page with your publication history, citation metrics, collaboration network,
-              co-author world map, open access profile, field-normalized impact, and p-index (thought leadership score) — all generated automatically.
+              Scholar Folio turns your Google Scholar profile into a shareable research portfolio. Paste your URL,
+              get back a page with your metrics, citation trends, co-author network, a world map, open access breakdown,
+              and a p-index score. The whole thing takes about ten seconds.
             </p>
           </section>
 
           <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What it shows</h2>
-            <ul className="space-y-2 list-none">
-              <li><strong>Impact metrics</strong> — h-index, g-index, i10, citation growth, Gini coefficient, age-normalized rates</li>
-              <li><strong>Field-normalized impact</strong> — FWCI and Mean Journal Impact via OpenAlex, so you can compare across disciplines</li>
-              <li><strong>Citation trends</strong> — year-by-year charts, cumulative growth, publication output, and momentum analysis</li>
-              <li><strong>Co-author network</strong> — interactive visualization of your collaboration patterns and key partnerships</li>
-              <li><strong>World map</strong> — where your co-authors are, mapped by institution location</li>
-              <li><strong>P-Index</strong> — thought leadership score based on within-journal citation percentile ranks (Pham, Wu &amp; Wang, 2024), with Abbas (2011) authorship weighting. Computed on-demand from OpenAlex data after selecting and reviewing your publications</li>
-              <li><strong>Open access profile</strong> — gold, green, hybrid, and bronze OA breakdown with per-paper status</li>
-            </ul>
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Why it exists</h2>
+            <p className="mb-3">
+              I am a marketing professor, not a bibliometrics researcher. But I kept running into the same problem:
+              every time I needed to present my research profile — for a grant, a tenure case, a collaboration pitch —
+              I ended up spending hours manually pulling numbers from different sources and putting them into slides
+              that would be outdated by the time I presented them.
+            </p>
+            <p className="mb-3">
+              So I built the thing I wanted. A single page that pulls everything together automatically. It started
+              as a weekend project and kept growing because other researchers found it useful too.
+            </p>
+            <p>
+              This is not a ranking tool. Academic culture already has plenty of ranking anxiety. The numbers here
+              are context for understanding your own work, not a verdict on it.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What you actually get</h2>
+            <p className="mb-3">
+              The basics are what you would expect: h-index, g-index, i10, citation growth over time, that sort of thing.
+              But the interesting parts go further.
+            </p>
+            <p className="mb-3">
+              There is a <strong>field-normalized impact score</strong> (FWCI) so you can compare a political scientist
+              with a chemist without the usual apples-to-oranges problem. There is a <strong>co-author world map</strong> that
+              shows where your collaborators are based. There is an <strong>open access breakdown</strong> — gold, green, hybrid,
+              bronze — so you can see how much of your work is actually accessible to people who do not have a university library card.
+            </p>
+            <p>
+              And there is the <strong>p-index</strong>, which I did not invent (credit goes to Pham, Wu &amp; Wang, 2024). It measures
+              where your papers rank in citations <em>within their own journal and publication year</em>, which means it is not biased
+              by field size or career stage. You review your publications before it runs, so you stay in control of what gets included.
+            </p>
           </section>
 
           <section>
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
-            <p className="mb-2">
-              Profile data is sourced from <strong>Google Scholar</strong> via SerpAPI.
-              Open access stats, co-author geography, ORCID, field-normalized metrics, and p-index journal citation
-              distributions come from <strong>OpenAlex</strong>, an open bibliometric database.
+            <p className="mb-3">
+              Profile data comes from Google Scholar, accessed through an API called SerpAPI. Everything else — open access
+              stats, co-author locations, ORCID links, field-normalized metrics, journal citation distributions — comes
+              from OpenAlex, which is an open bibliometric database run by a nonprofit.
             </p>
             <p>
-              No data is stored beyond a 7-day cache to reduce API calls. ScholarFolio does not store
-              or sell researcher data.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">What it is not</h2>
-            <p>
-              A ranking tool. A benchmarking system. A productivity scorecard.
-              The numbers it surfaces are context, not verdict.
+              Nothing is stored permanently. There is a 7-day cache to avoid hammering the APIs, and that is it.
+              No researcher data is sold, shared, or monetized. Ever.
             </p>
           </section>
 
           <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Who built it</h2>
-            <p>
-              Built by{' '}
+            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Who is behind this</h2>
+            <p className="mb-3">
+              I am{' '}
               <a
                 href="https://www.linkedin.com/in/hellerjonas/"
                 target="_blank"
@@ -78,32 +94,21 @@ export function AboutPage({ onBack }: AboutPageProps) {
               >
                 Jonas Heller <ExternalLink className="h-3 w-3" />
               </a>,
-              Assistant Professor of Marketing at Maastricht University, researching consumer behavior
-              in emerging technologies (AR, VR, AI). This is an evening/weekend project, built for fun and
-              because there's a real need for automatic, individual-level research performance pages.
+              Assistant Professor of Marketing at Maastricht University. My actual research is on consumer behavior
+              in emerging technologies — AR, VR, AI — which is how I ended up building this in the first place. I kept
+              using these tools for my own work, got frustrated with what was available, and decided to make something better.
             </p>
-          </section>
-
-          <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Why</h2>
             <p>
-              Academic culture already has enough ranking anxiety. This tool exists to help researchers
-              understand and narrate their own work — on their own terms.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Open source</h2>
-            <p>
-              Scholar Folio is open source.{' '}
+              Scholar Folio is open source, built in my evenings and weekends, and not affiliated with my university.{' '}
               <a
                 href="https://github.com/JonasHeller1212/ResearchFolio"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#2d7d7d] hover:underline inline-flex items-center gap-1"
               >
-                View on GitHub <ExternalLink className="h-3 w-3" />
-              </a>
+                The code is on GitHub <ExternalLink className="h-3 w-3" />
+              </a>{' '}
+              if you want to look under the hood.
             </p>
           </section>
 
@@ -114,11 +119,12 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Pricing</h2>
 
             <p className="mb-4">
-              Scholar Folio is free to try: <strong>5 searches without signing up</strong>, and{' '}
-              <strong>5 more when you create an account</strong>.
+              You get 5 free searches without signing up, and 5 more when you create an account (which is also free).
+              If a profile was already searched by someone else in the last 7 days, viewing it costs nothing — the
+              cached version loads for free.
             </p>
 
-            <p className="mb-4">After that, supporter packs help cover the API costs:</p>
+            <p className="mb-4">After that, there are two supporter packs:</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-white rounded-xl border border-gray-100 shadow-card p-5">
@@ -133,35 +139,30 @@ export function AboutPage({ onBack }: AboutPageProps) {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p>
-                <strong>Why it is not completely free:</strong> Every profile lookup requires an API call to
-                retrieve Google Scholar data, and that API charges per request. The supporter packs exist to
-                cover this cost. There are no subscriptions, no ranking tools, and no data monetization.
-              </p>
-              <p>
-                <strong>Cached profiles</strong> (searched by anyone in the last 7 days) are always free
-                and do not cost a credit.
-              </p>
-            </div>
+            <p className="mb-3">
+              The reason it is not entirely free: every fresh profile lookup calls an external API that charges per request.
+              The packs exist to cover that cost. There are no subscriptions, no ads, and no data monetization.
+            </p>
+            <p>
+              You can also earn free credits by giving feedback — report a bug or suggest a feature, and you
+              get credits added to your account. If you run out completely, you get one free credit each month
+              just for being signed up.
+            </p>
           </section>
 
-          {/* Section 3: Transparency Report */}
           <hr className="border-gray-200" />
 
           <section>
-            <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Transparency Report &amp; Donation Commitment</h2>
+            <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Transparency</h2>
 
             <p className="mb-4">
-              Scholar Folio publishes a transparency report covering revenue, API costs, hosting costs, and
-              any surplus.
+              I want to be upfront about the money side of this. Scholar Folio is not a business — it is an academic
+              side project that costs money to run. Here is where that money goes.
             </p>
 
             <p className="mb-6">
-              If there is ever a surplus after covering operating costs, it will be donated to open science
-              initiatives. This is not a business. It is an academic side project that costs money to run.
-              The commitment to transparency and donation is here from day one — even though the amounts are
-              currently tiny.
+              If there is ever a surplus after covering API and hosting costs, it gets donated to open science
+              initiatives. That commitment is here from day one, even though the amounts are currently tiny.
             </p>
 
             <div className="overflow-x-auto">
