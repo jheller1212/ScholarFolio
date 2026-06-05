@@ -533,7 +533,7 @@ export function ProfileView({
         )}
 
         {activeTab === 'publications' && (
-          <PublicationsList publications={data.publications} openAccess={data.openAccess} />
+          <PublicationsList publications={data.publications} openAccess={data.openAccess} s2Data={data.s2Data} />
         )}
 
         {activeTab === 'narrativecv' && (

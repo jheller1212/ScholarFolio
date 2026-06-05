@@ -24,6 +24,7 @@ import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService } from './services/openalex';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
+import { enrichWithSemanticScholar } from './services/semanticscholar';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -262,8 +263,60 @@ function AppContent() {
         .then(oaStats => {
           if (oaStats) {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
+
+            // Enrich with Semantic Scholar data using DOIs from OpenAlex
+            const doiMap = oaStats.doiMap
+              ? new Map(Object.entries(oaStats.doiMap))
+              : undefined;
+            enrichWithSemanticScholar(sanitizedData.publications, doiMap)
+              .then(s2Result => {
+                // Re-key using PublicationsList normalization (lowercase, alphanumeric only)
+                const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
+                for (const pub of sanitizedData.publications) {
+                  const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  // Find matching S2 data by checking the S2-normalized title
+                  const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+                  const paper = s2Result.papers.get(s2Normalized);
+                  if (paper) {
+                    s2Data[pubKey] = {
+                      influentialCitationCount: paper.influentialCitationCount,
+                      tldr: paper.tldr?.text,
+                      s2CitationCount: paper.citationCount,
+                    };
+                  }
+                }
+                setData(prev => prev ? {
+                  ...prev,
+                  s2Data,
+                  s2Stats: s2Result.stats,
+                } : prev);
+              })
+              .catch(() => {}); // S2 enrichment is supplementary
           } else {
             setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
+            // Still try S2 without DOI map
+            enrichWithSemanticScholar(sanitizedData.publications)
+              .then(s2Result => {
+                const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
+                for (const pub of sanitizedData.publications) {
+                  const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+                  const paper = s2Result.papers.get(s2Normalized);
+                  if (paper) {
+                    s2Data[pubKey] = {
+                      influentialCitationCount: paper.influentialCitationCount,
+                      tldr: paper.tldr?.text,
+                      s2CitationCount: paper.citationCount,
+                    };
+                  }
+                }
+                setData(prev => prev ? {
+                  ...prev,
+                  s2Data,
+                  s2Stats: s2Result.stats,
+                } : prev);
+              })
+              .catch(() => {});
           }
         })
         .catch(() => {

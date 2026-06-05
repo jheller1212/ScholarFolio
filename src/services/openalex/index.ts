@@ -44,13 +44,14 @@ export class OpenAlexService {
       // ORCID is already fetched by shared author lookup
       const orcid = author.orcid;
 
-      // Fetch per-publication OA status (paginated, up to 200 works per page)
+      // Fetch per-publication OA status + DOIs (paginated, up to 200 works per page)
       const publicationOa: Record<string, { status: OaStatus; oaUrl?: string }> = {};
+      const doiMap: Record<string, string> = {};
       let page = 1;
       const maxPages = 10;
       while (page <= maxPages) {
         await oaRateLimiter.acquireToken();
-        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
+        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
         const pubsResponse = await fetch(pubsUrl, {
           headers: OA_HEADERS,
           signal: timeoutSignal(15000)
@@ -68,6 +69,12 @@ export class OpenAlexService {
               status,
               oaUrl: work.open_access?.oa_url || undefined,
             };
+            // Extract DOI for Semantic Scholar batch lookup
+            if (work.doi) {
+              // OpenAlex DOIs are full URLs like "https://doi.org/10.1234/..."
+              const doi = work.doi.replace('https://doi.org/', '');
+              if (doi) doiMap[normalizedTitle] = doi;
+            }
           }
         }
 
@@ -86,6 +93,7 @@ export class OpenAlexService {
         oaPercent: Math.round((oa / total) * 100),
         orcid,
         publicationOa,
+        doiMap,
       };
     } catch (error) {
       console.warn('[OpenAlex] Error fetching OA stats:', error);

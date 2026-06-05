@@ -74,6 +74,8 @@ export interface OpenAccessStats {
   orcid?: string;
   /** Per-publication OA status, keyed by normalized title */
   publicationOa?: Record<string, { status: OaStatus; oaUrl?: string }>;
+  /** DOI map from normalized title to DOI string (from OpenAlex) */
+  doiMap?: Record<string, string>;
 }
 
 export interface FieldNormalizedMetrics {
@@ -82,6 +84,19 @@ export interface FieldNormalizedMetrics {
   paperCount: number;
   rcrMean: number | null;
   rcrPaperCount: number;
+}
+
+export interface S2PublicationData {
+  influentialCitationCount: number;
+  tldr?: string;
+  s2CitationCount?: number;
+}
+
+export interface S2Stats {
+  matched: number;
+  total: number;
+  totalInfluentialCitations: number;
+  papersWithTldr: number;
 }
 
 export interface Author {
@@ -96,6 +111,9 @@ export interface Author {
   openAccess?: OpenAccessStats;
   openAccessFailed?: boolean;
   fieldMetrics?: FieldNormalizedMetrics;
+  /** Semantic Scholar per-publication data, keyed by normalized title */
+  s2Data?: Record<string, S2PublicationData>;
+  s2Stats?: S2Stats;
   cacheStatus?: 'hit' | 'miss';
 }
 
