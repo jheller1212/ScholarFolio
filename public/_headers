@@ -5,4 +5,4 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Robots-Tag: noai, noimageai
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openalex.org https://pub.orcid.org https://api.crossref.org https://api.semanticscholar.org https://icite.od.nih.gov; font-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openalex.org https://pub.orcid.org https://api.crossref.org https://api.semanticscholar.org https://icite.od.nih.gov; font-src 'self' https://fonts.gstatic.com
