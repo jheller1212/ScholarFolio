@@ -36,7 +36,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Why it exists</h2>
             <p className="mb-3">
               I am a marketing professor, not a bibliometrics researcher. But I kept running into the same problem:
-              every time I needed to present my research profile — for a grant, a tenure case, a collaboration pitch —
+              every time I needed to present my research profile (for a grant, a tenure case, a collaboration pitch)
               I ended up spending hours manually pulling numbers from different sources and putting them into slides
               that would be outdated by the time I presented them.
             </p>
@@ -59,8 +59,8 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <p className="mb-3">
               There is a <strong>field-normalized impact score</strong> (FWCI) so you can compare a political scientist
               with a chemist without the usual apples-to-oranges problem. There is a <strong>co-author world map</strong> that
-              shows where your collaborators are based. There is an <strong>open access breakdown</strong> — gold, green, hybrid,
-              bronze — so you can see how much of your work is actually accessible to people who do not have a university library card.
+              shows where your collaborators are based. There is an <strong>open access breakdown</strong> (gold, green, hybrid,
+              bronze) so you can see how much of your work is actually accessible to people who do not have a university library card.
             </p>
             <p>
               And there is the <strong>p-index</strong>, which I did not invent (credit goes to Pham, Wu &amp; Wang, 2024). It measures
@@ -72,9 +72,9 @@ export function AboutPage({ onBack }: AboutPageProps) {
           <section>
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
             <p className="mb-3">
-              Profile data comes from Google Scholar, accessed through an API called SerpAPI. Everything else — open access
-              stats, co-author locations, ORCID links, field-normalized metrics, journal citation distributions — comes
-              from OpenAlex, which is an open bibliometric database run by a nonprofit.
+              Profile data comes from Google Scholar, accessed through an API called SerpAPI. Everything else
+              (open access stats, co-author locations, ORCID links, field-normalized metrics, journal citation distributions)
+              comes from OpenAlex, which is an open bibliometric database run by a nonprofit.
             </p>
             <p>
               Nothing is stored permanently. There is a 7-day cache to avoid hammering the APIs, and that is it.
@@ -95,7 +95,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
                 Jonas Heller <ExternalLink className="h-3 w-3" />
               </a>,
               Assistant Professor of Marketing at Maastricht University. My actual research is on consumer behavior
-              in emerging technologies — AR, VR, AI — which is how I ended up building this in the first place. I kept
+              in emerging technologies (AR, VR, AI), which is how I ended up building this in the first place. I kept
               using these tools for my own work, got frustrated with what was available, and decided to make something better.
             </p>
             <p>
@@ -120,7 +120,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
 
             <p className="mb-4">
               You get 5 free searches without signing up, and 5 more when you create an account (which is also free).
-              If a profile was already searched by someone else in the last 7 days, viewing it costs nothing — the
+              If a profile was already searched by someone else in the last 7 days, viewing it costs nothing: the
               cached version loads for free.
             </p>
 
@@ -144,7 +144,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
               The packs exist to cover that cost. There are no subscriptions, no ads, and no data monetization.
             </p>
             <p>
-              You can also earn free credits by giving feedback — report a bug or suggest a feature, and you
+              You can also earn free credits by giving feedback. Report a bug or suggest a feature, and you
               get credits added to your account. If you run out completely, you get one free credit each month
               just for being signed up.
             </p>
@@ -156,7 +156,7 @@ export function AboutPage({ onBack }: AboutPageProps) {
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Transparency</h2>
 
             <p className="mb-4">
-              I want to be upfront about the money side of this. Scholar Folio is not a business — it is an academic
+              I want to be upfront about the money side of this. Scholar Folio is not a business. It is an academic
               side project that costs money to run. Here is where that money goes.
             </p>
 
