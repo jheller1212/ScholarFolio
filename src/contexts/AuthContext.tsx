@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const fetchCredits = async (userId: string) => {
-    // Try to claim a free monthly credit if eligible (0 credits, >30 days since last grant)
-    await supabase.rpc('claim_monthly_credit', { p_user_id: userId }).catch(() => {});
+    // Fire-and-forget: try to claim a free monthly credit (don't block credit fetch)
+    supabase.rpc('claim_monthly_credit', { p_user_id: userId }).catch(() => {});
 
     const { data, error } = await supabase
       .from('user_credits')
@@ -50,6 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!error && data) {
       setCredits(data.credits_remaining);
+    } else {
+      setCredits(0);
     }
   };
 
