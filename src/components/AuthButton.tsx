@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LogIn, User, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export function AuthButton() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
@@ -14,6 +15,8 @@ export function AuthButton() {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   if (loading) return null;
 
@@ -55,6 +58,7 @@ export function AuthButton() {
     setPassword('');
     setError(null);
     setConfirmSent(false);
+    setResetSent(false);
     setShowPassword(false);
     setAgreedToTerms(false);
   };
@@ -199,6 +203,41 @@ export function AuthButton() {
                     </button>
                   </div>
                 </div>
+
+                {!isSignUp && !resetSent && (
+                  <div className="text-right -mt-2">
+                    <button
+                      type="button"
+                      disabled={sendingReset}
+                      onClick={async () => {
+                        if (!email.trim()) {
+                          setError('Enter your email address first.');
+                          return;
+                        }
+                        setSendingReset(true);
+                        setError(null);
+                        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                          redirectTo: window.location.origin,
+                        });
+                        setSendingReset(false);
+                        if (error) {
+                          setError(error.message);
+                        } else {
+                          setResetSent(true);
+                        }
+                      }}
+                      className="text-[10px] text-[#2d7d7d] hover:underline font-medium"
+                    >
+                      {sendingReset ? 'Sending...' : 'Forgot password?'}
+                    </button>
+                  </div>
+                )}
+
+                {resetSent && (
+                  <p className="text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                    Password reset link sent to <strong>{email}</strong>. Check your inbox.
+                  </p>
+                )}
 
                 {error && (
                   <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
