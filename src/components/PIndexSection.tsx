@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { oaFetchJson, OA_API_URL, OA_EMAIL } from '../services/openalex/author-lookup';
+import { oaFetchJson, OA_API_URL, OA_EMAIL, oaRateLimiter } from '../services/openalex/author-lookup';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
-import { supabase } from '../lib/supabase';
 
 interface OpenAlexSearchResult {
   id: string;
@@ -110,16 +109,12 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`
     );
 
-    // Log p-index lookup for debugging (no IP — client-side insert)
-    try {
-      await supabase.from('request_logs').insert({
-        source: 'pindex',
-        author_id: query,
-        origin: window.location.href,
-      });
-    } catch (_) {}
-
-    if (!data?.results?.length) {
+    if (!data) {
+      setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again.');
+      setStep('error');
+      return;
+    }
+    if (!data.results?.length) {
       setErrorMsg('No authors found in OpenAlex. Try adjusting the name.');
       setStep('error');
       return;
@@ -236,6 +231,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     setMatchStatuses(new Map());
     setErrorMsg('');
     setProgress({ pct: 0, status: '' });
+    oaRateLimiter.clear();
   }, []);
 
   const handleBackToReview = useCallback(() => {
