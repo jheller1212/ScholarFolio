@@ -21,7 +21,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-4">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: June 4, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: June 5, 2026</p>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
 
@@ -115,10 +115,18 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">8. Cookies & Local Storage</h2>
+            <p className="mb-3">
+              This site does not use any tracking or advertising cookies.
+            </p>
+            <p className="mb-3">We use the following strictly necessary cookies:</p>
+            <ul className="list-disc list-inside space-y-1.5 ml-2 mb-3">
+              <li><strong>Supabase authentication cookies</strong> — set automatically when you sign in to maintain your login session. These are strictly necessary for the service to function and do not require your consent.</li>
+              <li><strong>Stripe payment cookies</strong> (<code>__stripe_mid</code>, <code>__stripe_sid</code>) — set by Stripe only during the checkout flow to process payments securely and prevent fraud. These are strictly necessary for payment processing and are not used for tracking or advertising.</li>
+            </ul>
             <p>
-              Scholar Folio does not use tracking cookies or third-party analytics. We use browser localStorage
-              for two strictly functional purposes: storing your theme preference and counting anonymous searches
-              for rate limiting. Supabase authentication uses session tokens stored in localStorage.
+              We also use browser localStorage for two strictly functional purposes: storing your theme preference
+              (<code>sf_theme</code>) and counting anonymous searches for rate limiting (<code>sf_searches</code>).
+              These contain no personal identifiers.
             </p>
           </section>
 

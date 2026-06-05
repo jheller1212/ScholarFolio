@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowUpDown, BookOpen, Presentation as Citation, Calendar, Award, Star, TrendingUp, Unlock, Lock } from 'lucide-react';
-import type { Publication, JournalRanking, OpenAccessStats, OaStatus } from '../types/scholar';
+import type { Publication, JournalRanking, OpenAccessStats, OaStatus, S2PublicationData } from '../types/scholar';
 
 const OA_COLORS: Record<OaStatus, { bg: string; text: string; label: string; tooltip: string }> = {
   gold: { bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-800 dark:text-amber-300', label: 'Gold OA', tooltip: 'Published in an open access journal' },
@@ -34,6 +34,7 @@ function OaBadge({ status, oaUrl }: { status: OaStatus; oaUrl?: string }) {
 interface PublicationsListProps {
   publications: Publication[];
   openAccess?: OpenAccessStats;
+  s2Data?: Record<string, S2PublicationData>;
 }
 
 type SortField = 'year' | 'citations' | 'title';
@@ -75,7 +76,7 @@ function JournalRankingBadge({ ranking }: { ranking: JournalRanking }) {
   );
 }
 
-export function PublicationsList({ publications, openAccess }: PublicationsListProps) {
+export function PublicationsList({ publications, openAccess, s2Data }: PublicationsListProps) {
   const [sortField, setSortField] = useState<SortField>('citations');
   
   const handleSort = (field: SortField) => {
@@ -153,6 +154,7 @@ export function PublicationsList({ publications, openAccess }: PublicationsListP
         {sortedPublications.map((pub, index) => {
           const normalizedTitle = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
           const pubOaStatus = openAccess?.publicationOa?.[normalizedTitle];
+          const pubS2 = s2Data?.[normalizedTitle];
           return (
           <div key={index} className="border-b border-gray-100 dark:border-slate-700 last:border-0 pb-4 last:pb-0">
             <a
@@ -176,12 +178,26 @@ export function PublicationsList({ publications, openAccess }: PublicationsListP
                   {pub.venue && (
                     <span className="text-gray-400 dark:text-gray-500">{pub.venue}</span>
                   )}
+                  {pubS2 && pubS2.influentialCitationCount > 0 && (
+                    <span
+                      className="inline-flex items-center text-[#2d7d7d] dark:text-[#5bbdbd]"
+                      title="Influential citations — papers where this work is central to the citing paper's contribution (Semantic Scholar)"
+                    >
+                      <Star className="h-3 w-3 mr-0.5" />
+                      {pubS2.influentialCitationCount} influential
+                    </span>
+                  )}
                 </div>
                 {(pub.journalRanking || pubOaStatus) && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {pubOaStatus && <OaBadge status={pubOaStatus.status} oaUrl={pubOaStatus.oaUrl} />}
                     {pub.journalRanking && <JournalRankingBadge ranking={pub.journalRanking} />}
                   </div>
+                )}
+                {pubS2?.tldr && (
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic leading-relaxed">
+                    {pubS2.tldr}
+                  </p>
                 )}
               </div>
               <div className="flex flex-col items-center shrink-0 min-w-[60px]">
