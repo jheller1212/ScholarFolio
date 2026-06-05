@@ -157,11 +157,19 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       .sort((a, b) => a.localeCompare(b))
       .map(day => ({ day, searches: daySearchMap[day] || 0, signups: daySignupMap[day] || 0 }));
 
+    // SerpAPI usage this calendar month
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const serpApiThisMonth = rawData.searches.filter(
+      s => s.source === 'serpapi' && s.created_at >= monthStart
+    ).length;
+
     // Revenue
     const revenue = purchases.reduce((sum, p) => sum + (p.amount_cents || 0), 0) / 100;
     const creditsSold = purchases.reduce((sum, p) => sum + (p.credits || 0), 0);
 
     return {
+      serpApiThisMonth,
       searches: searches.length,
       searchesAllTime: rawData.dailyStats.reduce((sum, d) => sum + d.total_searches, 0) + todayLiveCount,
       bySources,
@@ -235,6 +243,40 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               <StatCard icon={<CreditCard className="h-4 w-4" />} label={`Revenue (${periodLabels[period].toLowerCase()})`} value={`€${stats.revenue.toFixed(2)}`} />
               <StatCard icon={<TrendingUp className="h-4 w-4" />} label={`Credits sold (${periodLabels[period].toLowerCase()})`} value={stats.creditsSold} />
             </div>
+
+            {/* SerpAPI usage */}
+            {(() => {
+              const limit = 250;
+              const used = stats.serpApiThisMonth;
+              const pct = Math.round((used / limit) * 100);
+              const isWarning = used >= 200;
+              const isCritical = used >= 230;
+              return (
+                <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
+                  isCritical ? 'bg-red-50 border-red-200' : isWarning ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
+                }`}>
+                  {(isWarning || isCritical) && <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-semibold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-gray-700'}`}>
+                        SerpAPI Usage — {new Date().toLocaleString('en-US', { month: 'long' })}
+                      </span>
+                      <span className={`text-xs font-mono font-bold ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-600'}`}>
+                        {used} / {limit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-[#2d7d7d]'}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    {isCritical && <p className="text-[10px] text-red-600 mt-1">Critical: approaching monthly limit. New lookups may fail.</p>}
+                    {isWarning && !isCritical && <p className="text-[10px] text-amber-600 mt-1">Warning: 80% of monthly SerpAPI quota used.</p>}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Detail cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
