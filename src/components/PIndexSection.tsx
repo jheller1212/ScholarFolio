@@ -90,7 +90,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
 
   const sortedWorks = useMemo(() => {
     if (matchStatuses.size === 0) return allWorks;
-    const order: Record<MatchStatus, number> = { confirmed: 0, likely: 1, unmatched: 2 };
+    const order: Record<MatchStatus, number> = { likely: 0, unmatched: 1, confirmed: 2 };
     return [...allWorks].sort((a, b) => {
       const statusA = matchStatuses.get(a.id) ?? 'unmatched';
       const statusB = matchStatuses.get(b.id) ?? 'unmatched';
@@ -199,6 +199,8 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       return;
     }
 
+    setResult(null);
+    onResult?.(null);
     setStep('computing');
     setProgress({ pct: 0, status: 'Starting…' });
 
@@ -359,7 +361,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
                 {includedCount} of {allWorks.length} selected.
                 {matchSummary && (
                   <span className="ml-1">
-                    {matchSummary.confirmed} confirmed · {matchSummary.likely} possible · {matchSummary.unmatched} unmatched
+                    {matchSummary.likely} possible · {matchSummary.unmatched} unmatched · {matchSummary.confirmed} confirmed
                   </span>
                 )}
               </p>
@@ -385,7 +387,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
             <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2 mb-3">
               <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
               <p className="text-[11px] text-green-700 dark:text-green-300">
-                Publications found in your Google Scholar profile are pre-selected (green). Unmatched items are unchecked — review and include any that are yours.
+                Items needing your review appear first. Confirmed matches (green) are at the bottom. Unmatched items are unchecked — review and include any that are yours.
               </p>
             </div>
           ) : (
