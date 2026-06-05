@@ -4,9 +4,10 @@ import { Logo } from './Logo';
 
 interface AboutPageProps {
   onBack: () => void;
+  headerControls?: React.ReactNode;
 }
 
-export function AboutPage({ onBack }: AboutPageProps) {
+export function AboutPage({ onBack, headerControls }: AboutPageProps) {
   return (
     <main className="flex-1 mesh-bg min-h-screen">
       <nav className="border-b border-gray-200/60 bg-white/60 backdrop-blur-lg sticky top-0 z-10">
@@ -16,6 +17,9 @@ export function AboutPage({ onBack }: AboutPageProps) {
           </button>
           <Logo size={28} />
           <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <div className="ml-auto flex items-center gap-2">
+            {headerControls}
+          </div>
         </div>
       </nav>
 

@@ -338,7 +338,7 @@ function AppContent() {
       if (!isAdmin) { handleNavigate('home'); return null; }
       return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
     }
-    if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} headerControls={authControls} /></div>;
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'changelog') return <div className="page-enter"><ChangelogPage onBack={() => handleNavigate('home')} /></div>;

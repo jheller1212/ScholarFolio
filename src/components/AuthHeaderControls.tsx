@@ -102,17 +102,17 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
       {credits !== null && (
         <button
           onClick={onBuyCredits}
-          className={`flex items-center gap-1 px-2 py-1 text-[10px] rounded-md transition-colors whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
             credits <= 2 && credits > 0
               ? 'text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100'
               : credits <= 0
                 ? 'text-red-700 bg-red-50 border border-red-200 hover:bg-red-100'
-                : 'text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                : 'text-[#2d7d7d] bg-[#eaf4f4] border border-[#2d7d7d]/20 hover:bg-[#d5ebeb]'
           }`}
           title="Buy more searches"
         >
-          <Coins className="h-3 w-3" />
-          {credits} credits
+          <Coins className="h-3.5 w-3.5" />
+          {credits} credit{credits !== 1 ? 's' : ''}
         </button>
       )}
 
