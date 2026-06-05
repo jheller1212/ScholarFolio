@@ -1,0 +1,20 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Production: main branch → scholarfolio.org
+[context.production]
+  environment = { VITE_SUPABASE_URL = "https://mixaxkywkojoclgbjjur.supabase.co" }
+
+# Staging: develop branch → develop--scholarfolio.netlify.app
+[context.branch-deploy]
+  environment = { VITE_SUPABASE_URL = "https://ziuhowdrhdcogyqvvhst.supabase.co", VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppdWhvd2RyaGRjb2d5cXZ2aHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDMxNzQsImV4cCI6MjA5NjIxOTE3NH0.HO2JTwQevpv_z9moGCusOA7YhqktypgpvOyhDrGzUnY" }
+
+# PR deploy previews → deploy-preview-NNN--scholarfolio.netlify.app
+[context.deploy-preview]
+  environment = { VITE_SUPABASE_URL = "https://ziuhowdrhdcogyqvvhst.supabase.co", VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppdWhvd2RyaGRjb2d5cXZ2aHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NDMxNzQsImV4cCI6MjA5NjIxOTE3NH0.HO2JTwQevpv_z9moGCusOA7YhqktypgpvOyhDrGzUnY" }
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
