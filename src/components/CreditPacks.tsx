@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Zap, X, Shield, Clock, Check, Sparkles, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthButton } from './AuthButton';
+import { logCaughtError } from '../lib/errorLogger';
 
 const PACKS = [
   {
@@ -65,7 +66,8 @@ export function CreditPacks({ onClose }: { onClose: () => void }) {
         window.location.href = data.url;
       }
     } catch (err) {
-      setError('Failed to create checkout session. Please try again.');
+      logCaughtError(err, 'profile', 'CreditPacks', 'create-checkout');
+      setError('Failed to create checkout session. Please try again. (SF-PAY)');
     } finally {
       setLoading(null);
     }

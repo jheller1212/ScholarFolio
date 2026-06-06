@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { logCaughtError } from '../lib/errorLogger';
 import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { findJournalRanking } from '../data/journalRankings';
@@ -902,7 +903,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
         newWindow?.close();
       }
     } catch (err) {
-      console.warn('[Narrative] Author search failed for:', authorName, err);
+      logCaughtError(err, 'profile', 'ResearcherNarrative', 'author-link-search', { authorName });
       newWindow?.close();
     } finally {
       setSearchingAuthor(null);

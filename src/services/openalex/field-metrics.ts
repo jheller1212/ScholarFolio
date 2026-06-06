@@ -1,4 +1,5 @@
 import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { logCaughtError } from '../../lib/errorLogger';
 import type { FieldNormalizedMetrics } from '../../types/scholar';
 
 export type { FieldNormalizedMetrics };
@@ -74,7 +75,7 @@ export async function fetchFieldNormalizedMetrics(
       rcrPaperCount: 0,
     };
   } catch (error) {
-    console.warn('[OpenAlex] Error fetching field-normalized metrics:', error);
+    logCaughtError(error, 'openalex', 'field-metrics', 'fetch-field-normalized');
     return null;
   }
 }

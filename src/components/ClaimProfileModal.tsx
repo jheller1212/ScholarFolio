@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/errorLogger';
 
 interface ClaimProfileModalProps {
   onClose: () => void;
@@ -62,6 +63,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
       .maybeSingle();
 
     if (error) {
+      logError({ category: 'profile', message: `Slug check failed: ${error.message}`, component: 'ClaimProfileModal', action: 'check-slug', context: { code: error.code } });
       setSlugStatus('idle');
       return;
     }

@@ -8,6 +8,7 @@ import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw } from 'lu
 import type { Publication, CoAuthorGeoData } from '../types/scholar';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { timeoutSignal } from '../utils/api';
+import { logCaughtError } from '../lib/errorLogger';
 
 interface CoAuthorMapProps {
   publications: Publication[];
@@ -93,6 +94,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
         setGeoData(result);
         setLoading(false);
       }
+    }).catch(err => {
+      logCaughtError(err, 'openalex', 'CoAuthorMap', 'fetch-geo-data');
+      if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
   }, [authorName, authorAffiliation, publications, prefetchedData]);
@@ -361,7 +365,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
         }
       })
       .catch(err => {
-        console.warn('[CoAuthorMap] Failed to load world map data:', err);
+        logCaughtError(err, 'navigation', 'CoAuthorMap', 'load-world-topojson');
         setMapError(true);
       });
   }, [geoData]);
