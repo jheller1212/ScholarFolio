@@ -42,6 +42,7 @@ export class RateLimiter {
 
   public clear(): void {
     this.timestamps = [];
+    this.pending = Promise.resolve();
   }
 }
 

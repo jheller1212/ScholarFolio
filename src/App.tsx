@@ -265,16 +265,24 @@ function AppContent() {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
 
             // Enrich with Semantic Scholar data using DOIs from OpenAlex
-            const doiMap = oaStats.doiMap
-              ? new Map(Object.entries(oaStats.doiMap))
-              : undefined;
+            // Re-key doiMap from OA normalization (alphanumeric) to S2 normalization (keeps spaces)
+            let doiMap: Map<string, string> | undefined;
+            if (oaStats.doiMap) {
+              doiMap = new Map<string, string>();
+              for (const pub of sanitizedData.publications) {
+                const oaKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const s2Key = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+                const doi = oaStats.doiMap[oaKey];
+                if (doi) doiMap.set(s2Key, doi);
+              }
+            }
             enrichWithSemanticScholar(sanitizedData.publications, doiMap)
               .then(s2Result => {
+                console.log(`[S2] Matched ${s2Result.stats.matched}/${s2Result.stats.total} papers, ${s2Result.stats.totalInfluentialCitations} influential citations`);
                 // Re-key using PublicationsList normalization (lowercase, alphanumeric only)
                 const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
                 for (const pub of sanitizedData.publications) {
                   const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                  // Find matching S2 data by checking the S2-normalized title
                   const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
                   const paper = s2Result.papers.get(s2Normalized);
                   if (paper) {
@@ -291,12 +299,13 @@ function AppContent() {
                   s2Stats: s2Result.stats,
                 } : prev);
               })
-              .catch(() => {}); // S2 enrichment is supplementary
+              .catch((err) => console.warn('[S2] Enrichment failed:', err));
           } else {
             setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
-            // Still try S2 without DOI map
+            // Still try S2 without DOI map (title search only, capped at 10)
             enrichWithSemanticScholar(sanitizedData.publications)
               .then(s2Result => {
+                console.log(`[S2] Matched ${s2Result.stats.matched}/${s2Result.stats.total} papers (no DOI map)`);
                 const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
                 for (const pub of sanitizedData.publications) {
                   const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -316,7 +325,7 @@ function AppContent() {
                   s2Stats: s2Result.stats,
                 } : prev);
               })
-              .catch(() => {});
+              .catch((err) => console.warn('[S2] Enrichment failed:', err));
           }
         })
         .catch(() => {
