@@ -282,8 +282,9 @@ export function ProfileView({
                         const { exportProfilePdf } = await import('../utils/pdfExport');
                         await exportProfilePdf(data, scholarId || undefined, prefetchedGeo);
                       } catch (err) {
-                        console.error('PDF export failed:', err);
-                        setExportError('PDF export failed. Please try again.');
+                        const { logCaughtError } = await import('../lib/errorLogger');
+                        logCaughtError(err, 'profile', 'ProfileView', 'export-pdf');
+                        setExportError('PDF export failed. Please try again. (SF-PDF)');
                       } finally {
                         setExportingPdf(false);
                       }

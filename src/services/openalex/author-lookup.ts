@@ -1,5 +1,6 @@
 import { timeoutSignal } from '../../utils/api';
 import { RateLimiter } from '../scholar/rate-limiter';
+import { logCaughtError } from '../../lib/errorLogger';
 
 const API_URL = 'https://api.openalex.org';
 const EMAIL = 'info@scholarfolio.org';
@@ -119,7 +120,8 @@ export async function findOpenAlexAuthor(
 
     authorCache.set(cacheKey, author);
     return author;
-  } catch {
+  } catch (err) {
+    logCaughtError(err, 'openalex', 'author-lookup', 'find-author', { name, affiliation });
     authorCache.set(cacheKey, null);
     return null;
   }
