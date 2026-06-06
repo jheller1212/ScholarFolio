@@ -27,37 +27,28 @@ const TAG_STYLES = {
 
 const changelog: ChangelogWeek[] = [
   {
-    label: 'June 5, 2026',
-    date: 'Today',
-    headline: 'Password reset, monthly credits, About page rewrite',
+    label: 'June 2–6, 2026',
+    date: 'This week',
+    headline: 'Semantic Scholar integration, error logging, staging environment',
     entries: [
+      { icon: <BookOpen className="h-4 w-4" />, text: 'Semantic Scholar integration — influential citation counts and AI-generated TLDRs on publications', tag: 'new' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Client-side error logging to Supabase with admin dashboard for debugging user issues', tag: 'new' },
+      { icon: <Zap className="h-4 w-4" />, text: 'Staging environment with develop branch and deploy previews for safer releases', tag: 'new' },
       { icon: <Shield className="h-4 w-4" />, text: 'Forgot password flow with branded email templates via custom SMTP (Resend)', tag: 'new' },
       { icon: <Sparkles className="h-4 w-4" />, text: 'Monthly free credit for signed-up users (1 credit when balance is 0)', tag: 'new' },
-      { icon: <Users className="h-4 w-4" />, text: 'Delete account now requires typing DELETE to confirm', tag: 'improved' },
-      { icon: <Eye className="h-4 w-4" />, text: 'Credits badge redesigned with brand colors, visible on all pages including About', tag: 'improved' },
-      { icon: <BarChart3 className="h-4 w-4" />, text: 'P-Index citation reference now links to the original JCR paper', tag: 'improved' },
-      { icon: <Globe className="h-4 w-4" />, text: 'Co-author links now show a branded loading screen instead of a blank page', tag: 'improved' },
-      { icon: <FileText className="h-4 w-4" />, text: 'About page rewritten in first-person conversational tone', tag: 'improved' },
-      { icon: <Shield className="h-4 w-4" />, text: 'SerpAPI usage tracker added to admin dashboard', tag: 'new' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed credits not loading (Supabase RPC TypeError), CSP blocking Google Fonts', tag: 'fix' },
-    ],
-  },
-  {
-    label: 'June 2–4, 2026',
-    date: 'This week',
-    headline: 'Narrative CV export, P-Index, GDPR compliance',
-    entries: [
       { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV overhaul — smarter research themes, ORCID auto-fill, geographic & field-normalized context, typewriter animation on first view', tag: 'improved' },
       { icon: <FileText className="h-4 w-4" />, text: 'Narrative CV export (Beta) — one-click Word download for NWO, ERC, and MSCA grant formats', tag: 'new' },
       { icon: <BarChart3 className="h-4 w-4" />, text: 'P-Index and field-normalized metrics (FWCI, RCR) with publication review step', tag: 'new' },
-      { icon: <Shield className="h-4 w-4" />, text: 'Full GDPR compliance — account deletion, data export, 30-day log retention, privacy policy', tag: 'new' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Full GDPR compliance — account deletion, data export, 30-day log retention, cookie disclosure', tag: 'new' },
       { icon: <Zap className="h-4 w-4" />, text: '40% bundle size reduction and accessibility improvements (ARIA, keyboard nav, dark mode)', tag: 'improved' },
-      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed co-author network crash and credit system race conditions', tag: 'fix' },
+      { icon: <Eye className="h-4 w-4" />, text: 'Credits badge redesigned with brand colors, About page rewritten', tag: 'improved' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed P-Index hanging for other users, narrative venue ordering, admin dashboard visibility', tag: 'fix' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Fixed co-author network crash, credit system race conditions, and CORS for deploy previews', tag: 'fix' },
     ],
   },
   {
     label: 'May 12–22, 2026',
-    date: '2–3 weeks ago',
+    date: '3 weeks ago',
     headline: 'Field metrics, world map improvements, user menu redesign',
     entries: [
       { icon: <BarChart3 className="h-4 w-4" />, text: 'Field-normalized metrics card — FWCI, mean journal impact, and Relative Citation Ratio', tag: 'new' },
@@ -68,7 +59,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'May 7–11, 2026',
-    date: '4 weeks ago',
+    date: '5 weeks ago',
     headline: 'Co-author World Map',
     entries: [
       { icon: <Globe className="h-4 w-4" />, text: 'Co-author World Map — interactive globe showing where your collaborators are based, with continent coloring and region presets', tag: 'new' },
@@ -77,7 +68,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'April 26–27, 2026',
-    date: '5 weeks ago',
+    date: '6 weeks ago',
     headline: 'Claim your profile, visual redesign',
     entries: [
       { icon: <Users className="h-4 w-4" />, text: 'Claim your profile — get a vanity URL (scholarfolio.org/profile/yourname) with verified badge and share snippets', tag: 'new' },
@@ -87,7 +78,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'March 18–20, 2026',
-    date: '~11 weeks ago',
+    date: '~12 weeks ago',
     headline: 'Open Science tab, admin dashboard',
     entries: [
       { icon: <BookOpen className="h-4 w-4" />, text: 'Open Science tab — per-publication OA badges, interactive OA trend chart, ORCID integration via OpenAlex', tag: 'new' },
