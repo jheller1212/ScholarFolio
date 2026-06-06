@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { oaFetchJson, OA_API_URL, OA_EMAIL, oaRateLimiter } from '../services/openalex/author-lookup';
+import { OA_API_URL, OA_EMAIL, OA_HEADERS, oaRateLimiter } from '../services/openalex/author-lookup';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
 
@@ -123,24 +123,30 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     setStep('searching');
     setErrorMsg('');
 
-    const query = `${firstName} ${lastName}`;
-    const data = await oaFetchJson<{ results: OpenAlexSearchResult[] }>(
-      `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`
-    );
+    try {
+      const query = `${firstName} ${lastName}`;
+      const url = `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`;
+      // Direct fetch — bypass the shared rate limiter to avoid queuing behind OA stats
+      const response = await fetch(url, { headers: OA_HEADERS, signal: AbortSignal.timeout(15000) });
+      if (!response.ok) {
+        setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again.');
+        setStep('error');
+        return;
+      }
+      const data: { results: OpenAlexSearchResult[] } = await response.json();
 
-    if (!data) {
-      setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again.');
-      setStep('error');
-      return;
-    }
-    if (!data.results?.length) {
-      setErrorMsg('No authors found in OpenAlex. Try adjusting the name.');
-      setStep('error');
-      return;
-    }
+      if (!data.results?.length) {
+        setErrorMsg('No authors found in OpenAlex. Try adjusting the name.');
+        setStep('error');
+        return;
+      }
 
-    setSearchResults(data.results);
-    setStep('select');
+      setSearchResults(data.results);
+      setStep('select');
+    } catch {
+      setErrorMsg('Could not reach OpenAlex. Please check your connection and try again.');
+      setStep('error');
+    }
   }, [firstName, lastName]);
 
   const handleSelectAuthor = useCallback(async (author: OpenAlexSearchResult) => {
@@ -150,7 +156,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     try {
       const works = await fetchPIndexWorks(author.id);
       if (works.length === 0) {
-        setErrorMsg('No publications found for this author in OpenAlex.');
+        setErrorMsg(`No publications found for ${author.display_name} (${author.id}) in OpenAlex.`);
         setStep('error');
         return;
       }
@@ -186,8 +192,9 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       }
 
       setStep('review');
-    } catch {
-      setErrorMsg('Failed to fetch publications. Please try again.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Failed to fetch publications: ${msg}`);
       setStep('error');
     }
   }, [scrapedPublications]);
@@ -236,8 +243,9 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
         setErrorMsg('Could not compute p-index. No publications with journal data found.');
         setStep('error');
       }
-    } catch {
-      setErrorMsg('Calculation failed. Please try again later.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(`Calculation failed: ${msg}`);
       setStep('error');
     }
   }, [selectedAuthor, allWorks, excludedIds, onResult]);

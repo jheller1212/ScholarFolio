@@ -15,9 +15,13 @@ export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T 
   try {
     await oaRateLimiter.acquireToken();
     const response = await fetch(url, { headers: OA_HEADERS, signal: timeoutSignal(timeoutMs) });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.warn(`[OpenAlex] HTTP ${response.status} for ${url.split('?')[0]}`);
+      return null;
+    }
     return await response.json() as T;
-  } catch {
+  } catch (err) {
+    console.warn('[OpenAlex] Fetch failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }
