@@ -194,7 +194,6 @@ function normalizeScholarUrl(url: string): string {
     // Create a clean normalized URL with just the user parameter
     const normalizedUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userId)}`;
     
-    console.log('[ScholarService] Normalized URL:', normalizedUrl);
     return normalizedUrl;
   } catch (e) {
     console.error('[ScholarService] Error normalizing URL:', e);
