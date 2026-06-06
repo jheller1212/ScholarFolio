@@ -133,14 +133,14 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       // The mailto= param in the URL is sufficient for OpenAlex polite pool
       const response = await fetch(url, { signal: timeoutSignal(15000) });
       if (!response.ok) {
-        setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again.');
+        setErrorMsg(`Could not reach OpenAlex (HTTP ${response.status}). Please wait a moment and try again. (SF-PI-SEARCH)`);
         setStep('error');
         return;
       }
       const data: { results: OpenAlexSearchResult[] } = await response.json();
 
       if (!data.results?.length) {
-        setErrorMsg('No authors found in OpenAlex. Try adjusting the name.');
+        setErrorMsg('No authors found in OpenAlex. Try adjusting the name. (SF-PI-NORESULT)');
         setStep('error');
         return;
       }
@@ -150,7 +150,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logCaughtError(err, 'pindex', 'PIndexSection', 'search', { firstName, lastName, institution });
-      setErrorMsg(`Could not reach OpenAlex: ${msg}`);
+      setErrorMsg(`Could not reach OpenAlex: ${msg} (SF-PI-NET)`);
       setStep('error');
     }
   }, [firstName, lastName, institution]);
@@ -162,7 +162,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     try {
       const works = await fetchPIndexWorks(author.id);
       if (works.length === 0) {
-        setErrorMsg(`No publications found for ${author.display_name} (${author.id}) in OpenAlex.`);
+        setErrorMsg(`No publications found for ${author.display_name} in OpenAlex. (SF-PI-NOPUBS)`);
         setStep('error');
         return;
       }
@@ -201,7 +201,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logCaughtError(err, 'pindex', 'PIndexSection', 'fetch-works', { authorId: author.id, authorName: author.display_name });
-      setErrorMsg(`Failed to fetch publications: ${msg}`);
+      setErrorMsg(`Failed to fetch publications: ${msg} (SF-PI-WORKS)`);
       setStep('error');
     }
   }, [scrapedPublications]);
@@ -247,13 +247,13 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
         onResult?.(pIndex);
         setStep('done');
       } else {
-        setErrorMsg('Could not compute p-index. No publications with journal data found.');
+        setErrorMsg('Could not compute p-index. No publications with journal data found. (SF-PI-NOJOURNAL)');
         setStep('error');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       logCaughtError(err, 'pindex', 'PIndexSection', 'compute', { authorId: selectedAuthor?.id, includedCount: included.length });
-      setErrorMsg(`Calculation failed: ${msg}`);
+      setErrorMsg(`Calculation failed: ${msg} (SF-PI-CALC)`);
       setStep('error');
     }
   }, [selectedAuthor, allWorks, excludedIds, onResult]);

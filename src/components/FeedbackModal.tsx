@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { logCaughtError } from '../lib/errorLogger';
 
 interface FeedbackModalProps {
   mode: 'prompt' | 'button';
@@ -81,7 +82,8 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
         onSuccess(granted);
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      logCaughtError(err, 'profile', 'FeedbackModal', 'submit-feedback');
+      setError(err instanceof Error ? err.message : 'Something went wrong. (SF-FEEDBACK)');
       setSubmitting(false);
     }
   };

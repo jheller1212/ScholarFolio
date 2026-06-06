@@ -176,7 +176,8 @@ function AppContent() {
             const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(claim.author_id)}`;
             handleSearchRef.current(scholarUrl, true, true);
           }
-        });
+        })
+        .catch((err: unknown) => logCaughtError(err, 'navigation', 'App', 'load-vanity-slug', { pathSlug }));
     }
   }, [initialUrlHandled]);
 

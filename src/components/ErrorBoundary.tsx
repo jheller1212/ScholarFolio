@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { logError } from '../lib/errorLogger';
 
 interface Props {
   children: ReactNode;
@@ -25,6 +26,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    logError({
+      category: 'unhandled',
+      message: error.message,
+      stack: error.stack,
+      component: errorInfo.componentStack?.split('\n')[1]?.trim() || 'ErrorBoundary',
+      action: 'react_render_crash',
+    });
   }
 
   public render() {
@@ -39,6 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-sm text-gray-600 mb-4">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
+            <p className="text-[10px] text-gray-400 mb-4 font-mono">Error code: SF-CRASH</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-[#1e293b] text-white rounded-lg hover:bg-slate-800 transition-colors"
