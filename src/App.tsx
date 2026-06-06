@@ -25,6 +25,7 @@ import { scholarService } from './services/scholar';
 import { openAlexService } from './services/openalex';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
+import { logCaughtError, logError } from './lib/errorLogger';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -299,9 +300,13 @@ function AppContent() {
                   s2Stats: s2Result.stats,
                 } : prev);
               })
-              .catch((err) => console.warn('[S2] Enrichment failed:', err));
+              .catch((err) => {
+                console.warn('[S2] Enrichment failed:', err);
+                logCaughtError(err, 's2', 'App', 'enrich-with-dois', { pubCount: sanitizedData.publications.length });
+              });
           } else {
             setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
+            logError({ category: 'openalex', message: 'OA stats returned null', component: 'App', action: 'fetch-oa-stats', context: { name: sanitizedData.name } });
             // Still try S2 without DOI map (title search only, capped at 10)
             enrichWithSemanticScholar(sanitizedData.publications)
               .then(s2Result => {
@@ -325,11 +330,15 @@ function AppContent() {
                   s2Stats: s2Result.stats,
                 } : prev);
               })
-              .catch((err) => console.warn('[S2] Enrichment failed:', err));
+              .catch((err) => {
+                console.warn('[S2] Enrichment failed:', err);
+                logCaughtError(err, 's2', 'App', 'enrich-no-dois', { pubCount: sanitizedData.publications.length });
+              });
           }
         })
-        .catch(() => {
+        .catch((err) => {
           setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
+          logCaughtError(err, 'openalex', 'App', 'fetch-oa-stats', { name: sanitizedData.name });
         });
 
       // Fetch field-normalized metrics from OpenAlex + iCite (non-blocking)
@@ -339,7 +348,7 @@ function AppContent() {
             setData(prev => prev ? { ...prev, fieldMetrics } : prev);
           }
         })
-        .catch(() => {}); // Silently ignore — field metrics are supplementary
+        .catch((err) => logCaughtError(err, 'openalex', 'App', 'fetch-field-metrics', { name: sanitizedData.name }));
 
       // Update browser URL with shareable link (preserve vanity URL if loaded via slug)
       const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
@@ -352,10 +361,15 @@ function AppContent() {
 
       if (err instanceof ApiError) {
         errorMessage = err.message;
+        if (err.code !== 'CREDITS_EXHAUSTED') {
+          logCaughtError(err, 'profile', 'App', 'fetch-profile', { url, code: err.code });
+        }
       } else if (err instanceof Error) {
         errorMessage = err.message;
+        logCaughtError(err, 'profile', 'App', 'fetch-profile', { url });
       } else {
         errorMessage = 'An unexpected error occurred';
+        logError({ category: 'profile', message: errorMessage, component: 'App', action: 'fetch-profile', context: { url } });
       }
 
       setShowError(true);

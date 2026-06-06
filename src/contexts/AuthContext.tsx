@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/errorLogger';
 
 interface AuthState {
   user: User | null;
@@ -51,6 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error && data) {
       setCredits(data.credits_remaining);
     } else {
+      if (error) {
+        logError({ category: 'auth', message: `Credit fetch failed: ${error.message}`, component: 'AuthContext', action: 'fetch-credits', context: { code: error.code } });
+      }
       setCredits(0);
     }
   };

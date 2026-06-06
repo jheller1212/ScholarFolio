@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare, Bug } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -54,6 +54,13 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string; resolved: boolean; resolved_note: string | null }>>([]);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolveNote, setResolveNote] = useState('');
+  const [clientErrors, setClientErrors] = useState<Array<{
+    id: number; created_at: string; category: string; message: string;
+    stack: string | null; component: string | null; action: string | null;
+    context: Record<string, unknown>; browser: string | null; os: string | null;
+    screen_size: string | null; url: string | null; session_id: string | null;
+  }>>([]);
+  const [errorFilter, setErrorFilter] = useState<string>('all');
 
   const userEmail = user?.email || user?.user_metadata?.email || '';
   const isAdmin = userEmail === ADMIN_EMAIL;
@@ -86,13 +93,14 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           return allLogs;
         }
 
-        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes] = await Promise.all([
+        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes, clientErrorsRes] = await Promise.all([
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
           supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
           supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
           supabase.from('feedback').select('id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
+          supabase.from('client_errors').select('id,created_at,category,message,stack,component,action,context,browser,os,screen_size,url,session_id').order('created_at', { ascending: false }).limit(200),
         ]);
 
         if (usersRes.error) throw usersRes.error;
@@ -106,6 +114,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           feedback: feedbackRes.data || [],
         });
         if (reportsRes.data) setReports(reportsRes.data);
+        if (clientErrorsRes.data) setClientErrors(clientErrorsRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load stats');
       } finally {
@@ -478,6 +487,73 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                       </div>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Client Error Log */}
+        {clientErrors.length > 0 && (
+          <div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Bug className="h-4 w-4 text-red-500" />
+                Client Errors ({clientErrors.length})
+              </h3>
+              <div className="flex gap-1">
+                {['all', 'pindex', 'profile', 'openalex', 's2', 'auth', 'unhandled'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setErrorFilter(cat)}
+                    className={`px-2 py-0.5 text-[10px] rounded-full ${errorFilter === cat ? 'bg-red-100 text-red-700 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {clientErrors
+                .filter(e => errorFilter === 'all' || e.category === errorFilter)
+                .map(err => (
+                <div key={err.id} className="border border-gray-100 rounded-lg p-3 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                          err.category === 'pindex' ? 'bg-violet-100 text-violet-700' :
+                          err.category === 'profile' ? 'bg-red-100 text-red-700' :
+                          err.category === 'unhandled' ? 'bg-red-200 text-red-800' :
+                          err.category === 's2' ? 'bg-teal-100 text-teal-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {err.category}
+                        </span>
+                        {err.action && <span className="text-gray-400">{err.action}</span>}
+                        {err.component && <span className="text-gray-300">in {err.component}</span>}
+                      </div>
+                      <p className="text-gray-700 font-mono break-all">{err.message}</p>
+                      {err.context && Object.keys(err.context).length > 0 && (
+                        <p className="text-gray-400 mt-1 font-mono text-[10px] break-all">
+                          {JSON.stringify(err.context)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right flex-shrink-0 text-[10px] text-gray-400 space-y-0.5">
+                      <p>{new Date(err.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      {err.browser && <p>{err.browser}</p>}
+                      {err.os && <p>{err.os}</p>}
+                      {err.screen_size && <p>{err.screen_size}</p>}
+                    </div>
+                  </div>
+                  {err.stack && (
+                    <details className="mt-2">
+                      <summary className="text-[10px] text-gray-400 cursor-pointer hover:text-gray-600">Stack trace</summary>
+                      <pre className="mt-1 text-[10px] text-gray-400 font-mono whitespace-pre-wrap break-all max-h-32 overflow-y-auto bg-gray-50 p-2 rounded">
+                        {err.stack}
+                      </pre>
+                    </details>
+                  )}
                 </div>
               ))}
             </div>

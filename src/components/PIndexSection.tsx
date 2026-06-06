@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { OA_API_URL, OA_EMAIL, OA_HEADERS, oaRateLimiter } from '../services/openalex/author-lookup';
+import { logCaughtError } from '../lib/errorLogger';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
 
@@ -143,11 +144,13 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
 
       setSearchResults(data.results);
       setStep('select');
-    } catch {
-      setErrorMsg('Could not reach OpenAlex. Please check your connection and try again.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logCaughtError(err, 'pindex', 'PIndexSection', 'search', { firstName, lastName, institution });
+      setErrorMsg(`Could not reach OpenAlex: ${msg}`);
       setStep('error');
     }
-  }, [firstName, lastName]);
+  }, [firstName, lastName, institution]);
 
   const handleSelectAuthor = useCallback(async (author: OpenAlexSearchResult) => {
     setSelectedAuthor(author);
@@ -194,6 +197,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       setStep('review');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      logCaughtError(err, 'pindex', 'PIndexSection', 'fetch-works', { authorId: author.id, authorName: author.display_name });
       setErrorMsg(`Failed to fetch publications: ${msg}`);
       setStep('error');
     }
@@ -245,6 +249,7 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      logCaughtError(err, 'pindex', 'PIndexSection', 'compute', { authorId: selectedAuthor?.id, includedCount: included.length });
       setErrorMsg(`Calculation failed: ${msg}`);
       setStep('error');
     }
