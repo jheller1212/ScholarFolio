@@ -199,6 +199,24 @@ function AppContent() {
   };
   const ANON_FREE_LIMIT = 5;
 
+  /** Re-key S2 enrichment results to PublicationsList normalization and update state */
+  const applyS2Data = (s2Result: Awaited<ReturnType<typeof enrichWithSemanticScholar>>, pubs: Array<{ title: string }>) => {
+    const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
+    for (const pub of pubs) {
+      const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+      const paper = s2Result.papers.get(s2Normalized);
+      if (paper) {
+        s2Data[pubKey] = {
+          influentialCitationCount: paper.influentialCitationCount,
+          tldr: paper.tldr?.text,
+          s2CitationCount: paper.citationCount,
+        };
+      }
+    }
+    setData(prev => prev ? { ...prev, s2Data, s2Stats: s2Result.stats } : prev);
+  };
+
   const handleSearch = useCallback(async (url: string, bypassCredits = false, cacheOnly = false) => {
     // Prevent multiple concurrent requests using ref to avoid stale closure
     if (requestInProgressRef.current) {
@@ -279,29 +297,9 @@ function AppContent() {
             }
             enrichWithSemanticScholar(sanitizedData.publications, doiMap)
               .then(s2Result => {
-                console.log(`[S2] Matched ${s2Result.stats.matched}/${s2Result.stats.total} papers, ${s2Result.stats.totalInfluentialCitations} influential citations`);
-                // Re-key using PublicationsList normalization (lowercase, alphanumeric only)
-                const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
-                for (const pub of sanitizedData.publications) {
-                  const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                  const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-                  const paper = s2Result.papers.get(s2Normalized);
-                  if (paper) {
-                    s2Data[pubKey] = {
-                      influentialCitationCount: paper.influentialCitationCount,
-                      tldr: paper.tldr?.text,
-                      s2CitationCount: paper.citationCount,
-                    };
-                  }
-                }
-                setData(prev => prev ? {
-                  ...prev,
-                  s2Data,
-                  s2Stats: s2Result.stats,
-                } : prev);
+                applyS2Data(s2Result, sanitizedData.publications);
               })
               .catch((err) => {
-                console.warn('[S2] Enrichment failed:', err);
                 logCaughtError(err, 's2', 'App', 'enrich-with-dois', { pubCount: sanitizedData.publications.length });
               });
           } else {
@@ -310,28 +308,9 @@ function AppContent() {
             // Still try S2 without DOI map (title search only, capped at 10)
             enrichWithSemanticScholar(sanitizedData.publications)
               .then(s2Result => {
-                console.log(`[S2] Matched ${s2Result.stats.matched}/${s2Result.stats.total} papers (no DOI map)`);
-                const s2Data: Record<string, { influentialCitationCount: number; tldr?: string; s2CitationCount?: number }> = {};
-                for (const pub of sanitizedData.publications) {
-                  const pubKey = pub.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                  const s2Normalized = pub.title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-                  const paper = s2Result.papers.get(s2Normalized);
-                  if (paper) {
-                    s2Data[pubKey] = {
-                      influentialCitationCount: paper.influentialCitationCount,
-                      tldr: paper.tldr?.text,
-                      s2CitationCount: paper.citationCount,
-                    };
-                  }
-                }
-                setData(prev => prev ? {
-                  ...prev,
-                  s2Data,
-                  s2Stats: s2Result.stats,
-                } : prev);
+                applyS2Data(s2Result, sanitizedData.publications);
               })
               .catch((err) => {
-                console.warn('[S2] Enrichment failed:', err);
                 logCaughtError(err, 's2', 'App', 'enrich-no-dois', { pubCount: sanitizedData.publications.length });
               });
           }
