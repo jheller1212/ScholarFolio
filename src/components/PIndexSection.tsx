@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { OA_API_URL, OA_EMAIL, OA_HEADERS, oaRateLimiter } from '../services/openalex/author-lookup';
+import { OA_API_URL, OA_EMAIL, oaRateLimiter } from '../services/openalex/author-lookup';
+import { timeoutSignal } from '../utils/api';
 import { logCaughtError } from '../lib/errorLogger';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
@@ -128,7 +129,9 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
       const query = `${firstName} ${lastName}`;
       const url = `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`;
       // Direct fetch — bypass the shared rate limiter to avoid queuing behind OA stats
-      const response = await fetch(url, { headers: OA_HEADERS, signal: AbortSignal.timeout(15000) });
+      // Don't send OA_HEADERS (custom User-Agent is a forbidden header on Firefox/mobile)
+      // The mailto= param in the URL is sufficient for OpenAlex polite pool
+      const response = await fetch(url, { signal: timeoutSignal(15000) });
       if (!response.ok) {
         setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again.');
         setStep('error');
