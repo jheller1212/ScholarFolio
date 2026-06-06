@@ -1,1 +1,1 @@
-export const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+export const ADMIN_EMAIL = 'jonasheller89@gmail.com';
