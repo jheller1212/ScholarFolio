@@ -94,9 +94,10 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
 
   return Array.from(venueCounts.values())
     .sort((a, b) => {
-      const prestigeDiff = prestigeScore(b.displayName) - prestigeScore(a.displayName);
-      if (prestigeDiff !== 0) return prestigeDiff;
-      return b.count - a.count; // Fall back to publication count
+      // Primary sort: publication count (descending) — narrative says "most frequent"
+      if (b.count !== a.count) return b.count - a.count;
+      // Tiebreak: prestige
+      return prestigeScore(b.displayName) - prestigeScore(a.displayName);
     })
     .slice(0, limit)
     .map(v => ({ name: v.displayName, count: v.count }));
