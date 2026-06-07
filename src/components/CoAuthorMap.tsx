@@ -624,7 +624,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                   }
                   setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
                   try {
-                    const results = await scholarService.searchAuthors(clickedCoAuthor.name);
+                    const results = await scholarService.searchAuthors(clickedCoAuthor.fullName || clickedCoAuthor.name);
                     if (results.length >= 1) {
                       const authorId = results[0].authorId;
                       setScholarIdLookup({ loading: false, scholarId: authorId, notFound: false });
