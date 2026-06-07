@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin } from 'lucide-react';
+import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin, GraduationCap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
@@ -279,6 +279,24 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
                 <p className="text-xs text-gray-500">Ready-to-post text with your link</p>
               </div>
               {copiedSnippet === 'linkedin' && <span className="text-xs text-emerald-600 font-medium">Copied!</span>}
+            </button>
+
+            {/* Google Scholar homepage */}
+            <button
+              onClick={() => {
+                copyToClipboard(profileUrl, 'scholar');
+                window.open('https://scholar.google.com/citations?view_op=edit_profile', '_blank');
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50/50 hover:border-amber-300 hover:bg-amber-50 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <GraduationCap className="h-4 w-4 text-amber-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">Add to Google Scholar</p>
+                <p className="text-xs text-gray-500">Paste your link as your Scholar homepage — it shows up when people search your name</p>
+              </div>
+              {copiedSnippet === 'scholar' && <span className="text-xs text-emerald-600 font-medium">Copied!</span>}
             </button>
           </div>
 

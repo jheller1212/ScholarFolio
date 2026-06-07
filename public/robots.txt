@@ -4,6 +4,8 @@
 User-agent: *
 Allow: /
 
+Sitemap: https://scholarfolio.org/sitemap.xml
+
 # Block AI training crawlers
 User-agent: GPTBot
 Disallow: /

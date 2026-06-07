@@ -4,7 +4,7 @@ import { zoom as d3Zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { geoNaturalEarth1, geoPath, geoCentroid, geoInterpolate, type GeoPermissibleObjects, type GeoProjection } from 'd3-geo';
 import * as topojson from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
-import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw, ExternalLink, Share2, Loader2 } from 'lucide-react';
 import type { Publication, CoAuthorGeoData } from '../types/scholar';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { timeoutSignal } from '../utils/api';
@@ -77,6 +77,8 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
   const [loading, setLoading] = useState(true);
   const [geoData, setGeoData] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, data: null });
+  const [clickedCoAuthor, setClickedCoAuthor] = useState<CoAuthorGeoData | null>(null);
+  const [scholarIdLookup, setScholarIdLookup] = useState<{ loading: boolean; scholarId: string | null; notFound: boolean }>({ loading: false, scholarId: null, notFound: false });
   const [mapError, setMapError] = useState(false);
   const [activeRegion, setActiveRegion] = useState('world');
 
@@ -313,7 +315,13 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                 y: touch.clientY - rect.top - 8,
                 data: coAuthor
               });
-            }, { passive: true });
+            }, { passive: true })
+            .on('click', (event: MouseEvent) => {
+              event.stopPropagation();
+              setClickedCoAuthor(coAuthor);
+              setScholarIdLookup({ loading: false, scholarId: null, notFound: false });
+              setTooltip(prev => ({ ...prev, visible: false }));
+            });
         });
 
         // Draw main author dot (on top)
@@ -570,6 +578,92 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
         </div>
       )}
 
+      {/* Co-author click popup */}
+      {clickedCoAuthor && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setClickedCoAuthor(null)}>
+          <div
+            className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-sm w-full p-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">{clickedCoAuthor.name}</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{clickedCoAuthor.institution}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{clickedCoAuthor.countryCode}</p>
+              </div>
+              <button onClick={() => setClickedCoAuthor(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+            {clickedCoAuthor.sharedPapers > 0 && (
+              <div className="text-sm text-gray-600 dark:text-gray-300 mb-4 pb-3 border-b border-gray-100 dark:border-slate-700">
+                <span className="text-[#2d7d7d] font-medium">{clickedCoAuthor.sharedPapers}</span> shared {clickedCoAuthor.sharedPapers === 1 ? 'paper' : 'papers'} · {clickedCoAuthor.sharedCitations.toLocaleString()} citations
+              </div>
+            )}
+            <div className="space-y-2">
+              <button
+                onClick={async () => {
+                  if (scholarIdLookup.loading) return;
+                  if (scholarIdLookup.scholarId) {
+                    window.open(`${window.location.origin}/?user=${scholarIdLookup.scholarId}`, '_blank');
+                    return;
+                  }
+                  setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
+                  try {
+                    // Search OpenAlex for co-author → get their Google Scholar external ID
+                    const searchUrl = `https://api.openalex.org/authors?search=${encodeURIComponent(clickedCoAuthor.name)}&per_page=5&select=id,display_name,ids&mailto=info@scholarfolio.org`;
+                    const resp = await fetch(searchUrl, { signal: timeoutSignal(10000) });
+                    const data = await resp.json();
+                    const results = data?.results || [];
+                    // Find best match by name
+                    const nameLower = clickedCoAuthor.name.toLowerCase().trim();
+                    const match = results.find((r: { display_name: string }) => r.display_name.toLowerCase().trim() === nameLower) || results[0];
+                    const gsUrl = match?.ids?.google_scholar as string | undefined;
+                    if (gsUrl) {
+                      // Extract Scholar ID from URL like "https://scholar.google.com/citations?user=ABC123"
+                      const gsMatch = gsUrl.match(/user=([A-Za-z0-9_-]+)/);
+                      if (gsMatch) {
+                        setScholarIdLookup({ loading: false, scholarId: gsMatch[1], notFound: false });
+                        window.open(`${window.location.origin}/?user=${gsMatch[1]}`, '_blank');
+                        return;
+                      }
+                    }
+                    setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
+                  } catch {
+                    setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
+              >
+                {scholarIdLookup.loading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Looking up profile...</>
+                ) : scholarIdLookup.notFound ? (
+                  <><ExternalLink className="h-4 w-4" /> Not found on Google Scholar</>
+                ) : (
+                  <><ExternalLink className="h-4 w-4" /> View on ScholarFolio</>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  const text = `Check out your research profile on ScholarFolio: ${window.location.origin}`;
+                  if (navigator.share) {
+                    navigator.share({ title: `${clickedCoAuthor.name} — ScholarFolio`, text, url: window.location.origin });
+                  } else {
+                    navigator.clipboard.writeText(text);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                <Share2 className="h-4 w-4" /> Share with {clickedCoAuthor.name.split(' ')[0]}
+              </button>
+              {scholarIdLookup.notFound && (
+                <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-1">
+                  No Google Scholar profile found. Share the link so they can create one!
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info box */}
       <div className="mt-4 text-xs text-gray-500 bg-[#eaf4f4]/50 rounded-lg p-3">
         <div className="flex items-start space-x-2">
@@ -580,6 +674,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
               <li>• Teal dot marks your location; darker dots are co-authors</li>
               <li>• Dot size scales with number of shared papers</li>
               <li>• Arcs show collaboration routes across the globe</li>
+              <li>• Click a co-author dot to view their profile or share ScholarFolio with them</li>
               <li>• Tap or hover a dot for details · Pinch or scroll to zoom · Drag to pan</li>
               <li>• Use region buttons or zoom controls to explore specific areas</li>
               <li>• Locations sourced from OpenAlex — top 50 co-authors by shared papers</li>
