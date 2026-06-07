@@ -2,7 +2,32 @@ import type { Handler, HandlerEvent } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const ORCID_TOKEN_URL = 'https://orcid.org/oauth/token';
+const ORCID_API_URL = 'https://pub.orcid.org/v3.0';
 const SITE_URL = 'https://scholarfolio.org';
+
+interface OrcidEmail {
+  email: string;
+  primary: boolean;
+  verified: boolean;
+}
+
+/** Fetch public emails from the ORCID public API */
+async function fetchOrcidEmails(orcidId: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${ORCID_API_URL}/${orcidId}/email`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const emails: OrcidEmail[] = data?.email ?? [];
+    return emails
+      .filter((e) => e.email && e.verified)
+      .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0))
+      .map((e) => e.email.toLowerCase());
+  } catch {
+    return [];
+  }
+}
 
 const handler: Handler = async (event: HandlerEvent) => {
   const code = event.queryStringParameters?.code;
@@ -67,29 +92,45 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 
-  // Create or find Supabase user by synthetic email derived from ORCID iD
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const syntheticEmail = `${orcidId.replace(/-/g, '')}@orcid.scholarfolio.org`;
-
-  // Try to find existing user by synthetic email
   const { data: { users } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const existingUser = users?.find(
-    (u) => u.email === syntheticEmail || u.user_metadata?.orcid_id === orcidId
-  );
 
-  if (existingUser) {
-    // Update name if it changed
-    if (orcidName && existingUser.user_metadata?.full_name !== orcidName) {
-      await supabase.auth.admin.updateUserById(existingUser.id, {
-        user_metadata: { ...existingUser.user_metadata, full_name: orcidName },
+  // Priority 1: Find user who already has this ORCID linked (returning ORCID user)
+  let matchedUser = users?.find((u) => u.user_metadata?.orcid_id === orcidId);
+
+  // Priority 2: Match by email from ORCID's public profile
+  if (!matchedUser) {
+    const orcidEmails = await fetchOrcidEmails(orcidId);
+    if (orcidEmails.length > 0) {
+      matchedUser = users?.find(
+        (u) => u.email && orcidEmails.includes(u.email.toLowerCase())
+      );
+    }
+  }
+
+  // Priority 3: Check for synthetic email (legacy ORCID-only user)
+  const syntheticEmail = `${orcidId.replace(/-/g, '')}@orcid.scholarfolio.org`;
+  if (!matchedUser) {
+    matchedUser = users?.find((u) => u.email === syntheticEmail);
+  }
+
+  let signInEmail: string;
+
+  if (matchedUser) {
+    signInEmail = matchedUser.email!;
+    // Link ORCID iD to existing user if not already set
+    if (matchedUser.user_metadata?.orcid_id !== orcidId) {
+      await supabase.auth.admin.updateUserById(matchedUser.id, {
+        user_metadata: { ...matchedUser.user_metadata, orcid_id: orcidId },
       });
     }
   } else {
-    // Create new user
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    // No existing user found — create new with synthetic email
+    signInEmail = syntheticEmail;
+    const { error: createError } = await supabase.auth.admin.createUser({
       email: syntheticEmail,
       email_confirm: true,
       user_metadata: {
@@ -99,7 +140,7 @@ const handler: Handler = async (event: HandlerEvent) => {
       },
     });
 
-    if (createError || !newUser.user) {
+    if (createError) {
       return {
         statusCode: 302,
         headers: { Location: `${SITE_URL}?orcid_error=create_user` },
@@ -110,7 +151,7 @@ const handler: Handler = async (event: HandlerEvent) => {
   // Generate a magic link for automatic sign-in
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
-    email: syntheticEmail,
+    email: signInEmail,
     options: { redirectTo: SITE_URL },
   });
 
@@ -121,7 +162,6 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 
-  // Redirect to Supabase's verify endpoint which will set the session
   return {
     statusCode: 302,
     headers: { Location: linkData.properties.action_link },

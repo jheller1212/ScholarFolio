@@ -85,13 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === 'PASSWORD_RECOVERY') {
             setShowPasswordReset(true);
           }
-          // Detect new Google sign-up (user just created, signed in via OAuth)
+          // Detect new sign-up (account created in the last 30s, not a returning ORCID user)
           if (event === 'SIGNED_IN') {
             const createdAt = new Date(session.user.created_at).getTime();
             const now = Date.now();
-            // If account was created within the last 30 seconds, it's a new sign-up
+            const isNewAccount = now - createdAt < 30000;
             const provider = session.user.app_metadata?.provider;
-            if (now - createdAt < 30000 && (provider === 'google' || session.user.user_metadata?.provider === 'orcid')) {
+            // ORCID magic-link sign-ins for existing users should not trigger welcome
+            const isOrcidReturning = session.user.user_metadata?.orcid_id && provider !== 'orcid';
+            if (isNewAccount && (provider === 'google' || session.user.user_metadata?.provider === 'orcid') && !isOrcidReturning) {
               setShowWelcome(true);
             }
           }
