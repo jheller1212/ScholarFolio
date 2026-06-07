@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Linkedin, Github, ExternalLink } from 'lucide-react';
+import { Linkedin, Github, ExternalLink, TrendingUp } from 'lucide-react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
@@ -11,6 +11,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { ChangelogPage } from './components/ChangelogPage';
+import { TrendingPage } from './components/TrendingPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
@@ -32,7 +33,7 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
-type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog';
+type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog' | 'trending';
 
 function SocialLinks() {
   return (
@@ -76,6 +77,13 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
           >
             GitHub <ExternalLink className="h-3 w-3" />
           </a>
+          <button
+            onClick={() => onNavigate('trending')}
+            className="text-sm text-[#3d9494] hover:text-white transition-colors inline-flex items-center gap-1"
+          >
+            <TrendingUp className="h-3 w-3" />
+            Trending
+          </button>
           <button
             onClick={() => onNavigate('about')}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
@@ -154,6 +162,10 @@ function AppContent() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('page') === 'admin') {
       setPage('admin');
+      return;
+    }
+    if (params.get('page') === 'trending') {
+      setPage('trending');
       return;
     }
     const userParam = params.get('user');
@@ -394,6 +406,7 @@ function AppContent() {
       if (!isAdmin) { handleNavigate('home'); return null; }
       return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
     }
+    if (page === 'trending') return <div className="page-enter"><TrendingPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} socialLinks={<SocialLinks />} authControls={authControls} /></div>;
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;

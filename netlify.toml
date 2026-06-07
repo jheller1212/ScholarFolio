@@ -22,6 +22,13 @@
 [functions]
   directory = "netlify/functions"
 
+[edge_functions]
+  directory = "netlify/edge-functions"
+
+[[edge_functions]]
+  path = "/"
+  function = "og-meta"
+
 # Sitemap redirect must come before the SPA catch-all
 [[redirects]]
   from = "/sitemap.xml"
