@@ -220,6 +220,7 @@ export async function fetchCoAuthorGeoData(
     if (!geo) continue;
     coAuthors.push({
       name: m.sfName,
+      fullName: m.oaInfo.displayName,
       institution: m.oaInfo.institutionName,
       countryCode: m.oaInfo.countryCode,
       lat: geo.lat,
