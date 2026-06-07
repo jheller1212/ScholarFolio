@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { oaFetchJson, OA_API_URL, OA_EMAIL } from './openalex/author-lookup';
 
 function normalizeName(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,]/g, '');
@@ -24,7 +25,8 @@ export async function lookupCoAuthorLink(name: string): Promise<CoAuthorLink | n
   return data ?? null;
 }
 
-/** Save a verified co-author link (upsert by normalized name, merges fields) */
+/** Save a verified co-author link (upsert by normalized name, merges fields).
+ *  After saving, kicks off background enrichment for ORCID and S2 author ID. */
 export async function saveCoAuthorLink(params: {
   name: string;
   scholarId?: string;
@@ -46,7 +48,6 @@ export async function saveCoAuthorLink(params: {
     .single();
 
   if (existing) {
-    // Merge: only overwrite fields that are being provided (don't null out existing data)
     await supabase
       .from('coauthor_links')
       .update({
@@ -59,6 +60,14 @@ export async function saveCoAuthorLink(params: {
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id);
+
+    // Background-enrich missing IDs
+    const openalexId = params.openalexId || existing.openalex_id;
+    const needsOrcid = !params.orcid && !existing.orcid && !!openalexId;
+    const needsS2 = !params.s2AuthorId && !existing.s2_author_id;
+    if (needsOrcid || needsS2) {
+      enrichCoAuthorLink(normalized, openalexId, needsOrcid, needsS2, params.name).catch(() => {});
+    }
   } else {
     await supabase
       .from('coauthor_links')
@@ -73,5 +82,56 @@ export async function saveCoAuthorLink(params: {
         institution: params.institution ?? null,
         contributed_by: params.contributedBy ?? null,
       });
+
+    // Background-enrich
+    const needsOrcid = !params.orcid && !!params.openalexId;
+    const needsS2 = !params.s2AuthorId;
+    if (needsOrcid || needsS2) {
+      enrichCoAuthorLink(normalized, params.openalexId, needsOrcid, needsS2, params.name).catch(() => {});
+    }
+  }
+}
+
+/** Background: fetch ORCID from OpenAlex and S2 author ID from Semantic Scholar */
+async function enrichCoAuthorLink(
+  nameNormalized: string,
+  openalexId: string | null | undefined,
+  fetchOrcid: boolean,
+  fetchS2: boolean,
+  displayName: string,
+): Promise<void> {
+  const updates: Record<string, string> = {};
+
+  // Fetch ORCID from OpenAlex author record
+  if (fetchOrcid && openalexId) {
+    const shortId = openalexId.replace('https://openalex.org/', '');
+    const data = await oaFetchJson<{ orcid?: string }>(
+      `${OA_API_URL}/authors/${shortId}?select=orcid&mailto=${OA_EMAIL}`
+    );
+    if (data?.orcid) {
+      updates.orcid = data.orcid;
+    }
+  }
+
+  // Fetch S2 author ID by searching for the author's name
+  if (fetchS2) {
+    try {
+      const res = await fetch(
+        `https://api.semanticscholar.org/graph/v1/author/search?query=${encodeURIComponent(displayName)}&limit=1`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.[0]?.authorId) {
+          updates.s2_author_id = json.data[0].authorId;
+        }
+      }
+    } catch { /* best effort */ }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await supabase
+      .from('coauthor_links')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('name_normalized', nameNormalized);
   }
 }
