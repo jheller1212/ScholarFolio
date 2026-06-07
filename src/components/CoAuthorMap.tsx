@@ -628,27 +628,36 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     newWindow.document.close();
                   }
                   setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
+                  const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                  const fallbackUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
                   try {
-                    const results = await scholarService.searchAuthors(clickedCoAuthor.fullName || clickedCoAuthor.name);
-                    if (results.length >= 1) {
-                      const authorId = results[0].authorId;
-                      setScholarIdLookup({ loading: false, scholarId: authorId, notFound: false });
+                    // Search with institution for better disambiguation
+                    const queryWithInst = clickedCoAuthor.institution
+                      ? `${searchName} ${clickedCoAuthor.institution}`
+                      : searchName;
+                    let results = await scholarService.searchAuthors(queryWithInst);
+                    // If no results with institution, retry with just the name
+                    if (results.length === 0 && clickedCoAuthor.institution) {
+                      results = await scholarService.searchAuthors(searchName);
+                    }
+                    // Validate: check the result's last name matches the co-author's
+                    const targetLast = searchName.split(/\s+/).pop()?.toLowerCase() ?? '';
+                    const match = results.find(r => {
+                      const resultLast = r.name.split(/\s+/).pop()?.toLowerCase() ?? '';
+                      return resultLast === targetLast;
+                    });
+                    if (match) {
+                      setScholarIdLookup({ loading: false, scholarId: match.authorId, notFound: false });
                       if (newWindow) {
-                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(authorId)}`;
+                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(match.authorId)}`;
                       }
                     } else {
                       setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                      if (newWindow) {
-                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                        newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
-                      }
+                      if (newWindow) newWindow.location.href = fallbackUrl;
                     }
                   } catch {
                     setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                    if (newWindow) {
-                      const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                      newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
-                    }
+                    if (newWindow) newWindow.location.href = fallbackUrl;
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
