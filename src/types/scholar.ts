@@ -121,6 +121,8 @@ export interface CoAuthorGeoData {
   name: string;
   /** Full display name from OpenAlex (for reliable Scholar search) */
   fullName?: string;
+  /** OpenAlex author ID */
+  openalexId?: string;
   institution: string;
   countryCode: string;
   lat: number;

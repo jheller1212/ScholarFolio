@@ -663,7 +663,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     });
                     if (match) {
                       // Save to cache for future lookups
-                      saveCoAuthorLink({ name: searchName, scholarId: match.authorId, institution: clickedCoAuthor.institution }).catch(() => {});
+                      saveCoAuthorLink({ name: searchName, scholarId: match.authorId, openalexId: clickedCoAuthor.openalexId, institution: clickedCoAuthor.institution }).catch(() => {});
                       setScholarIdLookup({ loading: false, scholarId: match.authorId, notFound: false });
                       if (newWindow) {
                         newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(match.authorId)}`;
@@ -717,6 +717,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                           name: searchName,
                           scholarId,
                           scholarUrl: urlInputValue,
+                          openalexId: clickedCoAuthor.openalexId,
                           institution: clickedCoAuthor.institution,
                         }).catch(() => {});
                         setScholarIdLookup({ loading: false, scholarId, notFound: false });
