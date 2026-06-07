@@ -9,6 +9,7 @@ import type { Publication, CoAuthorGeoData } from '../types/scholar';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { timeoutSignal } from '../utils/api';
 import { logCaughtError } from '../lib/errorLogger';
+import { scholarService } from '../services/scholar';
 
 interface CoAuthorMapProps {
   publications: Publication[];
@@ -615,29 +616,28 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     window.open(`${window.location.origin}/?user=${scholarIdLookup.scholarId}`, '_blank');
                     return;
                   }
+                  // Open window immediately to avoid popup blocker
+                  const newWindow = window.open('about:blank', '_blank');
+                  if (newWindow) {
+                    newWindow.document.write(`<!DOCTYPE html><html><head><title>Scholar Folio</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafa;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#334155}.wrap{text-align:center}.spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2d7d7d;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}.title{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px}.sub{font-size:13px;color:#64748b}</style></head><body><div class="wrap"><div class="spinner"></div><div class="title">Loading profile</div><div class="sub">${clickedCoAuthor.name.replace(/'/g, '&#39;')}</div></div></body></html>`);
+                    newWindow.document.close();
+                  }
                   setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
                   try {
-                    // Search OpenAlex for co-author → get their Google Scholar external ID
-                    const searchUrl = `https://api.openalex.org/authors?search=${encodeURIComponent(clickedCoAuthor.name)}&per_page=5&select=id,display_name,ids&mailto=info@scholarfolio.org`;
-                    const resp = await fetch(searchUrl, { signal: timeoutSignal(10000) });
-                    const data = await resp.json();
-                    const results = data?.results || [];
-                    // Find best match by name
-                    const nameLower = clickedCoAuthor.name.toLowerCase().trim();
-                    const match = results.find((r: { display_name: string }) => r.display_name.toLowerCase().trim() === nameLower) || results[0];
-                    const gsUrl = match?.ids?.google_scholar as string | undefined;
-                    if (gsUrl) {
-                      // Extract Scholar ID from URL like "https://scholar.google.com/citations?user=ABC123"
-                      const gsMatch = gsUrl.match(/user=([A-Za-z0-9_-]+)/);
-                      if (gsMatch) {
-                        setScholarIdLookup({ loading: false, scholarId: gsMatch[1], notFound: false });
-                        window.open(`${window.location.origin}/?user=${gsMatch[1]}`, '_blank');
-                        return;
+                    const results = await scholarService.searchAuthors(clickedCoAuthor.name);
+                    if (results.length >= 1) {
+                      const authorId = results[0].authorId;
+                      setScholarIdLookup({ loading: false, scholarId: authorId, notFound: false });
+                      if (newWindow) {
+                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(authorId)}`;
                       }
+                    } else {
+                      setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
+                      newWindow?.close();
                     }
-                    setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
                   } catch {
                     setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
+                    newWindow?.close();
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
@@ -663,11 +663,6 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
               >
                 <Share2 className="h-4 w-4" /> Share with {clickedCoAuthor.name.split(' ')[0]}
               </button>
-              {scholarIdLookup.notFound && (
-                <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-1">
-                  No Google Scholar profile found. Share the link so they can create one!
-                </p>
-              )}
             </div>
           </div>
         </div>
