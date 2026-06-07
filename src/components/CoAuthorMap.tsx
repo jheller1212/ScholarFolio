@@ -616,6 +616,11 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     window.open(`${window.location.origin}/?user=${scholarIdLookup.scholarId}`, '_blank');
                     return;
                   }
+                  if (scholarIdLookup.notFound) {
+                    const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                    window.open(`https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`, '_blank');
+                    return;
+                  }
                   // Open window immediately to avoid popup blocker
                   const newWindow = window.open('about:blank', '_blank');
                   if (newWindow) {
@@ -633,11 +638,17 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                       }
                     } else {
                       setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                      newWindow?.close();
+                      if (newWindow) {
+                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                        newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
+                      }
                     }
                   } catch {
                     setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                    newWindow?.close();
+                    if (newWindow) {
+                      const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                      newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
+                    }
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
@@ -645,7 +656,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                 {scholarIdLookup.loading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Looking up profile...</>
                 ) : scholarIdLookup.notFound ? (
-                  <><ExternalLink className="h-4 w-4" /> Not found on Google Scholar</>
+                  <><ExternalLink className="h-4 w-4" /> Search on Google Scholar</>
                 ) : (
                   <><ExternalLink className="h-4 w-4" /> View on ScholarFolio</>
                 )}

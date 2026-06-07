@@ -526,10 +526,14 @@ export function ProfileView({
               scholarService.searchAuthors(name).then(results => {
                 if (results.length >= 1 && newWindow) {
                   newWindow.location.href = `${window.location.origin}?user=${encodeURIComponent(results[0].authorId)}`;
-                } else {
-                  newWindow?.close();
+                } else if (newWindow) {
+                  newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
                 }
-              }).catch(() => newWindow?.close());
+              }).catch(() => {
+                if (newWindow) {
+                  newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
+                }
+              });
             }} />
           </div>
         )}
