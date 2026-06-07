@@ -1,6 +1,6 @@
 import { timeoutSignal } from '../../utils/api';
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
-import { findOpenAlexAuthor, oaFetchJson, oaRateLimiter, OA_HEADERS, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { findOpenAlexAuthor, oaFetchJson, oaRateLimiter, OA_API_URL, OA_EMAIL } from './author-lookup';
 
 export class OpenAlexService {
   /**
@@ -18,7 +18,6 @@ export class OpenAlexService {
       await oaRateLimiter.acquireToken();
       const worksUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${OA_EMAIL}`;
       const worksResponse = await fetch(worksUrl, {
-        headers: OA_HEADERS,
         signal: timeoutSignal(10000)
       });
 
@@ -53,7 +52,6 @@ export class OpenAlexService {
         await oaRateLimiter.acquireToken();
         const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
         const pubsResponse = await fetch(pubsUrl, {
-          headers: OA_HEADERS,
           signal: timeoutSignal(15000)
         });
         if (!pubsResponse.ok) break;

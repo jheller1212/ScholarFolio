@@ -4,7 +4,6 @@ import { logCaughtError } from '../../lib/errorLogger';
 
 const API_URL = 'https://api.openalex.org';
 const EMAIL = 'info@scholarfolio.org';
-export const OA_HEADERS = { 'User-Agent': `ScholarFolio/1.0 (mailto:${EMAIL})` };
 export const OA_EMAIL = EMAIL;
 export const OA_API_URL = API_URL;
 
@@ -15,7 +14,7 @@ export const oaRateLimiter = new RateLimiter(5000, 100);
 export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
   try {
     await oaRateLimiter.acquireToken();
-    const response = await fetch(url, { headers: OA_HEADERS, signal: timeoutSignal(timeoutMs) });
+    const response = await fetch(url, { signal: timeoutSignal(timeoutMs) });
     if (!response.ok) {
       console.warn(`[OpenAlex] HTTP ${response.status} for ${url.split('?')[0]}`);
       return null;
