@@ -90,7 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const createdAt = new Date(session.user.created_at).getTime();
             const now = Date.now();
             // If account was created within the last 30 seconds, it's a new sign-up
-            if (now - createdAt < 30000 && session.user.app_metadata?.provider === 'google') {
+            const provider = session.user.app_metadata?.provider;
+            if (now - createdAt < 30000 && (provider === 'google' || session.user.user_metadata?.provider === 'orcid')) {
               setShowWelcome(true);
             }
           }
