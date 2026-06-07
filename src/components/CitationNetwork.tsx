@@ -35,6 +35,7 @@ interface Link {
 interface CitationNetworkProps {
   publications: Publication[];
   fullScreen?: boolean;
+  onCoAuthorClick?: (name: string) => void;
 }
 
 type ViewMode = 'publications' | 'citations' | 'temporal' | 'clusters';
@@ -187,7 +188,7 @@ const CLUSTER_COLORS = [
   '#2563eb', '#d97706', '#6366f1', '#dc2626', '#0891b2'
 ];
 
-export function CitationNetwork({ publications, fullScreen = false }: CitationNetworkProps) {
+export function CitationNetwork({ publications, fullScreen = false, onCoAuthorClick }: CitationNetworkProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<D3Simulation<Node, Link> | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('publications');
@@ -560,6 +561,15 @@ export function CitationNetwork({ publications, fullScreen = false }: CitationNe
         }
         return text;
       });
+
+    // Double-click to open co-author profile
+    node.on('dblclick', (_event: MouseEvent, d: any) => {
+      _event.stopPropagation();
+      _event.preventDefault();
+      if (d.group !== 0 && onCoAuthorClick) {
+        onCoAuthorClick(d.name);
+      }
+    });
 
     // Click-to-highlight
     node.on('click', (_event, d) => {
