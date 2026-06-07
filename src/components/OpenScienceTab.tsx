@@ -107,8 +107,12 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
         <Unlock className="h-8 w-8 text-gray-300 mx-auto mb-3" />
         {data.openAccessFailed ? (
           <>
-            <p className="text-sm text-gray-500">Open Access data unavailable</p>
-            <p className="text-xs text-gray-400 mt-1">Could not retrieve data from OpenAlex. Try refreshing the profile.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Open Access data unavailable</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              This researcher could not be matched on{' '}
+              <a href="https://openalex.org" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAlex</a>.
+              {' '}This can happen if the name or affiliation differs from the OpenAlex record.
+            </p>
           </>
         ) : (
           <>
