@@ -221,6 +221,7 @@ export async function fetchCoAuthorGeoData(
     coAuthors.push({
       name: m.sfName,
       fullName: m.oaInfo.displayName,
+      openalexId: m.oaInfo.oaId,
       institution: m.oaInfo.institutionName,
       countryCode: m.oaInfo.countryCode,
       lat: geo.lat,
