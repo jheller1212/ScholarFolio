@@ -168,6 +168,13 @@ function AppContent() {
       setPage('trending');
       return;
     }
+    // Handle ORCID OAuth error
+    const orcidError = params.get('orcid_error');
+    if (orcidError) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('orcid_error');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
     const userParam = params.get('user');
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
