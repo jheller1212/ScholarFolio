@@ -10,6 +10,7 @@ import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { timeoutSignal } from '../utils/api';
 import { logCaughtError } from '../lib/errorLogger';
 import { scholarService } from '../services/scholar';
+import { lookupCoAuthorLink, saveCoAuthorLink } from '../services/coauthor-links';
 
 interface CoAuthorMapProps {
   publications: Publication[];
@@ -80,6 +81,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, data: null });
   const [clickedCoAuthor, setClickedCoAuthor] = useState<CoAuthorGeoData | null>(null);
   const [scholarIdLookup, setScholarIdLookup] = useState<{ loading: boolean; scholarId: string | null; notFound: boolean }>({ loading: false, scholarId: null, notFound: false });
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlInputValue, setUrlInputValue] = useState('');
+  const [urlInputError, setUrlInputError] = useState('');
   const [mapError, setMapError] = useState(false);
   const [activeRegion, setActiveRegion] = useState('world');
 
@@ -330,6 +334,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
               event.stopPropagation();
               setClickedCoAuthor(coAuthor);
               setScholarIdLookup({ loading: false, scholarId: null, notFound: false });
+              setShowUrlInput(false);
+              setUrlInputValue('');
+              setUrlInputError('');
               setTooltip(prev => ({ ...prev, visible: false }));
             });
         });
@@ -617,8 +624,9 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     return;
                   }
                   if (scholarIdLookup.notFound) {
-                    const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                    window.open(`https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`, '_blank');
+                    setShowUrlInput(true);
+                    setUrlInputValue('');
+                    setUrlInputError('');
                     return;
                   }
                   // Open window immediately to avoid popup blocker
@@ -629,35 +637,44 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                   }
                   setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
                   const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                  const fallbackUrl = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`;
                   try {
-                    // Search with institution for better disambiguation
+                    // 1. Check community-contributed cache first
+                    const cached = await lookupCoAuthorLink(searchName);
+                    if (cached?.scholar_id) {
+                      setScholarIdLookup({ loading: false, scholarId: cached.scholar_id, notFound: false });
+                      if (newWindow) {
+                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(cached.scholar_id)}`;
+                      }
+                      return;
+                    }
+                    // 2. Search with institution for better disambiguation
                     const queryWithInst = clickedCoAuthor.institution
                       ? `${searchName} ${clickedCoAuthor.institution}`
                       : searchName;
                     let results = await scholarService.searchAuthors(queryWithInst);
-                    // If no results with institution, retry with just the name
                     if (results.length === 0 && clickedCoAuthor.institution) {
                       results = await scholarService.searchAuthors(searchName);
                     }
-                    // Validate: check the result's last name matches the co-author's
+                    // Validate: check the result's last name matches
                     const targetLast = searchName.split(/\s+/).pop()?.toLowerCase() ?? '';
                     const match = results.find(r => {
                       const resultLast = r.name.split(/\s+/).pop()?.toLowerCase() ?? '';
                       return resultLast === targetLast;
                     });
                     if (match) {
+                      // Save to cache for future lookups
+                      saveCoAuthorLink({ name: searchName, scholarId: match.authorId, institution: clickedCoAuthor.institution }).catch(() => {});
                       setScholarIdLookup({ loading: false, scholarId: match.authorId, notFound: false });
                       if (newWindow) {
                         newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(match.authorId)}`;
                       }
                     } else {
                       setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                      if (newWindow) newWindow.location.href = fallbackUrl;
+                      newWindow?.close();
                     }
                   } catch {
                     setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                    if (newWindow) newWindow.location.href = fallbackUrl;
+                    newWindow?.close();
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
@@ -665,11 +682,64 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                 {scholarIdLookup.loading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Looking up profile...</>
                 ) : scholarIdLookup.notFound ? (
-                  <><ExternalLink className="h-4 w-4" /> Search on Google Scholar</>
+                  <><MapPin className="h-4 w-4" /> Link Google Scholar profile</>
                 ) : (
                   <><ExternalLink className="h-4 w-4" /> View on ScholarFolio</>
                 )}
               </button>
+
+              {/* URL input modal for manual linking */}
+              {showUrlInput && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 space-y-2">
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    We couldn't automatically find <strong>{clickedCoAuthor.fullName || clickedCoAuthor.name}</strong> on Google Scholar. Multiple authors may share this name. Paste their Google Scholar profile URL below to link it.
+                  </p>
+                  <input
+                    type="url"
+                    value={urlInputValue}
+                    onChange={e => { setUrlInputValue(e.target.value); setUrlInputError(''); }}
+                    placeholder="https://scholar.google.com/citations?user=..."
+                    className="w-full text-xs px-2.5 py-2 rounded border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-[#2d7d7d] focus:border-[#2d7d7d] outline-none"
+                  />
+                  {urlInputError && <p className="text-xs text-red-600 dark:text-red-400">{urlInputError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const validation = scholarService.validateProfileUrl(urlInputValue);
+                        if (!validation.isValid || !validation.userId) {
+                          setUrlInputError('Please enter a valid Google Scholar profile URL (must contain ?user=...)');
+                          return;
+                        }
+                        const scholarId = validation.userId;
+                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                        // Save to community cache
+                        saveCoAuthorLink({
+                          name: searchName,
+                          scholarId,
+                          scholarUrl: urlInputValue,
+                          institution: clickedCoAuthor.institution,
+                        }).catch(() => {});
+                        setScholarIdLookup({ loading: false, scholarId, notFound: false });
+                        setShowUrlInput(false);
+                        window.open(`${window.location.origin}/?user=${encodeURIComponent(scholarId)}`, '_blank');
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Link &amp; View
+                    </button>
+                    <button
+                      onClick={() => {
+                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
+                        window.open(`https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`, '_blank');
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Search Scholar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   const text = `Check out your research profile on ScholarFolio: ${window.location.origin}`;
