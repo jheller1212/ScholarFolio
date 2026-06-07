@@ -20,6 +20,7 @@ import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
+import { scholarService } from '../services/scholar';
 import { extractLastName } from '../utils/names';
 import { useFeedback } from '../hooks/useFeedback';
 import { FeedbackModal } from './FeedbackModal';
@@ -516,7 +517,20 @@ export function ProfileView({
 
         {activeTab === 'network' && (
           <div className="w-full">
-            <CitationNetwork publications={data.publications} fullScreen={true} />
+            <CitationNetwork publications={data.publications} fullScreen={true} onCoAuthorClick={(name) => {
+              const newWindow = window.open('about:blank', '_blank');
+              if (newWindow) {
+                newWindow.document.write(`<!DOCTYPE html><html><head><title>Scholar Folio</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafa;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#334155}.wrap{text-align:center}.spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2d7d7d;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}.title{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px}.sub{font-size:13px;color:#64748b}</style></head><body><div class="wrap"><div class="spinner"></div><div class="title">Loading profile</div><div class="sub">${name.replace(/'/g, '&#39;')}</div></div></body></html>`);
+                newWindow.document.close();
+              }
+              scholarService.searchAuthors(name).then(results => {
+                if (results.length >= 1 && newWindow) {
+                  newWindow.location.href = `${window.location.origin}?user=${encodeURIComponent(results[0].authorId)}`;
+                } else {
+                  newWindow?.close();
+                }
+              }).catch(() => newWindow?.close());
+            }} />
           </div>
         )}
 
