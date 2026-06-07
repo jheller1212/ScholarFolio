@@ -139,7 +139,14 @@ async function fetchViaEdgeFunction(normalizedUrl: string, cacheOnly?: boolean) 
   return data;
 }
 
+/** Strip academic title suffixes from profile names (e.g. "Name - Full Professor" → "Name") */
+function stripTitleSuffix(name: string): string {
+  return name.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research|Senior|Junior|Distinguished|Clinical|Tenured)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr|MD|Instructor|Postdoc|PostDoc)\b.*/i, '').trim() || name;
+}
+
 function buildAuthorResult(data: any): Author {
+  const cleanName = stripTitleSuffix(data.name || '');
+
   const publications = (data.publications || []).map(pub => ({
     ...pub,
     journalRanking: pub.journalRanking || findJournalRanking(pub.venue)
@@ -151,7 +158,7 @@ function buildAuthorResult(data: any): Author {
   const metrics = metricsCalculator.calculateMetrics(
     publications,
     data.metrics?.citationsPerYear || {},
-    data.name
+    cleanName
   );
 
   // Propagate the citation graph source from the edge function response
@@ -160,7 +167,7 @@ function buildAuthorResult(data: any): Author {
   }
 
   return {
-    name: data.name,
+    name: cleanName,
     affiliation: data.affiliation || '',
     imageUrl: data.imageUrl,
     topics: data.topics || [],

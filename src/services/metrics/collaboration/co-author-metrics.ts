@@ -12,6 +12,7 @@ interface CoAuthorStats {
   topCoAuthorLastYear: number;
   topCoAuthorFirstPaper: string;
   topCoAuthorLastPaper: string;
+  topCoAuthors: Array<{ name: string; papers: number }>;
 }
 
 export function calculateCoAuthorMetrics(publications: Publication[], authorName: string): CoAuthorStats {
@@ -35,8 +36,11 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
       .replace(/[.,]/g, '');
   };
 
+  // Strip title suffixes like " - Full Professor" or " - Associate Professor"
+  const cleanAuthorName = authorName.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr)\b.*/i, '').trim() || authorName;
+
   // Create variations of the main author's name for matching
-  const mainAuthorNormalized = normalizeAuthorName(authorName);
+  const mainAuthorNormalized = normalizeAuthorName(cleanAuthorName);
   const mainAuthorParts = mainAuthorNormalized.split(' ');
   const mainAuthorVariations = [
     mainAuthorNormalized,
@@ -100,6 +104,13 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
     }
   });
 
+  // Top co-authors sorted by paper count (max 4, min 2 papers each)
+  const topCoAuthors = [...coAuthorCounts.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 4)
+    .filter(([, d]) => d.count >= 2)
+    .map(([name, d]) => ({ name, papers: d.count }));
+
   return {
     totalCoAuthors: coAuthorCounts.size,
     averageAuthors: parseFloat((totalAuthors / publications.length).toFixed(1)),
@@ -111,6 +122,7 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
     topCoAuthorFirstYear: topCoAuthorData.firstYear,
     topCoAuthorLastYear: topCoAuthorData.lastYear,
     topCoAuthorFirstPaper: topCoAuthorData.firstPaper,
-    topCoAuthorLastPaper: topCoAuthorData.lastPaper
+    topCoAuthorLastPaper: topCoAuthorData.lastPaper,
+    topCoAuthors
   };
 }

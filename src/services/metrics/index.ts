@@ -139,6 +139,7 @@ class MetricsCalculator {
       topCoAuthorLastYear: 0,
       topCoAuthorFirstPaper: '',
       topCoAuthorLastPaper: '',
+      topCoAuthors: [],
       citationHalfLife: 0,
       citationGini: 0,
       ageNormalizedRate: 0,

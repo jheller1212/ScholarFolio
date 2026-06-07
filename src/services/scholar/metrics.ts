@@ -203,8 +203,11 @@ export class MetricsCalculator {
         .replace(/[.,]/g, '');
     };
 
+    // Strip title suffixes like " - Full Professor" before matching
+    const cleanAuthorName = authorName.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr)\b.*/i, '').trim() || authorName;
+
     // Normalize the main author's name and create variations for matching
-    const mainAuthorNormalized = normalizeAuthorName(authorName);
+    const mainAuthorNormalized = normalizeAuthorName(cleanAuthorName);
     const mainAuthorParts = mainAuthorNormalized.split(' ');
     const mainAuthorVariations = [
       mainAuthorNormalized,
