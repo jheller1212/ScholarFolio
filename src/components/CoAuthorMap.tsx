@@ -178,6 +178,15 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
     let currentScale = 1;
     const zoom = d3Zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.5, 20])
+      .filter((event: Event) => {
+        // Don't let zoom intercept clicks/touches on dots — allow them to bubble to the dot's click handler
+        const target = event.target as SVGElement;
+        if (target.classList?.contains('geo-dot')) {
+          // Allow scroll/pinch zoom on dots, but block drag (which eats click)
+          return event.type === 'wheel' || event.type === 'dblclick';
+        }
+        return true;
+      })
       .on('zoom', event => {
         zoomGroup.attr('transform', event.transform);
         currentScale = event.transform.k;
