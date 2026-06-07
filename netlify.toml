@@ -19,6 +19,15 @@
 [context.deploy-preview]
   environment = { VITE_SUPABASE_URL = "https://mixaxkywkojoclgbjjur.supabase.co" }
 
+[functions]
+  directory = "netlify/functions"
+
+# Sitemap redirect must come before the SPA catch-all
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
