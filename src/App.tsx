@@ -152,6 +152,7 @@ function AppContent() {
   const requestInProgressRef = useRef(false);
   const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome, showPasswordReset, dismissPasswordReset, updatePassword } = useAuth();
+  const [showBonus, setShowBonus] = useState(() => !localStorage.getItem('sf_bonus_seen'));
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
@@ -446,16 +447,29 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Welcome banner for new Google OAuth sign-ups */}
+      {/* Welcome banner for new sign-ups */}
       {showWelcome && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
           <p className="text-sm font-medium mb-1">Welcome to Scholar Folio!</p>
-          <p className="text-xs text-gray-600">You have <strong>5 free profile refreshes</strong> to get started.</p>
+          <p className="text-xs text-gray-600">You have <strong>10 free profile refreshes</strong> to get started.</p>
           <button
             onClick={dismissWelcome}
             className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
           >
             Got it
+          </button>
+        </div>
+      )}
+      {/* One-time thank-you bonus popup for existing users */}
+      {user && !showWelcome && showBonus && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
+          <p className="text-sm font-medium mb-1">Thank you for being a Scholar Folio user!</p>
+          <p className="text-xs text-gray-600">We've added <strong>10 bonus credits</strong> to your account as a thank you for signing up.</p>
+          <button
+            onClick={() => { localStorage.setItem('sf_bonus_seen', '1'); setShowBonus(false); refreshCredits(); }}
+            className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
+          >
+            Awesome, thanks!
           </button>
         </div>
       )}
