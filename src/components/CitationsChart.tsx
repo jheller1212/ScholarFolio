@@ -84,12 +84,22 @@ const YoYLabel = (props: any) => {
   const data = props.data?.[index];
   if (!data) return null;
 
-  // Current year: show forecast with @ symbol
+  // Current year: show both YoY % and forecast
   if (data.isCurrentYear && data.projectedTotal > 0) {
+    const growth = data.yoyGrowth;
+    const growthColor = growth != null ? (growth >= 0 ? '#059669' : '#dc2626') : null;
+    const growthText = growth != null ? `${growth >= 0 ? '+' : ''}${growth}%` : null;
     return (
-      <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fontWeight={500} fill="#2d7d7d">
-        @~{data.projectedTotal.toLocaleString()}
-      </text>
+      <g>
+        <text x={x + width / 2} y={y - (growthText ? 14 : 4)} textAnchor="middle" fontSize={9} fontWeight={500} fill="#2d7d7d">
+          @~{data.projectedTotal.toLocaleString()}
+        </text>
+        {growthText && (
+          <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fontWeight={500} fill={growthColor!}>
+            {growthText}
+          </text>
+        )}
+      </g>
     );
   }
 
@@ -147,12 +157,16 @@ export function CitationsChart({ citationsPerYear, citationGraphSource, publicat
       }
     });
 
-    // Add projection for current year
+    // Add projection for current year + compute YoY based on projected total
     const cur = filtered.find(d => d.isCurrentYear);
     if (cur) {
       const total = projectCurrentYear(cur.actual, safeData);
       cur.projectedTotal = total;
       cur.projected = Math.max(0, total - cur.actual);
+      const prev = safeData[String(currentYear - 1)];
+      if (prev != null && prev > 0) {
+        cur.yoyGrowth = Math.round(((total - prev) / prev) * 100);
+      }
     }
 
     return filtered;
