@@ -78,11 +78,22 @@ const ProjectedBar = (props: any) => {
   );
 };
 
-/** Renders YoY growth % label above each bar */
+/** Renders YoY growth % label above each bar, or forecast @ label for current year */
 const YoYLabel = (props: any) => {
-  const { x, y, width, value, index } = props;
-  // value is the 'actual' dataKey value; we need yoyGrowth from the data
+  const { x, y, width, index } = props;
   const data = props.data?.[index];
+  if (!data) return null;
+
+  // Current year: show forecast with @ symbol
+  if (data.isCurrentYear && data.projectedTotal > 0) {
+    return (
+      <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fontWeight={500} fill="#2d7d7d">
+        @~{data.projectedTotal.toLocaleString()}
+      </text>
+    );
+  }
+
+  // Other years: show YoY growth %
   const growth = data?.yoyGrowth;
   if (growth == null) return null;
   const color = growth >= 0 ? '#059669' : '#dc2626';
