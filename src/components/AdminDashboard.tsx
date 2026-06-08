@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare, Bug } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare, Bug, Send, Mail, Loader2, X } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -17,7 +17,7 @@ interface RawData {
   users: Array<{ user_id: string; credits_remaining: number; total_purchased: number; created_at: string }>;
   purchases: Array<{ pack: string; amount_cents: number; credits: number; created_at: string }>;
   dailyStats: Array<{ day: string; total_searches: number; auth_searches: number; anon_searches: number; unique_profiles: number }>;
-  feedback: Array<{ id: string; rating: number | null; comment: string | null; credits_granted: number; source: string; profile_viewed: string | null; created_at: string }>;
+  feedback: Array<{ id: string; user_id: string; rating: number | null; comment: string | null; credits_granted: number; source: string; profile_viewed: string | null; created_at: string }>;
 }
 
 function getPeriodStart(period: Period): Date | null {
@@ -61,6 +61,12 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     screen_size: string | null; url: string | null; session_id: string | null;
   }>>([]);
   const [errorFilter, setErrorFilter] = useState<string>('all');
+  const [feedbackEmails, setFeedbackEmails] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<{ type: 'feedback' | 'report' | 'custom'; email: string; context?: string } | null>(null);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const userEmail = user?.email || user?.user_metadata?.email || '';
   const isAdmin = userEmail === ADMIN_EMAIL;
@@ -99,7 +105,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
           supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
           supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
-          supabase.from('feedback').select('id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
+          supabase.from('feedback').select('id,user_id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
           supabase.from('client_errors').select('id,created_at,category,message,stack,component,action,context,browser,os,screen_size,url,session_id').order('created_at', { ascending: false }).limit(200),
         ]);
 
@@ -124,6 +130,66 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     fetchData();
   }, [isAdmin]);
+
+  // Resolve feedback user emails
+  useEffect(() => {
+    if (!rawData || rawData.feedback.length === 0) return;
+    const userIds = [...new Set(rawData.feedback.map(f => f.user_id).filter(Boolean))];
+    if (userIds.length === 0) return;
+
+    async function resolveEmails() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ action: 'resolve-emails', userIds }),
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setFeedbackEmails(data.emailMap || {});
+        }
+      } catch { /* silent */ }
+    }
+    resolveEmails();
+  }, [rawData]);
+
+  const sendEmail = useCallback(async () => {
+    if (!replyingTo || !replySubject.trim() || !replyBody.trim()) return;
+    setSendingEmail(true);
+    setEmailResult(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            action: 'send',
+            to: replyingTo.email,
+            subject: replySubject,
+            body: replyBody.replace(/\n/g, '<br/>'),
+          }),
+        }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Send failed');
+      }
+      setEmailResult({ success: true, message: `Sent to ${replyingTo.email}` });
+      setTimeout(() => { setReplyingTo(null); setReplySubject(''); setReplyBody(''); setEmailResult(null); }, 2000);
+    } catch (err) {
+      setEmailResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send' });
+    } finally {
+      setSendingEmail(false);
+    }
+  }, [replyingTo, replySubject, replyBody]);
 
   const stats = useMemo(() => {
     if (!rawData) return null;
@@ -218,20 +284,34 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           </button>
           <Logo size={28} />
           <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">Admin Dashboard</span>
-          <div className="ml-auto flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-            {(['day', 'week', 'month', 'all'] as Period[]).map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  period === p
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {periodLabels[p]}
-              </button>
-            ))}
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() => {
+                setReplyingTo({ type: 'custom', email: '' });
+                setReplySubject('');
+                setReplyBody('');
+                setEmailResult(null);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#2d7d7d] hover:bg-[#2d7d7d]/10 rounded-lg transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Compose
+            </button>
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+              {(['day', 'week', 'month', 'all'] as Period[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    period === p
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {periodLabels[p]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </nav>
@@ -405,6 +485,20 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {report.reporter_email && (
+                        <button
+                          onClick={() => {
+                            setReplyingTo({ type: 'report', email: report.reporter_email!, context: report.message });
+                            setReplySubject(`Re: Profile report — ${report.author_name || report.author_id}`);
+                            setReplyBody('');
+                            setEmailResult(null);
+                          }}
+                          className="text-xs text-[#2d7d7d] hover:text-[#1f5c5c] flex items-center gap-1"
+                          title="Reply via email"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       {report.page_url && (
                         <a href={report.page_url} target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:text-[#1f5c5c]" title="View profile">
                           <ExternalLink className="h-4 w-4" />
@@ -456,39 +550,57 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               User Feedback ({rawData.feedback.length})
             </h3>
             <div className="space-y-3">
-              {rawData.feedback.map(fb => (
-                <div key={fb.id} className="border border-gray-100 rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      {fb.rating && (
-                        <p className="text-sm mb-1">
-                          {'★'.repeat(fb.rating)}{'☆'.repeat(5 - fb.rating)}
-                        </p>
-                      )}
-                      {fb.comment && (
-                        <p className="text-sm text-gray-700">{fb.comment}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                        <span>{new Date(fb.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{fb.source}</span>
-                        {fb.credits_granted > 0 && (
-                          <span className="text-emerald-600">+{fb.credits_granted} credits</span>
+              {rawData.feedback.map(fb => {
+                const email = feedbackEmails[fb.user_id];
+                return (
+                  <div key={fb.id} className="border border-gray-100 rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {fb.rating && (
+                          <p className="text-sm mb-1">
+                            {'★'.repeat(fb.rating)}{'☆'.repeat(5 - fb.rating)}
+                          </p>
                         )}
-                        {fb.profile_viewed && (
-                          <a
-                            href={`?user=${fb.profile_viewed}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#2d7d7d] hover:underline"
-                          >
-                            {fb.profile_viewed}
-                          </a>
+                        {fb.comment && (
+                          <p className="text-sm text-gray-700">{fb.comment}</p>
                         )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                          <span>{new Date(fb.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          {email && <span className="text-gray-500">{email}</span>}
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{fb.source}</span>
+                          {fb.credits_granted > 0 && (
+                            <span className="text-emerald-600">+{fb.credits_granted} credits</span>
+                          )}
+                          {fb.profile_viewed && (
+                            <a
+                              href={`?user=${fb.profile_viewed}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#2d7d7d] hover:underline"
+                            >
+                              {fb.profile_viewed}
+                            </a>
+                          )}
+                        </div>
                       </div>
+                      {email && (
+                        <button
+                          onClick={() => {
+                            setReplyingTo({ type: 'feedback', email, context: fb.comment || '' });
+                            setReplySubject('Re: Your ScholarFolio feedback');
+                            setReplyBody('');
+                            setEmailResult(null);
+                          }}
+                          className="text-xs text-[#2d7d7d] hover:text-[#1f5c5c] flex items-center gap-1 flex-shrink-0"
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                          Reply
+                        </button>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -560,6 +672,77 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           </div>
         )}
       </div>
+
+      {/* Email compose modal */}
+      {replyingTo && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Mail className="h-4 w-4 text-[#2d7d7d]" />
+                {replyingTo.type === 'custom' ? 'Compose Email' : 'Reply'}
+              </h3>
+              <button onClick={() => { setReplyingTo(null); setEmailResult(null); }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              {replyingTo.context && (
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 italic border-l-2 border-gray-200">
+                  {replyingTo.context}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+                {replyingTo.type === 'custom' ? (
+                  <input
+                    type="email"
+                    value={replyingTo.email}
+                    onChange={e => setReplyingTo({ ...replyingTo, email: e.target.value })}
+                    placeholder="recipient@example.com"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-700">{replyingTo.email}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={replySubject}
+                  onChange={e => setReplySubject(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Message</label>
+                <textarea
+                  value={replyBody}
+                  onChange={e => setReplyBody(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none resize-none"
+                  placeholder="Type your message..."
+                />
+              </div>
+              <p className="text-[10px] text-gray-400">Sent from info@scholarfolio.org via Resend</p>
+              {emailResult && (
+                <p className={`text-xs px-3 py-2 rounded-lg ${emailResult.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                  {emailResult.message}
+                </p>
+              )}
+              <button
+                onClick={sendEmail}
+                disabled={sendingEmail || !replyingTo.email || !replySubject.trim() || !replyBody.trim()}
+                className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sendingEmail ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
