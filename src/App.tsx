@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Linkedin, Github, ExternalLink, TrendingUp } from 'lucide-react';
+import { Linkedin, Github, ExternalLink } from 'lucide-react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
@@ -77,13 +77,6 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
           >
             GitHub <ExternalLink className="h-3 w-3" />
           </a>
-          <button
-            onClick={() => onNavigate('trending')}
-            className="text-sm text-[#3d9494] hover:text-white transition-colors inline-flex items-center gap-1"
-          >
-            <TrendingUp className="h-3 w-3" />
-            Trending
-          </button>
           <button
             onClick={() => onNavigate('about')}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
