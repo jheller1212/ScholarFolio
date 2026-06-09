@@ -21,7 +21,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-4">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: June 5, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: June 9, 2026</p>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
 
@@ -43,6 +43,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Technical logs</strong> — IP address, user agent, request timestamp, and the Google Scholar profile ID searched. These are used for rate limiting, abuse prevention, and debugging. Logs are automatically deleted after 30 days.</li>
               <li><strong>Local storage</strong> — We store a theme preference (<code>sf_theme</code>) and an anonymous search counter (<code>sf_searches</code>) in your browser's localStorage. These are strictly functional and contain no personal identifiers.</li>
               <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 7 days to reduce redundant API calls.</li>
+              <li><strong>Usage analytics</strong> — We log anonymised usage events (e.g., page visits, searches, sign-ups) together with the referring URL and any UTM campaign parameters present in the link you followed. Each browser session is assigned a random identifier that is discarded when you close the tab. These events contain no personal identifiers and cannot be linked to you across sessions.</li>
               <li><strong>Admin access</strong> — The site administrator may access account-level data (email address, credit balance) for service administration, user support, abuse prevention, and credit adjustments (e.g., granting credits for helpful feedback).</li>
             </ul>
           </section>
@@ -53,6 +54,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Contract performance</strong> (Art. 6(1)(b) GDPR) — processing your account and purchase data to provide the service you signed up for.</li>
               <li><strong>Legitimate interest</strong> (Art. 6(1)(f) GDPR) — technical logging for rate limiting, abuse prevention, and service stability. We have balanced this interest against your privacy rights and minimise the data collected.</li>
               <li><strong>Legitimate interest</strong> (Art. 6(1)(f) GDPR) — caching publicly available Google Scholar data to provide the core service functionality.</li>
+              <li><strong>Legitimate interest</strong> (Art. 6(1)(f) GDPR) — anonymised usage analytics to understand how visitors find and use the service, without tracking individuals across sessions or devices.</li>
             </ul>
           </section>
 
@@ -123,10 +125,16 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Supabase authentication cookies</strong> — set automatically when you sign in to maintain your login session. These are strictly necessary for the service to function and do not require your consent.</li>
               <li><strong>Stripe payment cookies</strong> (<code>__stripe_mid</code>, <code>__stripe_sid</code>) — set by Stripe only during the checkout flow to process payments securely and prevent fraud. These are strictly necessary for payment processing and are not used for tracking or advertising.</li>
             </ul>
-            <p>
+            <p className="mb-3">
               We also use browser localStorage for two strictly functional purposes: storing your theme preference
               (<code>sf_theme</code>) and counting anonymous searches for rate limiting (<code>sf_searches</code>).
               These contain no personal identifiers.
+            </p>
+            <p>
+              We use browser sessionStorage (cleared when you close the tab) to store a random session identifier
+              and the referring URL that brought you to the site. This helps us understand how visitors find
+              Scholar Folio. The session identifier is a random value that cannot be used to identify you across
+              sessions or devices. No personal data is stored in sessionStorage.
             </p>
           </section>
 
