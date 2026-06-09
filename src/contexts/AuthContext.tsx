@@ -86,15 +86,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === 'PASSWORD_RECOVERY') {
             setShowPasswordReset(true);
           }
-          // Detect new sign-up (account created within last 30 seconds)
+          // Detect new sign-up (account created in the last 30s, not a returning ORCID user)
           if (event === 'SIGNED_IN') {
             const createdAt = new Date(session.user.created_at).getTime();
             const now = Date.now();
-            const isNewUser = now - createdAt < 30000;
-            const provider = session.user.app_metadata?.provider || 'email';
-            if (isNewUser) {
-              trackEvent('signup', { provider });
-              if (provider === 'google') {
+            const isNewAccount = now - createdAt < 30000;
+            const provider = session.user.app_metadata?.provider;
+            // ORCID magic-link sign-ins for existing users should not trigger welcome
+            const isOrcidReturning = session.user.user_metadata?.orcid_id && provider !== 'orcid';
+            if (isNewAccount) {
+              trackEvent('signup', { provider: provider || 'email' });
+              if ((provider === 'google' || session.user.user_metadata?.provider === 'orcid') && !isOrcidReturning) {
                 setShowWelcome(true);
               }
             }

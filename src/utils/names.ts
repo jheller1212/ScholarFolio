@@ -108,6 +108,14 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
     groups.get(key)!.push(name);
   }
 
+  // Count non-initial words before the last name (words with >2 chars that aren't the last name)
+  function nonInitialWordCount(name: string): number {
+    const lastName = extractLastName(name);
+    const before = name.slice(0, name.length - lastName.length).trim();
+    if (!before) return 0;
+    return before.split(/\s+/).filter(w => w.replace(/[.,]/g, '').length > 2).length;
+  }
+
   // For each group with >1 variant, pick canonical and build replacement map
   const replacements = new Map<string, string>();
   for (const variants of groups.values()) {
@@ -119,11 +127,16 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
     ));
     if (baseLastNames.size > 1) continue;
 
-    // Pick canonical: prefer longest name (most complete), break ties by frequency
+    // Safety check: reject groups where variants have different numbers of
+    // non-initial words before the last name (e.g. "J Bloemer" vs "J Sit Bloemer")
+    const wordCounts = new Set(variants.map(nonInitialWordCount));
+    if (wordCounts.size > 1) continue;
+
+    // Pick canonical: prefer most frequent name, break ties by length (most complete)
     const canonical = variants.sort((a, b) => {
-      const lenDiff = b.length - a.length;
-      if (lenDiff !== 0) return lenDiff;
-      return (nameFreq.get(b) || 0) - (nameFreq.get(a) || 0);
+      const freqDiff = (nameFreq.get(b) || 0) - (nameFreq.get(a) || 0);
+      if (freqDiff !== 0) return freqDiff;
+      return b.length - a.length;
     })[0];
 
     for (const v of variants) {

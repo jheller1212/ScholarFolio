@@ -72,10 +72,15 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     return parts.slice(surnameStart).join(' ');
   });
   const [institution, setInstitution] = useState(() => {
-    const stripped = affiliation.replace(/^(Assistant|Associate|Full|Adjunct|Visiting|Emeritus)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor)\s*(of|in|for|,)\s*/i, '');
-    if (stripped !== affiliation) return stripped.replace(/^,\s*/, '').trim();
-    const parts = affiliation.split(',');
-    return parts[parts.length - 1].trim();
+    // Strip academic titles like "Full Professor, " or "Associate Professor of Marketing, "
+    let cleaned = affiliation
+      .replace(/^(Distinguished|Emeritus|Adjunct|Visiting|Clinical|Tenured|Senior|Junior|Assistant|Associate|Full)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor|Reader|Chair|Director|Dean)\s*(of\s+\w[\w\s]*?)?\s*[,·]\s*/i, '')
+      .trim();
+    if (cleaned === affiliation) cleaned = affiliation;
+    const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
+    // Skip "Department of X" / "School of X" / "Faculty of X" parts — prefer the university name
+    const inst = parts.find(p => !/^(Department|School|Faculty|Division|Institute|Center|Centre|College)\s+(of|for)\s+/i.test(p)) || parts[0] || affiliation;
+    return inst;
   });
 
   const includedCount = useMemo(() => allWorks.length - excludedIds.size, [allWorks, excludedIds]);

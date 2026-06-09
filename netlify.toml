@@ -22,6 +22,16 @@
 [functions]
   directory = "netlify/functions"
 
+[[edge_functions]]
+  path = "/"
+  function = "og-meta"
+
+# ORCID OAuth callback
+[[redirects]]
+  from = "/api/orcid-callback"
+  to = "/.netlify/functions/orcid-callback"
+  status = 200
+
 # Sitemap redirect must come before the SPA catch-all
 [[redirects]]
   from = "/sitemap.xml"

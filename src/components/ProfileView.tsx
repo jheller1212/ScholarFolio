@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin } from 'lucide-react';
 import { NarrativeCvTab } from './NarrativeCvTab';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
@@ -25,6 +25,7 @@ import { extractLastName } from '../utils/names';
 import { useFeedback } from '../hooks/useFeedback';
 import { FeedbackModal } from './FeedbackModal';
 import { FeedbackPromptBanner } from './FeedbackPromptBanner';
+import { trackProfileView } from '../services/profile-views';
 import packageJson from '../../package.json';
 
 interface ProfileViewProps {
@@ -136,10 +137,15 @@ export function ProfileView({
     checkClaim();
   }, [scholarId, user?.id]);
 
-  // Track profile views for feedback prompt
+  // Track profile views for feedback prompt + trending leaderboard
   useEffect(() => {
-    if (scholarId) feedback.trackProfileView(scholarId);
-  }, [scholarId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (scholarId) {
+      feedback.trackProfileView(scholarId);
+      if (data) {
+        trackProfileView(scholarId, data.name, data.affiliation ?? '');
+      }
+    }
+  }, [scholarId, data?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update document title and OG meta tags for link previews
   useEffect(() => {
@@ -177,10 +183,13 @@ export function ProfileView({
     setShowClaimModal(false);
   };
 
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
+      setShowShareMenu(false);
       setTimeout(() => setCopied(false), 2000);
     });
   };
@@ -259,13 +268,47 @@ export function ProfileView({
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.affiliation}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleShare}
-                    className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
-                  >
-                    {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
-                    {copied ? 'Link copied!' : 'Share profile'}
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowShareMenu(!showShareMenu)}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
+                    >
+                      {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
+                      {copied ? 'Link copied!' : 'Share profile'}
+                    </button>
+                    {showShareMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                        <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 min-w-[180px]">
+                          <button onClick={handleShare} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <Link className="h-3 w-3" /> Copy link
+                          </button>
+                          <button onClick={() => {
+                            const text = `Check out ${data.name}'s research profile on ScholarFolio`;
+                            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400');
+                            setShowShareMenu(false);
+                          }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <ExternalLink className="h-3 w-3" /> Share on LinkedIn
+                          </button>
+                          <button onClick={() => {
+                            const text = `${data.name}'s research profile — ${data.totalCitations.toLocaleString()} citations, h-index ${data.hIndex}`;
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400');
+                            setShowShareMenu(false);
+                          }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <ExternalLink className="h-3 w-3" /> Share on X
+                          </button>
+                          <button onClick={() => {
+                            const subject = `${data.name} — Research Profile`;
+                            const body = `Check out ${data.name}'s research profile on ScholarFolio:\n\n${data.affiliation}\n${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex}\n\n${window.location.href}`;
+                            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                            setShowShareMenu(false);
+                          }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <Mail className="h-3 w-3" /> Send via email
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                   {scholarId && (
                     <button
                       onClick={() => setShowEmbed(true)}
@@ -377,6 +420,39 @@ export function ProfileView({
               <Heart className="h-3.5 w-3.5" />
               Support Scholar Folio
             </button>
+          </div>
+        )}
+
+        {/* Explore Co-Authors CTA */}
+        {data.metrics.totalCoAuthors > 0 && (
+          <div className="bg-gradient-to-r from-[#eaf4f4] to-[#e0f0f0] dark:from-[#2d7d7d]/15 dark:to-[#2d7d7d]/10 rounded-xl border border-[#2d7d7d]/10 dark:border-[#2d7d7d]/20 p-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Users className="h-4.5 w-4.5 text-[#2d7d7d]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Explore {data.name.split(' ')[0]}'s co-author network</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Discover <strong>{data.metrics.totalCoAuthors}</strong> collaborators across the world map and citation network
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setActiveTab('worldmap'); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <MapPin className="h-3 w-3" /> World Map
+                </button>
+                <button
+                  onClick={() => { setActiveTab('network'); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#2d7d7d] bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 border border-[#2d7d7d]/20 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Network className="h-3 w-3" /> Network Graph
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -526,10 +602,14 @@ export function ProfileView({
               scholarService.searchAuthors(name).then(results => {
                 if (results.length >= 1 && newWindow) {
                   newWindow.location.href = `${window.location.origin}?user=${encodeURIComponent(results[0].authorId)}`;
-                } else {
-                  newWindow?.close();
+                } else if (newWindow) {
+                  newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
                 }
-              }).catch(() => newWindow?.close());
+              }).catch(() => {
+                if (newWindow) {
+                  newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
+                }
+              });
             }} />
           </div>
         )}
