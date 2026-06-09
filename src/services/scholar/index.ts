@@ -4,6 +4,7 @@ import { metricsCalculator } from '../metrics';
 import { ApiError, timeoutSignal } from '../../utils/api';
 import { normalizeAuthorNames } from '../../utils/names';
 import { supabase } from '../../lib/supabase';
+import { logCaughtError } from '../../lib/errorLogger';
 
 export interface AuthorSearchResult {
   name: string;
@@ -57,8 +58,10 @@ export const scholarService = {
       errors.push(msg);
     }
 
-    console.error('[ScholarService] Author search failed:', errors);
-    throw new Error('Author search is temporarily unavailable. Please try again later or contact the site administrator.');
+    const fullError = `Author search failed: ${errors.join(' | ')}`;
+    console.error('[ScholarService]', fullError);
+    logCaughtError(new Error(fullError), 'profile', 'ScholarService', 'searchAuthors', { query });
+    throw new Error(fullError);
   },
 
   validateProfileUrl: (url: string) => {
