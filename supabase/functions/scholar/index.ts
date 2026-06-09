@@ -891,8 +891,21 @@ Deno.serve(async (req) => {
         });
         if (rlError) {
           console.error(`[Search] Rate limit RPC error:`, rlError);
+          try {
+            await supabase.from('edge_function_errors').insert({
+              function_name: 'scholar', action: 'search_rate_limit_rpc',
+              error_message: rlError.message, context: { query, ip: clientIp },
+            });
+          } catch (_) {}
         }
         if (searchAllowed === false) {
+          console.warn(`[Search] Rate limited: ${clientIp} for query "${query}"`);
+          try {
+            await supabase.from('edge_function_errors').insert({
+              function_name: 'scholar', action: 'search_rate_limited',
+              error_message: `Rate limited: ${clientIp}`, context: { query, ip: clientIp, user_id: userId },
+            });
+          } catch (_) {}
           return new Response(
             JSON.stringify({ error: "Too many searches. Please try again later." }),
             { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1096,6 +1109,12 @@ Deno.serve(async (req) => {
 
       if (decrError) {
         console.error("Credit decrement error:", decrError);
+        try {
+          await supabase.from('edge_function_errors').insert({
+            function_name: 'scholar', action: 'credit_decrement',
+            error_message: decrError.message, context: { user_id: userId },
+          });
+        } catch (_) {}
         return new Response(
           JSON.stringify({ error: "Credit check failed. Please try again." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1161,10 +1180,20 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Edge function error:", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error("Edge function error:", errMsg, errStack);
+    try {
+      await supabase.from('edge_function_errors').insert({
+        function_name: 'scholar', action: 'profile_fetch',
+        error_message: errMsg.slice(0, 2000),
+        error_stack: errStack?.slice(0, 4000),
+        context: { profileUrl: requestData?.profileUrl ?? null, query: requestData?.query ?? null },
+      });
+    } catch (_) {}
     return new Response(
       JSON.stringify({
-        error: "Unable to fetch profile data. Please try again later or contact the site administrator."
+        error: `Unable to fetch profile data: ${errMsg}`
       }),
       {
         status: 500,
