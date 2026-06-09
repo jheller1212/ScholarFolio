@@ -61,6 +61,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     screen_size: string | null; url: string | null; session_id: string | null;
   }>>([]);
   const [errorFilter, setErrorFilter] = useState<string>('all');
+  const [analyticsEvents, setAnalyticsEvents] = useState<Array<{ event: string; properties: Record<string, unknown>; referrer: string | null; session_id: string | null; created_at: string }>>([]);
   const [feedbackEmails, setFeedbackEmails] = useState<Record<string, string>>({});
   const [replyingTo, setReplyingTo] = useState<{ type: 'feedback' | 'report' | 'custom'; email: string; context?: string } | null>(null);
   const [replySubject, setReplySubject] = useState('');
@@ -99,7 +100,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           return allLogs;
         }
 
-        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes, clientErrorsRes] = await Promise.all([
+        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes, clientErrorsRes, analyticsRes] = await Promise.all([
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
@@ -107,6 +108,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
           supabase.from('feedback').select('id,user_id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
           supabase.from('client_errors').select('id,created_at,category,message,stack,component,action,context,browser,os,screen_size,url,session_id').order('created_at', { ascending: false }).limit(200),
+          supabase.from('analytics_events').select('event,properties,referrer,session_id,created_at').order('created_at', { ascending: false }).limit(1000),
         ]);
 
         if (usersRes.error) throw usersRes.error;
@@ -121,6 +123,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
         });
         if (reportsRes.data) setReports(reportsRes.data);
         if (clientErrorsRes.data) setClientErrors(clientErrorsRes.data);
+        if (analyticsRes.data) setAnalyticsEvents(analyticsRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load stats');
       } finally {
@@ -426,6 +429,11 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             {/* Activity chart */}
             {stats.activityByDay.length > 0 && (
               <ActivityChart data={stats.activityByDay} />
+            )}
+
+            {/* Attribution & Funnel */}
+            {analyticsEvents.length > 0 && (
+              <AttributionSection events={analyticsEvents} />
             )}
 
             {/* Purchase history */}
@@ -949,6 +957,117 @@ function ActivityChart({ data }: { data: Array<{ day: string; searches: number; 
       <div className="flex items-start gap-2 mt-3 p-2 bg-amber-50 rounded-lg">
         <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
         <p className="text-[10px] text-amber-600">Raw search logs are retained for 30 days (GDPR). Aggregated daily counts are retained permanently.</p>
+      </div>
+    </div>
+  );
+}
+
+function AttributionSection({ events }: { events: Array<{ event: string; properties: Record<string, unknown>; referrer: string | null; session_id: string | null; created_at: string }> }) {
+  // Parse referrer into a readable source
+  function parseSource(referrer: string | null, props: Record<string, unknown>): string {
+    if (props.utm_source) return String(props.utm_source);
+    if (!referrer || referrer === 'direct') return 'Direct';
+    try {
+      const host = new URL(referrer).hostname.replace('www.', '');
+      if (host.includes('google')) return 'Google';
+      if (host.includes('twitter') || host.includes('x.com')) return 'Twitter/X';
+      if (host.includes('linkedin')) return 'LinkedIn';
+      if (host.includes('facebook')) return 'Facebook';
+      if (host.includes('reddit')) return 'Reddit';
+      if (host.includes('t.co')) return 'Twitter/X';
+      return host;
+    } catch {
+      return referrer.slice(0, 30);
+    }
+  }
+
+  const visits = events.filter(e => e.event === 'visit');
+  const signups = events.filter(e => e.event === 'signup');
+  const searches = events.filter(e => e.event === 'search');
+  const signupWalls = events.filter(e => e.event === 'signup_wall_shown');
+  const creditWalls = events.filter(e => e.event === 'credit_wall_shown');
+
+  // Traffic sources
+  const sourceCounts: Record<string, number> = {};
+  visits.forEach(v => {
+    const src = parseSource(v.referrer, v.properties);
+    sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+  });
+  const sortedSources = Object.entries(sourceCounts).sort(([, a], [, b]) => b - a);
+
+  // Signup sources (from the signup event's attribution)
+  const signupSources: Record<string, number> = {};
+  signups.forEach(s => {
+    const src = parseSource(null, s.properties);
+    const key = s.properties._utm_source ? String(s.properties._utm_source) : (s.properties._referrer ? parseSource(String(s.properties._referrer), {}) : 'Direct');
+    signupSources[key] = (signupSources[key] || 0) + 1;
+  });
+  const sortedSignupSources = Object.entries(signupSources).sort(([, a], [, b]) => b - a);
+
+  // Unique sessions
+  const uniqueSessions = new Set(visits.map(v => v.session_id).filter(Boolean)).size;
+
+  // Funnel: visits → searches → signup_wall → signups
+  const funnelSearchSessions = new Set(searches.map(s => s.session_id).filter(Boolean)).size;
+  const funnelWallSessions = new Set(signupWalls.map(s => s.session_id).filter(Boolean)).size;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-5">
+        <TrendingUp className="h-4 w-4 text-[#2d7d7d]" />
+        Attribution & Funnel
+        <span className="text-[10px] text-gray-400 font-normal ml-auto">Tracking since deployment</span>
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Traffic Sources */}
+        <div>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Traffic Sources</h4>
+          <div className="space-y-2 text-sm">
+            <Row label="Unique sessions" value={uniqueSessions} />
+            <div className="border-t border-gray-100 pt-2 mt-2" />
+            {sortedSources.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No data yet — tracking starts now</p>
+            ) : (
+              sortedSources.slice(0, 10).map(([src, count]) => (
+                <Row key={src} label={src} value={count} />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Signup Attribution */}
+        <div>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Signup Sources</h4>
+          <div className="space-y-2 text-sm">
+            <Row label="Total signups tracked" value={signups.length} />
+            <div className="border-t border-gray-100 pt-2 mt-2" />
+            {sortedSignupSources.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No signups tracked yet</p>
+            ) : (
+              sortedSignupSources.map(([src, count]) => (
+                <Row key={src} label={src} value={count} />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Conversion Funnel */}
+        <div>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Session Funnel</h4>
+          <div className="space-y-2 text-sm">
+            <Row label="Visits" value={visits.length} />
+            <Row label="Searched" value={`${funnelSearchSessions} sessions`} />
+            <Row label="Hit signup wall" value={`${funnelWallSessions} sessions`} />
+            <Row label="Hit credit wall" value={`${creditWalls.length} times`} />
+            <Row label="Signed up" value={signups.length} />
+            {visits.length > 0 && signups.length > 0 && (
+              <div className="border-t border-gray-100 pt-2 mt-2">
+                <Row label="Visit → signup" value={`${((signups.length / uniqueSessions) * 100).toFixed(1)}%`} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

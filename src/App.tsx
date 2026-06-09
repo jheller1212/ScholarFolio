@@ -26,6 +26,7 @@ import { openAlexService } from './services/openalex';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
+import { captureAttribution, trackEvent } from './lib/analytics';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -146,6 +147,9 @@ function AppContent() {
   const { user, credits, refreshCredits, showWelcome, dismissWelcome, showPasswordReset, dismissPasswordReset, updatePassword } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
 
+  // Capture referrer + UTM on first load
+  useEffect(() => { captureAttribution(); }, []);
+
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
   const [initialUrlHandled, setInitialUrlHandled] = useState(false);
   useEffect(() => {
@@ -229,10 +233,12 @@ function AppContent() {
       if (!user) {
         // Anonymous user — check local free limit
         if (getAnonSearches() >= ANON_FREE_LIMIT) {
+          trackEvent('signup_wall_shown', { searches_used: getAnonSearches() });
           setShowSignUpWall(true);
           return;
         }
       } else if (credits !== null && credits <= 0) {
+        trackEvent('credit_wall_shown', { user_id: user.id });
         setShowCreditPacks(true);
         return;
       }
@@ -277,6 +283,7 @@ function AppContent() {
 
       setProfileUrl(url);
       setData(sanitizedData);
+      trackEvent('search', { author_id: userId, cache: profileData.cacheStatus, bypass: bypassCredits });
 
       // Fetch Open Access stats from OpenAlex (non-blocking)
       openAlexService.fetchOpenAccessStats(sanitizedData.name, sanitizedData.affiliation)
