@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
+import { trackEvent } from '../lib/analytics';
 
 interface AuthState {
   user: User | null;
@@ -93,8 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const provider = session.user.app_metadata?.provider;
             // ORCID magic-link sign-ins for existing users should not trigger welcome
             const isOrcidReturning = session.user.user_metadata?.orcid_id && provider !== 'orcid';
-            if (isNewAccount && (provider === 'google' || session.user.user_metadata?.provider === 'orcid') && !isOrcidReturning) {
-              setShowWelcome(true);
+            if (isNewAccount) {
+              trackEvent('signup', { provider: provider || 'email' });
+              if ((provider === 'google' || session.user.user_metadata?.provider === 'orcid') && !isOrcidReturning) {
+                setShowWelcome(true);
+              }
             }
           }
         } else {
@@ -120,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return { error: error.message };
     }
+    trackEvent('signup', { provider: 'email' });
     return { error: null };
   };
 
