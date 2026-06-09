@@ -168,9 +168,6 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
           {oa.bronze > 0 && <MetricsCard title="Bronze OA" value={oa.bronze} subtitle="Free to read, no license" icon="bronzeOa" />}
           {oa.closed > 0 && <MetricsCard title="Closed Access" value={oa.closed} subtitle="Behind paywall" icon="closedAccess" />}
           {(oa.preprintCount ?? 0) > 0 && <MetricsCard title="Preprints" value={oa.preprintCount!} subtitle="Early versions available" icon="preprint" />}
-          {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
-            <MetricsCard title="Influential Citations" value={data.s2Stats.totalInfluentialCitations} subtitle={`Across ${data.s2Stats.matched} matched papers`} icon="influential" />
-          )}
         </div>
       </div>
 
@@ -278,14 +275,6 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
         <a href="https://openalex.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
           OpenAlex
         </a>
-        {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
-          <>
-            {' '}and{' '}
-            <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
-              Semantic Scholar
-            </a>
-          </>
-        )}
       </p>
     </div>
   );
