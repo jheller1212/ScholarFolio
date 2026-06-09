@@ -805,13 +805,17 @@ async function searchAuthorsByNameScraping(query: string) {
 
 // --- Author search with fallback ---
 async function searchAuthorsByName(query: string) {
+  const errors: string[] = [];
+
   // Try SerpAPI first (most reliable)
   try {
     const results = await searchAuthorsByNameSerpAPI(query);
     console.log(`[Search] SerpAPI returned ${results.length} profiles`);
     return results;
   } catch (e) {
-    console.warn(`[Search] SerpAPI failed: ${e.message}`);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[Search] SerpAPI failed: ${msg}`);
+    errors.push(`SerpAPI: ${msg}`);
   }
 
   // Fallback: scrape Google Scholar directly (server-side, no CORS issues)
@@ -820,9 +824,12 @@ async function searchAuthorsByName(query: string) {
     console.log(`[Search] Scraping fallback returned ${results.length} profiles`);
     return results;
   } catch (e) {
-    console.warn(`[Search] Scraping fallback also failed: ${e.message}`);
-    throw new Error('Author search is temporarily unavailable. Please try again later or contact the site administrator.');
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[Search] Scraping fallback also failed: ${msg}`);
+    errors.push(`Scraping: ${msg}`);
   }
+
+  throw new Error(`All search methods failed for "${query}": ${errors.join(' | ')}`);
 }
 
 Deno.serve(async (req) => {
@@ -897,9 +904,21 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (searchErr) {
-        console.error(`[Search] Error:`, searchErr);
+        const errMsg = searchErr instanceof Error ? searchErr.message : String(searchErr);
+        const errStack = searchErr instanceof Error ? searchErr.stack : undefined;
+        console.error(`[Search] Error for query "${query}":`, errMsg, errStack);
+        // Log to error_logs table for traceability
+        try {
+          await supabase.from('edge_function_errors').insert({
+            function_name: 'scholar',
+            action: 'search',
+            error_message: errMsg.slice(0, 2000),
+            error_stack: errStack?.slice(0, 4000),
+            context: { query, ip: clientIp, user_id: userId },
+          });
+        } catch (_) {}
         return new Response(
-          JSON.stringify({ error: "Author search is temporarily unavailable. Please try again later." }),
+          JSON.stringify({ error: `Author search failed: ${errMsg}`, code: 'SEARCH_FAILED' }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
