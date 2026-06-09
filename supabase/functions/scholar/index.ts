@@ -642,6 +642,24 @@ function extractScholarUserId(url) {
   }
 }
 
+// --- Shared name matching utilities ---
+function stripDiacritics(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function nameMatchesQuery(candidateName: string, query: string): boolean {
+  const queryParts = stripDiacritics(query.toLowerCase().trim()).split(/\s+/);
+  const candidateParts = stripDiacritics(candidateName.toLowerCase().trim()).split(/\s+/);
+
+  return queryParts.every(qp =>
+    candidateParts.some(cp =>
+      cp.includes(qp) || qp.includes(cp) ||
+      (cp.length === 1 && qp.startsWith(cp)) ||
+      (qp.length === 1 && cp.startsWith(qp))
+    )
+  );
+}
+
 // --- Author search by name via SerpAPI ---
 // google_scholar_profiles engine was discontinued; use google_scholar with author:"name"
 // to extract unique author_ids from paper results, then fetch their profiles.
@@ -674,28 +692,14 @@ async function searchAuthorsByNameSerpAPI(query: string) {
   console.log(`[Search-SerpAPI] Got ${organicResults.length} organic results`);
 
   // Extract unique author_ids that match the query name
-  // Handles abbreviated names: query "Jonas Heller" matches "J Heller"
-  const queryLower = query.toLowerCase().trim();
-  const queryParts = queryLower.split(/\s+/);
   const seenIds = new Set<string>();
   const matchedAuthors: Array<{ author_id: string; name: string }> = [];
-
-  function namePartsMatch(queryPart: string, authorParts: string[]): boolean {
-    return authorParts.some(ap =>
-      ap.includes(queryPart) || queryPart.includes(ap) ||
-      (ap.length === 1 && queryPart.startsWith(ap)) ||
-      (queryPart.length === 1 && ap.startsWith(queryPart))
-    );
-  }
 
   for (const result of organicResults) {
     const authors = result.publication_info?.authors || [];
     for (const author of authors) {
       if (!author.author_id || seenIds.has(author.author_id)) continue;
-      const authorLower = (author.name || '').toLowerCase();
-      const authorParts = authorLower.split(/\s+/);
-      const isMatch = queryParts.every((p: string) => namePartsMatch(p, authorParts));
-      if (isMatch) {
+      if (nameMatchesQuery(author.name || '', query)) {
         seenIds.add(author.author_id);
         matchedAuthors.push({ author_id: author.author_id, name: author.name });
       }
@@ -800,7 +804,11 @@ async function searchAuthorsByNameScraping(query: string) {
     profiles.push({ name, affiliation, imageUrl, authorId, citedBy, interests });
   }
 
-  return profiles.slice(0, 8);
+  // Filter to profiles whose name actually matches the query (GS returns co-authors/related)
+  const filtered = profiles.filter(p => nameMatchesQuery(p.name, query));
+  console.log(`[Search-Scraper] ${profiles.length} raw results, ${filtered.length} after name filtering`);
+  // If filtering removes everything, return unfiltered (user may have used a different name form)
+  return (filtered.length > 0 ? filtered : profiles).slice(0, 8);
 }
 
 // --- Author search with fallback ---
