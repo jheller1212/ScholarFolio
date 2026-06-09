@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
+import { trackEvent } from '../lib/analytics';
 
 interface AuthState {
   user: User | null;
@@ -85,13 +86,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === 'PASSWORD_RECOVERY') {
             setShowPasswordReset(true);
           }
-          // Detect new Google sign-up (user just created, signed in via OAuth)
+          // Detect new sign-up (account created within last 30 seconds)
           if (event === 'SIGNED_IN') {
             const createdAt = new Date(session.user.created_at).getTime();
             const now = Date.now();
-            // If account was created within the last 30 seconds, it's a new sign-up
-            if (now - createdAt < 30000 && session.user.app_metadata?.provider === 'google') {
-              setShowWelcome(true);
+            const isNewUser = now - createdAt < 30000;
+            const provider = session.user.app_metadata?.provider || 'email';
+            if (isNewUser) {
+              trackEvent('signup', { provider });
+              if (provider === 'google') {
+                setShowWelcome(true);
+              }
             }
           }
         } else {
@@ -117,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return { error: error.message };
     }
+    trackEvent('signup', { provider: 'email' });
     return { error: null };
   };
 
