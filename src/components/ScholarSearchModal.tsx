@@ -1,7 +1,64 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, X, MapPin, GraduationCap, Loader2 } from 'lucide-react';
+import { Search, X, MapPin, GraduationCap, Loader2, Link, ArrowRight } from 'lucide-react';
 import { scholarService, type AuthorSearchResult } from '../services/scholar/index';
+
+function UrlFallback({ message, pastedUrl, setPastedUrl, urlError, setUrlError, onSubmit, compact }: {
+  message: string;
+  pastedUrl: string;
+  setPastedUrl: (v: string) => void;
+  urlError: string | null;
+  setUrlError: (v: string | null) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  compact?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (compact && !expanded) {
+    return (
+      <button
+        onClick={() => setExpanded(true)}
+        className="mt-4 w-full text-center text-xs text-gray-400 hover:text-[#2d7d7d] transition-colors flex items-center justify-center gap-1.5 py-2"
+      >
+        <Link className="h-3 w-3" />
+        {message} Paste a Google Scholar URL instead
+      </button>
+    );
+  }
+
+  return (
+    <div className={compact ? 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700' : 'text-center py-6'}>
+      {!compact && (
+        <>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4">Try a different spelling, or paste their Google Scholar URL directly</p>
+        </>
+      )}
+      <form onSubmit={onSubmit} className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={pastedUrl}
+            onChange={e => { setPastedUrl(e.target.value); setUrlError(null); }}
+            placeholder="https://scholar.google.com/citations?user=..."
+            className="w-full px-4 py-2 pl-9 text-xs text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 transition-all"
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <Link className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+        </div>
+        <button
+          type="submit"
+          disabled={!pastedUrl.trim()}
+          className="px-3 py-2 bg-[#2d7d7d] text-white text-xs font-medium rounded-lg hover:bg-[#236363] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+        >
+          Go <ArrowRight className="h-3 w-3" />
+        </button>
+      </form>
+      {urlError && <p className="text-xs text-red-500 mt-1.5">{urlError}</p>}
+    </div>
+  );
+}
 
 interface ScholarSearchModalProps {
   isOpen: boolean;
@@ -16,6 +73,8 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pastedUrl, setPastedUrl] = useState('');
+  const [urlError, setUrlError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasAutoSearched = useRef(false);
 
@@ -48,6 +107,8 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       setSearched(false);
       setError(null);
       setLoading(false);
+      setPastedUrl('');
+      setUrlError(null);
       hasAutoSearched.current = false;
     }
   }, [isOpen, initialQuery]);
@@ -77,6 +138,18 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
     onSelect(url);
     onClose();
   }, [onSelect, onClose]);
+
+  const handleUrlSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const url = pastedUrl.trim();
+    if (!url) return;
+    if (url.includes('scholar.google.') && url.includes('user=')) {
+      onSelect(url);
+      onClose();
+    } else {
+      setUrlError('Please paste a valid Google Scholar profile URL');
+    }
+  }, [pastedUrl, onSelect, onClose]);
 
   if (!isOpen) return null;
 
@@ -148,10 +221,25 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
           )}
 
           {!loading && searched && results.length === 0 && !error && (
-            <div className="text-center py-8">
-              <p className="text-sm text-gray-500 dark:text-gray-400">No profiles found for "{name.trim()}"</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different spelling or include the full name</p>
-            </div>
+            <UrlFallback
+              message={`No profiles found for "${name.trim()}"`}
+              pastedUrl={pastedUrl}
+              setPastedUrl={setPastedUrl}
+              urlError={urlError}
+              setUrlError={setUrlError}
+              onSubmit={handleUrlSubmit}
+            />
+          )}
+
+          {!loading && searched && results.length > 0 && error && (
+            <UrlFallback
+              message="Search failed"
+              pastedUrl={pastedUrl}
+              setPastedUrl={setPastedUrl}
+              urlError={urlError}
+              setUrlError={setUrlError}
+              onSubmit={handleUrlSubmit}
+            />
           )}
 
           {!loading && results.length > 0 && (
@@ -202,6 +290,16 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
                   </div>
                 </button>
               ))}
+              {/* URL fallback after results */}
+              <UrlFallback
+                message="Not finding the right person?"
+                pastedUrl={pastedUrl}
+                setPastedUrl={setPastedUrl}
+                urlError={urlError}
+                setUrlError={setUrlError}
+                onSubmit={handleUrlSubmit}
+                compact
+              />
             </div>
           )}
 

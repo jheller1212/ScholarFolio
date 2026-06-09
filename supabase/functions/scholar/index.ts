@@ -905,8 +905,36 @@ Deno.serve(async (req) => {
             author_id: null, origin: req.headers.get('Origin'), user_agent: req.headers.get('User-Agent')
           });
         } catch (_) {}
-        console.log(`[Search] Searching for authors: ${query}`);
+        // Check search cache first (24h TTL)
+        const cacheKey = `search:${query.toLowerCase().trim()}`;
+        const { data: cached } = await supabase
+          .from('scholar_cache')
+          .select('data')
+          .eq('url', cacheKey)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (cached?.data) {
+          console.log(`[Search] Cache hit for: ${query}`);
+          return new Response(
+            JSON.stringify({ profiles: cached.data, cached: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        console.log(`[Search] Cache miss, searching for: ${query}`);
         const results = await searchAuthorsByName(query);
+
+        // Cache successful results (even empty — avoids re-querying no-result names)
+        try {
+          const expires = new Date(Date.now() + 86400 * 1000).toISOString(); // 24h
+          await supabase.from('scholar_cache').upsert({
+            url: cacheKey,
+            data: results,
+            expires_at: expires,
+          });
+        } catch (_) {}
+
         return new Response(
           JSON.stringify({ profiles: results }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
