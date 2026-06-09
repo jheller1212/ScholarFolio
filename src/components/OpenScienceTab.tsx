@@ -275,6 +275,14 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
         <a href="https://openalex.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
           OpenAlex
         </a>
+        {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
+          <>
+            {' '}and{' '}
+            <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
+              Semantic Scholar
+            </a>
+          </>
+        )}
       </p>
     </div>
   );
