@@ -40,7 +40,7 @@ interface MetricsCardProps {
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
         'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
         'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF' |
-        'pindex' | 'owpi' | 'weightedCitations';
+        'pindex' | 'owpi' | 'weightedCitations' | 'influential' | 'preprint' | 'repository';
 }
 
 function useCountUp(target: number | string, duration = 600) {
@@ -147,6 +147,9 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'hybridOa': return <Unlock className="h-3.5 w-3.5" />;
       case 'bronzeOa': return <Unlock className="h-3.5 w-3.5" />;
       case 'closedAccess': return <Lock className="h-3.5 w-3.5" />;
+      case 'influential': return <Sparkles className="h-3.5 w-3.5" />;
+      case 'preprint': return <BookOpen className="h-3.5 w-3.5" />;
+      case 'repository': return <Network className="h-3.5 w-3.5" />;
 
       default: return <Citation className="h-3.5 w-3.5" />;
     }
@@ -190,6 +193,9 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'pindex': return 'pindex';
       case 'owpi': return 'owpi';
       case 'weightedCitations': return 'weightedCitations';
+      case 'influential': return 'citations';
+      case 'preprint': return 'citations';
+      case 'repository': return 'citations';
       default: return 'citations';
     }
   };
@@ -217,7 +223,11 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
         return 'from-cat-field-from to-cat-field-to';
       // Open access → green
       case 'oaPercent': case 'goldOa': case 'greenOa': case 'hybridOa': case 'bronzeOa': case 'closedAccess':
+      case 'preprint': case 'repository':
         return 'from-cat-oa-from to-cat-oa-to';
+      // Semantic Scholar → indigo
+      case 'influential':
+        return 'from-cat-field-from to-cat-field-to';
       default:
         return 'from-primary-start to-primary-end';
     }

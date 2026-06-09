@@ -76,6 +76,10 @@ export interface OpenAccessStats {
   publicationOa?: Record<string, { status: OaStatus; oaUrl?: string }>;
   /** DOI map from normalized title to DOI string (from OpenAlex) */
   doiMap?: Record<string, string>;
+  /** Number of papers with a preprint (submittedVersion) available */
+  preprintCount?: number;
+  /** OA repository/source breakdown: display_name → count */
+  repositoryCounts?: Record<string, number>;
 }
 
 export interface FieldNormalizedMetrics {

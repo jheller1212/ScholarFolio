@@ -7,6 +7,37 @@ interface OpenScienceTabProps {
   data: Author;
 }
 
+function RepositoryBreakdown({ repositoryCounts }: { repositoryCounts: Record<string, number> }) {
+  const sorted = useMemo(
+    () => Object.entries(repositoryCounts).sort(([, a], [, b]) => b - a),
+    [repositoryCounts]
+  );
+  if (sorted.length === 0) return null;
+  const max = sorted[0][1];
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Where Open Work Is Hosted</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card p-6">
+        <div className="space-y-2.5">
+          {sorted.slice(0, 8).map(([name, count]) => (
+            <div key={name} className="flex items-center gap-3">
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-48 truncate shrink-0" title={name}>{name}</span>
+              <div className="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-4 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#2d7d7d] to-[#3a9a9a] rounded-full transition-all duration-500"
+                  style={{ width: `${(count / max) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-8 text-right shrink-0">{count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OaTrend({ publications, publicationOa }: { publications: Author['publications']; publicationOa?: Record<string, { status: OaStatus }> }) {
   const [hoveredYear, setHoveredYear] = useState<number | null>(null);
 
@@ -136,6 +167,10 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
           {oa.hybrid > 0 && <MetricsCard title="Hybrid OA" value={oa.hybrid} subtitle="OA in subscription journals" icon="hybridOa" />}
           {oa.bronze > 0 && <MetricsCard title="Bronze OA" value={oa.bronze} subtitle="Free to read, no license" icon="bronzeOa" />}
           {oa.closed > 0 && <MetricsCard title="Closed Access" value={oa.closed} subtitle="Behind paywall" icon="closedAccess" />}
+          {(oa.preprintCount ?? 0) > 0 && <MetricsCard title="Preprints" value={oa.preprintCount!} subtitle="Early versions available" icon="preprint" />}
+          {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
+            <MetricsCard title="Influential Citations" value={data.s2Stats.totalInfluentialCitations} subtitle={`Across ${data.s2Stats.matched} matched papers`} icon="influential" />
+          )}
         </div>
       </div>
 
@@ -213,6 +248,11 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
       {/* OA trend over time */}
       <OaTrend publications={data.publications} publicationOa={oa.publicationOa} />
 
+      {/* Repository breakdown */}
+      {oa.repositoryCounts && Object.keys(oa.repositoryCounts).length > 0 && (
+        <RepositoryBreakdown repositoryCounts={oa.repositoryCounts} />
+      )}
+
       {/* ORCID */}
       {oa.orcid && (
         <div>
@@ -238,6 +278,14 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
         <a href="https://openalex.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
           OpenAlex
         </a>
+        {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
+          <>
+            {' '}and{' '}
+            <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">
+              Semantic Scholar
+            </a>
+          </>
+        )}
       </p>
     </div>
   );
