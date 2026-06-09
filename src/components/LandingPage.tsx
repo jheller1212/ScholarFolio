@@ -48,8 +48,49 @@ function useScrollReveal() {
   return ref;
 }
 
+function NameSearchInput({ onSearch, isLoading }: { onSearch: (name: string) => void; isLoading: boolean }) {
+  const [name, setName] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length >= 2 && !isLoading) {
+      onSearch(name.trim());
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="relative search-focus-glow rounded-lg transition-all">
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Search by researcher name..."
+          disabled={isLoading}
+          className="w-full py-3 pl-12 pr-28 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20 rounded-lg focus:outline-none focus:ring-2 transition-all"
+          autoComplete="off"
+          spellCheck="false"
+        />
+        <div className="absolute left-4 top-3.5 flex items-center justify-center">
+          <Search className="h-5 w-5 gradient-icon" />
+        </div>
+        <button
+          type="submit"
+          disabled={name.trim().length < 2 || isLoading}
+          className="absolute right-2 top-2 px-4 py-1.5 bg-[#2d7d7d] text-white rounded-lg btn-lift disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-xs min-w-[80px]"
+        >
+          <Search className="h-4 w-4" />
+          <span>Find</span>
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function LandingPage({ onSearch, loading, error, onNavigate, authControls }: LandingPageProps) {
   const [showScholarSearch, setShowScholarSearch] = useState(false);
+  const [initialSearchQuery, setInitialSearchQuery] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const featuresRef = useScrollReveal();
   const ctaRef = useScrollReveal();
@@ -140,9 +181,9 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             Get a shareable portfolio page for your research — your publications, citations, and collaboration network at a memorable URL like <span className="font-medium text-[#2d7d7d]">scholarfolio.org/your-name</span>.
           </p>
 
-          {/* Search area */}
+          {/* Search area — name search primary */}
           <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto mb-2">
-            <SearchBar onSearch={onSearch} isLoading={loading} error={error} />
+            <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
           </div>
 
           {!user && (
@@ -159,13 +200,19 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
           </p>
 
           <button
-            onClick={() => setShowScholarSearch(true)}
+            onClick={() => setShowUrlInput(!showUrlInput)}
             className="animate-fade-up animate-delay-350 inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#2d7d7d] transition-colors group"
           >
-            <Search className="h-3.5 w-3.5" />
-            <span>Or search by author name</span>
+            <Link className="h-3.5 w-3.5" />
+            <span>Or paste a Google Scholar URL</span>
             <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
           </button>
+
+          {showUrlInput && (
+            <div className="animate-fade-up w-full max-w-xl mx-auto mt-3">
+              <SearchBar onSearch={onSearch} isLoading={loading} error={error} compact />
+            </div>
+          )}
         </div>
       </section>
 
@@ -257,7 +304,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
 
             <div className="max-w-xl mx-auto mb-3">
-              <SearchBar onSearch={onSearch} isLoading={loading} />
+              <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
             </div>
 
             <p className="text-xs text-white/40 italic mb-5">
@@ -278,8 +325,9 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
 
       <ScholarSearchModal
         isOpen={showScholarSearch}
-        onClose={() => setShowScholarSearch(false)}
+        onClose={() => { setShowScholarSearch(false); setInitialSearchQuery(''); }}
         onSelect={onSearch}
+        initialQuery={initialSearchQuery}
       />
     </main>
   );
