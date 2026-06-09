@@ -43,14 +43,16 @@ export class OpenAlexService {
       // ORCID is already fetched by shared author lookup
       const orcid = author.orcid;
 
-      // Fetch per-publication OA status + DOIs (paginated, up to 200 works per page)
+      // Fetch per-publication OA status + DOIs + location data (paginated, up to 200 works per page)
       const publicationOa: Record<string, { status: OaStatus; oaUrl?: string }> = {};
       const doiMap: Record<string, string> = {};
+      const repositoryCounts: Record<string, number> = {};
+      let preprintCount = 0;
       let page = 1;
       const maxPages = 10;
       while (page <= maxPages) {
         await oaRateLimiter.acquireToken();
-        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
+        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,best_oa_location,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
         const pubsResponse = await fetch(pubsUrl, {
           signal: timeoutSignal(15000)
         });
@@ -69,9 +71,17 @@ export class OpenAlexService {
             };
             // Extract DOI for Semantic Scholar batch lookup
             if (work.doi) {
-              // OpenAlex DOIs are full URLs like "https://doi.org/10.1234/..."
               const doi = work.doi.replace('https://doi.org/', '');
               if (doi) doiMap[normalizedTitle] = doi;
+            }
+            // Extract preprint/repository info from best_oa_location
+            const boa = work.best_oa_location;
+            if (boa?.version === 'submittedVersion') {
+              preprintCount++;
+            }
+            if (boa?.source?.display_name && boa?.is_oa) {
+              const repoName = boa.source.display_name;
+              repositoryCounts[repoName] = (repositoryCounts[repoName] || 0) + 1;
             }
           }
         }
@@ -92,6 +102,8 @@ export class OpenAlexService {
         orcid,
         publicationOa,
         doiMap,
+        preprintCount,
+        repositoryCounts,
       };
     } catch (error) {
       console.warn('[OpenAlex] Error fetching OA stats:', error);
