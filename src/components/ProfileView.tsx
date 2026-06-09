@@ -528,7 +528,22 @@ export function ProfileView({
                   subtitle="Age-normalized rate"
                   icon="ageNormalized"
                 />
+                {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
+                  <MetricsCard
+                    title="Influential Citations"
+                    value={data.s2Stats.totalInfluentialCitations}
+                    subtitle={`${data.s2Stats.matched} of ${data.s2Stats.total} papers matched`}
+                    icon="influential"
+                  />
+                )}
               </div>
+              {data.s2Stats && data.s2Stats.totalInfluentialCitations > 0 && (
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                  Influential Citations from{' '}
+                  <a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500">Semantic Scholar</a>
+                  {' '}— counts may differ from Google Scholar as coverage varies.
+                </p>
+              )}
             </div>
 
             {data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null) && (
