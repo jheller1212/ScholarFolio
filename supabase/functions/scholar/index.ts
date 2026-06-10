@@ -745,8 +745,10 @@ async function searchAuthorsByNameSerpAPI(query: string) {
     }
   }
 
-  console.log(`[Search-SerpAPI] Returning ${profiles.length} profiles`);
-  return profiles;
+  // Final name filter on fetched profiles (profile name may differ from paper author name)
+  const filtered = profiles.filter(p => nameMatchesQuery(p.name, query));
+  console.log(`[Search-SerpAPI] ${profiles.length} profiles fetched, ${filtered.length} after name filter`);
+  return filtered.length > 0 ? filtered : profiles;
 }
 
 // --- Author search by name via direct scraping (fallback) ---
