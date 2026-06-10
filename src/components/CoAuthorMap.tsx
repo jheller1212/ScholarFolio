@@ -26,6 +26,9 @@ interface TooltipState {
   data: CoAuthorGeoData | null;
 }
 
+// Module-level cache for world topology (84KB JSON, fetched once)
+let cachedWorldTopology: WorldTopology | null = null;
+
 interface WorldTopology extends Topology {
   objects: {
     countries: GeometryCollection;
@@ -208,13 +211,14 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
       setTooltip(prev => ({ ...prev, visible: false }));
     }, { passive: true } as unknown as boolean);
 
-    // Load world TopoJSON
-    fetch('https://unpkg.com/world-atlas@2/countries-110m.json', { signal: timeoutSignal(15000) })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((world: WorldTopology) => {
+    // Load world TopoJSON (cached after first fetch)
+    const worldPromise = cachedWorldTopology
+      ? Promise.resolve(cachedWorldTopology)
+      : fetch('https://unpkg.com/world-atlas@2/countries-110m.json', { signal: timeoutSignal(15000) })
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+          .then((data: WorldTopology) => { cachedWorldTopology = data; return data; });
+
+    worldPromise.then((world: WorldTopology) => {
         const countries = topojson.feature(world, world.objects.countries);
 
         // Outer sphere (ocean)

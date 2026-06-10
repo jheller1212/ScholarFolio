@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin } from 'lucide-react';
-import { NarrativeCvTab } from './NarrativeCvTab';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 // pdfExport is dynamically imported on click to avoid bundling jsPDF (344KB)
 import { SearchBar } from './SearchBar';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
-import { CitationsChart } from './CitationsChart';
 import { MetricsCard } from './MetricsCard';
-import { CitationNetwork } from './CitationNetwork';
-import { CoAuthorMap } from './CoAuthorMap';
-import { OpenScienceTab } from './OpenScienceTab';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { PIndexSection } from './PIndexSection';
+
+// Lazy-load heavy tab components (D3, Leaflet, recharts, docx)
+const CitationsChart = lazy(() => import('./CitationsChart').then(m => ({ default: m.CitationsChart })));
+const CitationNetwork = lazy(() => import('./CitationNetwork').then(m => ({ default: m.CitationNetwork })));
+const CoAuthorMap = lazy(() => import('./CoAuthorMap').then(m => ({ default: m.CoAuthorMap })));
+const OpenScienceTab = lazy(() => import('./OpenScienceTab').then(m => ({ default: m.OpenScienceTab })));
+const NarrativeCvTab = lazy(() => import('./NarrativeCvTab').then(m => ({ default: m.NarrativeCvTab })));
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -242,6 +244,8 @@ export function ProfileView({
                 <img
                   src={data.imageUrl}
                   alt={data.name}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-xl object-cover bg-[#eaf4f4] flex-shrink-0"
                   onError={() => setImgError(true)}
                 />
@@ -471,6 +475,7 @@ export function ProfileView({
                 role="tab"
                 aria-selected={activeTab === tab.id}
                 tabIndex={activeTab === tab.id ? 0 : -1}
+                title={tab.label}
                 onClick={() => { setActiveTab(tab.id); setTabKey(k => k + 1); }}
                 className={`relative z-10 flex items-center gap-1.5 px-2 sm:px-4 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
                   activeTab === tab.id
@@ -600,6 +605,7 @@ export function ProfileView({
         </div>
 
         <div key={tabKey} className="tab-content-enter">
+        <Suspense fallback={<div className="flex items-center justify-center py-16"><div className="h-6 w-6 border-2 border-gray-200 border-t-[#2d7d7d] rounded-full animate-spin" /></div>}>
         {activeTab === 'trends' && (
           <div className="w-full">
             <CitationsChart citationsPerYear={data.metrics.citationsPerYear} citationGraphSource={data.metrics.citationGraphSource} publications={data.publications} />
@@ -649,6 +655,7 @@ export function ProfileView({
         {activeTab === 'narrativecv' && (
           <NarrativeCvTab data={data} geoData={prefetchedGeo} />
         )}
+        </Suspense>
         </div>
       </main>
 
