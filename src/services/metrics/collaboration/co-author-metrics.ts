@@ -28,9 +28,10 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
   let totalAuthors = 0;
   let soloCount = 0;
 
-  // Helper function to normalize author names
+  // Helper function to normalize author names (strip diacritics + punctuation)
   const normalizeAuthorName = (name: string) => {
-    return name.toLowerCase()
+    return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
       .trim()
       .replace(/\s+/g, ' ')
       .replace(/[.,]/g, '');
@@ -60,8 +61,16 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
 
     pub.authors.forEach(author => {
       const normalizedAuthor = normalizeAuthorName(author);
-      const isMainAuthor = mainAuthorVariations.some(variation => 
+      const authorParts = normalizedAuthor.split(' ');
+      const isMainAuthor = mainAuthorVariations.some(variation =>
         normalizedAuthor.includes(variation) || variation.includes(normalizedAuthor)
+      ) || (
+        // Handle abbreviated names: "E Efendic" matches "Emir Efendic"
+        // Check if last name matches and first part is an initial of the main author's first name
+        authorParts.length >= 2 && mainAuthorParts.length >= 2 &&
+        authorParts[authorParts.length - 1] === mainAuthorParts[mainAuthorParts.length - 1] &&
+        (authorParts[0].length <= 2 && mainAuthorParts[0].startsWith(authorParts[0]) ||
+         mainAuthorParts[0].length <= 2 && authorParts[0].startsWith(mainAuthorParts[0]))
       );
 
       if (!isMainAuthor) {
