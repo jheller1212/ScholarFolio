@@ -45,5 +45,3 @@ export class RateLimiter {
     this.pending = Promise.resolve();
   }
 }
-
-export const rateLimiter = new RateLimiter();
