@@ -83,6 +83,20 @@ function NameSearchInput({ onSearch, isLoading }: { onSearch: (name: string) => 
           <span>Find</span>
         </button>
       </div>
+      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center space-x-1">
+          <Search className="h-3.5 w-3.5 gradient-icon" />
+          <span>Enter a name to find their profile</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onSearch('Jonas Heller')}
+          className="flex items-center space-x-1 text-[#2d7d7d] hover:text-[#1f5c5c] transition-colors"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          <span>See an example portfolio</span>
+        </button>
+      </div>
     </form>
   );
 }
