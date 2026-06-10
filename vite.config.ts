@@ -55,7 +55,11 @@ export default defineConfig({
         background: 'src/background.ts'
       },
       output: {
-        entryFileNames: '[name].js'
+        entryFileNames: '[name].js',
+        manualChunks: {
+          'd3-vendor': ['d3', 'topojson-client'],
+          'recharts-vendor': ['recharts'],
+        }
       }
     },
     outDir: 'dist',
