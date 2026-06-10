@@ -48,7 +48,7 @@ function useScrollReveal() {
   return ref;
 }
 
-function NameSearchInput({ onSearch, isLoading }: { onSearch: (name: string) => void; isLoading: boolean }) {
+function NameSearchInput({ onSearch, isLoading, onExampleProfile }: { onSearch: (name: string) => void; isLoading: boolean; onExampleProfile: () => void }) {
   const [name, setName] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -90,7 +90,7 @@ function NameSearchInput({ onSearch, isLoading }: { onSearch: (name: string) => 
         </div>
         <button
           type="button"
-          onClick={() => onSearch('Jonas Heller')}
+          onClick={() => onExampleProfile()}
           className="flex items-center space-x-1 text-[#2d7d7d] hover:text-[#1f5c5c] transition-colors"
         >
           <BookOpen className="h-3.5 w-3.5" />
@@ -197,7 +197,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
 
           {/* Search area — name search primary */}
           <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto mb-2">
-            <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
+            <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} onExampleProfile={() => onSearch('https://scholar.google.com/citations?user=NOSPtp8AAAAJ')} />
           </div>
 
           {!user && (
@@ -318,7 +318,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
 
             <div className="max-w-xl mx-auto mb-3">
-              <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
+              <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} onExampleProfile={() => onSearch('https://scholar.google.com/citations?user=NOSPtp8AAAAJ')} />
             </div>
 
             <p className="text-xs text-white/40 italic mb-5">
