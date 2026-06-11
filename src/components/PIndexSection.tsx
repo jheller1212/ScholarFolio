@@ -72,9 +72,9 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     return parts.slice(surnameStart).join(' ');
   });
   const [institution, setInstitution] = useState(() => {
-    // Strip academic titles like "Full Professor, " or "Associate Professor of Marketing, "
+    // Strip academic titles like "Full Professor, " or "Assistant Professor in Marketing, "
     let cleaned = affiliation
-      .replace(/^(Distinguished|Emeritus|Adjunct|Visiting|Clinical|Tenured|Senior|Junior|Assistant|Associate|Full)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor|Reader|Chair|Director|Dean)\s*(of\s+\w[\w\s]*?)?\s*[,·]\s*/i, '')
+      .replace(/^(Distinguished|Emeritus|Adjunct|Visiting|Clinical|Tenured|Senior|Junior|Assistant|Associate|Full|Chaired|University|Endowed|Research|Postdoctoral)?\s*(Professor|Lecturer|Researcher|Fellow|Instructor|Reader|Chair|Director|Dean|Scientist|Scholar|Docent)\s*((of|in|for|at|de|,)\s+[\w][\w\s&-]*?)?\s*[,·]\s*/i, '')
       .trim();
     if (cleaned === affiliation) cleaned = affiliation;
     const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
