@@ -3,7 +3,7 @@ import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as Cha
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 // pdfExport is dynamically imported on click to avoid bundling jsPDF (344KB)
-import { SearchBar } from './SearchBar';
+import { ScholarSearchModal } from './ScholarSearchModal';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
 import { MetricsCard } from './MetricsCard';
@@ -75,6 +75,8 @@ export function ProfileView({
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
 
   useEffect(() => {
     if (exportError) {
@@ -223,8 +225,19 @@ export function ProfileView({
               </span>
             </div>
 
-            <div className="flex-1 max-w-md ml-auto">
-              <SearchBar onSearch={onSearch} isLoading={loading} error={error} compact={true} />
+            <div className="flex-1 max-w-xs ml-auto">
+              <form onSubmit={(e) => { e.preventDefault(); if (headerSearchQuery.trim().length >= 2) { setShowSearchModal(true); } }} className="relative">
+                <input
+                  type="text"
+                  value={headerSearchQuery}
+                  onChange={e => setHeaderSearchQuery(e.target.value)}
+                  placeholder="Search researcher..."
+                  className="w-full py-1.5 pl-8 pr-3 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 transition-all"
+                  autoComplete="off"
+                  spellCheck="false"
+                />
+                <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-gray-400" />
+              </form>
             </div>
 
             <div className="hidden md:flex items-center gap-3">
@@ -658,6 +671,13 @@ export function ProfileView({
         </Suspense>
         </div>
       </main>
+
+      <ScholarSearchModal
+        isOpen={showSearchModal}
+        onClose={() => { setShowSearchModal(false); setHeaderSearchQuery(''); }}
+        onSelect={onSearch}
+        initialQuery={headerSearchQuery}
+      />
 
       {scholarId && (
         <EmbedModal
