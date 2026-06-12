@@ -154,8 +154,10 @@ export function AuthButton() {
                   setError('Please agree to the Terms of Use to continue.');
                   return;
                 }
+                const state = crypto.randomUUID();
+                sessionStorage.setItem('orcid_oauth_state', state);
                 const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
-                window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}`;
+                window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
               }}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2"
             >
