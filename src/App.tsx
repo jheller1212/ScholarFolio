@@ -173,6 +173,20 @@ function AppContent() {
       url.searchParams.delete('orcid_error');
       window.history.replaceState({}, '', url.pathname + url.search);
     }
+
+    // Validate ORCID OAuth state (CSRF protection)
+    const orcidState = params.get('orcid_state');
+    if (orcidState !== null) {
+      const stored = sessionStorage.getItem('orcid_oauth_state');
+      sessionStorage.removeItem('orcid_oauth_state');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('orcid_state');
+      window.history.replaceState({}, '', url.pathname + url.search);
+      if (!stored || stored !== orcidState) {
+        console.error('ORCID OAuth state mismatch — signing out');
+        import('./lib/supabase').then(({ supabase }) => supabase.auth.signOut());
+      }
+    }
     const userParam = params.get('user');
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
