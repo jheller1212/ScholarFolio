@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
-import Stripe from "npm:stripe@14.14.0";
+import Stripe from "npm:stripe@17.7.0";
 
 const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
@@ -29,7 +29,7 @@ const PACKS: Record<string, { credits: number; priceInCents: number; name: strin
 };
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-02-24.acacia',
 });
 
 const supabase = createClient(
