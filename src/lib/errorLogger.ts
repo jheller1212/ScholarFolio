@@ -44,8 +44,16 @@ const MAX_ERRORS_PER_SESSION = 20;
 // Dedup: don't log the same error twice in a session
 const loggedErrors = new Set<string>();
 
+// Aborted fetches (user navigated away, typed a new query, or the component
+// unmounted before the request resolved) are expected cancellations, not real
+// failures — drop them so genuine errors aren't buried in noise.
+function isAbortNoise(message: string): boolean {
+  return /\babort(ed)?\b/i.test(message);
+}
+
 export function logError(payload: ErrorLogPayload): void {
   if (errorCount >= MAX_ERRORS_PER_SESSION) return;
+  if (isAbortNoise(payload.message)) return;
 
   // Dedup by category + message
   const dedupeKey = `${payload.category}:${payload.message}`;
