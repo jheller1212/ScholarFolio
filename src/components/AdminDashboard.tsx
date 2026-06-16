@@ -242,12 +242,20 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       s => s.source === 'serpapi' && s.created_at >= monthStart
     ).length;
 
+    // SerpAPI share of profile loads in the selected period. A rising share means
+    // the free scrape path is increasingly blocked (Google 403s) and we're leaning
+    // on the paid fallback — a leading indicator of cost + reliability trouble.
+    const serpApiInPeriod = bySources['serpapi'] || 0;
+    const serpApiShare = searches.length > 0 ? serpApiInPeriod / searches.length : 0;
+
     // Revenue
     const revenue = purchases.reduce((sum, p) => sum + (p.amount_cents || 0), 0) / 100;
     const creditsSold = purchases.reduce((sum, p) => sum + (p.credits || 0), 0);
 
     return {
       serpApiThisMonth,
+      serpApiShare,
+      serpApiInPeriod,
       searches: searches.length,
       searchesAllTime: rawData.dailyStats.reduce((sum, d) => sum + d.total_searches, 0) + todayLiveCount,
       bySources,
@@ -365,6 +373,44 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                     </div>
                     {isCritical && <p className="text-[10px] text-red-600 mt-1">Critical: approaching monthly limit. New lookups may fail.</p>}
                     {isWarning && !isCritical && <p className="text-[10px] text-amber-600 mt-1">Warning: 80% of monthly SerpAPI quota used.</p>}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Scholar source health — SerpAPI fallback share */}
+            {(() => {
+              const sample = stats.searches;
+              if (sample < 10) return null; // too little data to be meaningful
+              const pct = Math.round(stats.serpApiShare * 100);
+              const isWarning = stats.serpApiShare >= 0.4;
+              const isCritical = stats.serpApiShare >= 0.6;
+              const scrapeCount = sample - stats.serpApiInPeriod;
+              return (
+                <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
+                  isCritical ? 'bg-red-50 border-red-200' : isWarning ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
+                }`}>
+                  {(isWarning || isCritical) && <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-semibold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-gray-700'}`}>
+                        Scholar Fallback Share — {periodLabels[period]}
+                      </span>
+                      <span className={`text-xs font-mono font-bold ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-600'}`}>
+                        {pct}% via SerpAPI
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-[#2d7d7d]'}`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <p className={`text-[10px] mt-1 ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-400'}`}>
+                      {stats.serpApiInPeriod} of {sample} loads needed the paid SerpAPI fallback ({scrapeCount} from free scrape/cache).
+                      {isCritical && ' Critical: the free Google Scholar scrape path is largely failing.'}
+                      {isWarning && !isCritical && ' Elevated: free scraping is being blocked more than usual.'}
+                    </p>
                   </div>
                 </div>
               );
