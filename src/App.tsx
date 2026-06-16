@@ -23,7 +23,7 @@ import { supabase } from './lib/supabase';
 import { ADMIN_EMAIL } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
-import { openAlexService } from './services/openalex';
+import { openAlexService, fetchOpenAlexProfile, OPENALEX_ID_PREFIX } from './services/openalex';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
@@ -188,6 +188,12 @@ function AppContent() {
       }
     }
     const userParam = params.get('user');
+    // OpenAlex fallback profile (?user=openalex:A...) — must be checked before the
+    // generic Scholar handler, which would otherwise wrap it in a scholar.google URL.
+    if (userParam && userParam.startsWith(OPENALEX_ID_PREFIX) && handleSearchRef.current) {
+      handleSearchRef.current(userParam, true);
+      return;
+    }
     if (userParam && userParam.length >= 12 && handleSearchRef.current) {
       const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(userParam)}`;
       handleSearchRef.current(scholarUrl, true);
@@ -255,8 +261,12 @@ function AppContent() {
       return;
     }
 
-    // Credit/usage checks (skip for direct profile links and vanity URLs)
-    if (!bypassCredits) {
+    // OpenAlex fallback profile (sourced from open data when Scholar is unavailable).
+    // Free to view — it never hits SerpAPI/credits — so skip the usage gates entirely.
+    const isOpenAlex = url.startsWith(OPENALEX_ID_PREFIX);
+
+    // Credit/usage checks (skip for direct profile links, vanity URLs, OpenAlex fallbacks)
+    if (!bypassCredits && !isOpenAlex) {
       if (!user) {
         // Anonymous user — check local free limit
         if (getAnonSearches() >= ANON_FREE_LIMIT) {
@@ -277,22 +287,29 @@ function AppContent() {
       setError(null);
       setData(null);
 
-      const { isValid, userId } = scholarService.validateProfileUrl(url);
-      if (!isValid) {
-        setError('Invalid Google Scholar URL format. Please enter a valid profile URL.');
-        setShowError(true);
-        return;
+      let profileData: Awaited<ReturnType<typeof scholarService.fetchProfile>>;
+      let userId: string | null;
+      if (isOpenAlex) {
+        userId = url; // keep the "openalex:<id>" token for sharing + analytics
+        profileData = await fetchOpenAlexProfile(url);
+      } else {
+        const validated = scholarService.validateProfileUrl(url);
+        if (!validated.isValid) {
+          setError('Invalid Google Scholar URL format. Please enter a valid profile URL.');
+          setShowError(true);
+          return;
+        }
+        userId = validated.userId;
+        profileData = await scholarService.fetchProfile(url, cacheOnly ? { cacheOnly: true } : undefined);
       }
-
-      const profileData = await scholarService.fetchProfile(url, cacheOnly ? { cacheOnly: true } : undefined);
       if (!profileData) {
         setError('Unable to fetch profile data. Please try again later or contact the site administrator.');
         setShowError(true);
         return;
       }
 
-      // Track usage (skip for direct profile links)
-      if (!bypassCredits) {
+      // Track usage (skip for direct profile links and OpenAlex fallbacks)
+      if (!bypassCredits && !isOpenAlex) {
         if (!user) {
           if (profileData.cacheStatus !== 'hit') {
             incrementAnonSearches();

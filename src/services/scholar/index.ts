@@ -147,7 +147,7 @@ function stripTitleSuffix(name: string): string {
   return name.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research|Senior|Junior|Distinguished|Clinical|Tenured)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr|MD|Instructor|Postdoc|PostDoc)\b.*/i, '').trim() || name;
 }
 
-function buildAuthorResult(data: any): Author {
+export function buildAuthorResult(data: any): Author {
   const cleanName = stripTitleSuffix(data.name || '');
 
   const publications = (data.publications || []).map(pub => ({

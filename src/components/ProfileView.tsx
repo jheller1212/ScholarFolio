@@ -116,10 +116,15 @@ export function ProfileView({
     return () => { cancelled = true; };
   }, [data?.name, data?.affiliation, data?.publications]);
 
-  // Extract scholar ID from URL params or profileUrl
-  const scholarId = new URLSearchParams(window.location.search).get('user')
-    || (profileUrl ? new URL(profileUrl).searchParams.get('user') : null)
+  // Extract scholar ID from URL params or profileUrl.
+  // OpenAlex fallback profiles use an "openalex:<id>" token, not a Scholar id —
+  // treat them as having no scholarId so Scholar-only features (embed, claim,
+  // "view on Google Scholar") stay hidden rather than pointing at a bad id.
+  const rawUserId = new URLSearchParams(window.location.search).get('user')
+    || (profileUrl && profileUrl.startsWith('http') ? new URL(profileUrl).searchParams.get('user') : null)
     || '';
+  const isOpenAlexProfile = rawUserId.startsWith('openalex:') || (!!profileUrl && profileUrl.startsWith('openalex:'));
+  const scholarId = isOpenAlexProfile ? '' : rawUserId;
 
   // Check if this profile has been claimed
   useEffect(() => {
@@ -156,9 +161,11 @@ export function ProfileView({
     if (!data) return;
     const title = `${data.name} — Scholar Folio`;
     const description = `${data.affiliation} · ${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex} · ${data.publications.length} publications`;
+    // OpenAlex profiles have an empty scholarId; fall back to the raw token
+    // (openalex:<id>) so link-preview crawlers get a URL that resolves.
     const url = claimedSlug
       ? `https://scholarfolio.org/${claimedSlug}`
-      : `https://scholarfolio.org/?user=${scholarId}`;
+      : `https://scholarfolio.org/?user=${scholarId || rawUserId}`;
 
     document.title = title;
 
@@ -179,7 +186,7 @@ export function ProfileView({
     return () => {
       document.title = 'Scholar Folio — Your research, at a glance';
     };
-  }, [data, claimedSlug, scholarId]);
+  }, [data, claimedSlug, scholarId, rawUserId]);
 
   const handleClaimed = (slug: string) => {
     setClaimedSlug(slug);
@@ -269,7 +276,7 @@ export function ProfileView({
               )}
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1 truncate">
-                  {profileUrl ? (
+                  {profileUrl && !isOpenAlexProfile ? (
                     <a
                       href={profileUrl}
                       target="_blank"
