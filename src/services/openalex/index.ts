@@ -2,6 +2,8 @@ import { timeoutSignal } from '../../utils/api';
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
 import { findOpenAlexAuthor, oaFetchJson, oaRateLimiter, OA_API_URL, OA_EMAIL } from './author-lookup';
 
+export { searchOpenAlexAuthors, fetchOpenAlexProfile, OPENALEX_ID_PREFIX, toOpenAlexShortId } from './profile';
+
 export class OpenAlexService {
   /**
    * Search OpenAlex for an author by name + affiliation, return OA stats.

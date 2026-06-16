@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, X, MapPin, GraduationCap, Loader2, Link, ArrowRight } from 'lucide-react';
+import { Search, X, MapPin, GraduationCap, Loader2, Link, ArrowRight, Database } from 'lucide-react';
 import { scholarService, type AuthorSearchResult } from '../services/scholar/index';
+import { searchOpenAlexAuthors, OPENALEX_ID_PREFIX } from '../services/openalex';
 
 function UrlFallback({ message, pastedUrl, setPastedUrl, urlError, setUrlError, onSubmit, compact }: {
   message: string;
@@ -73,31 +74,58 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<'scholar' | 'openalex'>('scholar');
   const [pastedUrl, setPastedUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasAutoSearched = useRef(false);
+
+  // Try Google Scholar first; if it returns nothing or hard-fails, fall back to
+  // OpenAlex's open dataset so users still get a result when Scholar is blocked.
+  const runSearch = useCallback(async (query: string) => {
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+    setSource('scholar');
+
+    let scholarFailed = false;
+    try {
+      const profiles = await scholarService.searchAuthors(query);
+      if (profiles.length > 0) {
+        setResults(profiles);
+        setLoading(false);
+        return;
+      }
+    } catch {
+      scholarFailed = true;
+    }
+
+    // Scholar empty or unavailable — try OpenAlex.
+    try {
+      const oaProfiles = await searchOpenAlexAuthors(query);
+      if (oaProfiles.length > 0) {
+        setResults(oaProfiles);
+        setSource('openalex');
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // ignore — handled by the empty/error states below
+    }
+
+    setResults([]);
+    if (scholarFailed) {
+      setError('Search is temporarily unavailable. Please try again, or paste a Google Scholar URL.');
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
       if (initialQuery && !hasAutoSearched.current) {
         setName(initialQuery);
         hasAutoSearched.current = true;
-        // Auto-trigger search
-        (async () => {
-          setLoading(true);
-          setSearched(true);
-          setError(null);
-          try {
-            const profiles = await scholarService.searchAuthors(initialQuery);
-            setResults(profiles);
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Search failed.');
-            setResults([]);
-          } finally {
-            setLoading(false);
-          }
-        })();
+        runSearch(initialQuery);
       } else {
         setTimeout(() => inputRef.current?.focus(), 100);
       }
@@ -106,36 +134,28 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       setResults([]);
       setSearched(false);
       setError(null);
+      setSource('scholar');
       setLoading(false);
       setPastedUrl('');
       setUrlError(null);
       hasAutoSearched.current = false;
     }
-  }, [isOpen, initialQuery]);
+  }, [isOpen, initialQuery, runSearch]);
 
-  const handleSearch = useCallback(async (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     const query = name.trim();
     if (!query || query.length < 2) return;
-
-    setLoading(true);
-    setError(null);
-    setSearched(true);
-
-    try {
-      const profiles = await scholarService.searchAuthors(query);
-      setResults(profiles);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed. Please try again.');
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [name]);
+    runSearch(query);
+  }, [name, runSearch]);
 
   const handleSelect = useCallback((authorId: string) => {
-    const url = `https://scholar.google.com/citations?user=${authorId}`;
-    onSelect(url);
+    // OpenAlex candidates carry an "openalex:<id>" token routed directly;
+    // Google Scholar candidates are opened via their profile URL.
+    const target = authorId.startsWith(OPENALEX_ID_PREFIX)
+      ? authorId
+      : `https://scholar.google.com/citations?user=${authorId}`;
+    onSelect(target);
     onClose();
   }, [onSelect, onClose]);
 
@@ -244,6 +264,14 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
 
           {!loading && results.length > 0 && (
             <div className="space-y-2">
+              {source === 'openalex' && (
+                <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 px-3 py-2">
+                  <Database className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
+                    Google Scholar is unavailable right now — showing results from <span className="font-medium">OpenAlex</span> instead. Metrics may differ slightly.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-gray-400 mb-3">{results.length} profile{results.length !== 1 ? 's' : ''} found — select the correct one</p>
               {results.map((profile) => (
                 <button
