@@ -62,6 +62,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   }>>([]);
   const [errorFilter, setErrorFilter] = useState<string>('all');
   const [analyticsEvents, setAnalyticsEvents] = useState<Array<{ event: string; properties: Record<string, unknown>; referrer: string | null; session_id: string | null; created_at: string }>>([]);
+  const [edgeErrors, setEdgeErrors] = useState<Array<{ created_at: string; action: string | null; error_message: string | null }>>([]);
   const [feedbackEmails, setFeedbackEmails] = useState<Record<string, string>>({});
   const [replyingTo, setReplyingTo] = useState<{ type: 'feedback' | 'report' | 'custom'; email: string; context?: string } | null>(null);
   const [replySubject, setReplySubject] = useState('');
@@ -100,7 +101,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           return allLogs;
         }
 
-        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes, clientErrorsRes, analyticsRes] = await Promise.all([
+        const [searchesData, usersRes, purchasesRes, reportsRes, dailyStatsRes, feedbackRes, clientErrorsRes, analyticsRes, edgeErrorsRes] = await Promise.all([
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
@@ -109,6 +110,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           supabase.from('feedback').select('id,user_id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
           supabase.from('client_errors').select('id,created_at,category,message,stack,component,action,context,browser,os,screen_size,url,session_id').order('created_at', { ascending: false }).limit(200),
           supabase.from('analytics_events').select('event,properties,referrer,session_id,created_at').order('created_at', { ascending: false }).limit(1000),
+          supabase.from('edge_function_errors').select('created_at,action,error_message').order('created_at', { ascending: false }).limit(500),
         ]);
 
         if (usersRes.error) throw usersRes.error;
@@ -124,6 +126,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
         if (reportsRes.data) setReports(reportsRes.data);
         if (clientErrorsRes.data) setClientErrors(clientErrorsRes.data);
         if (analyticsRes.data) setAnalyticsEvents(analyticsRes.data);
+        if (edgeErrorsRes.data) setEdgeErrors(edgeErrorsRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load stats');
       } finally {
@@ -242,11 +245,37 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       s => s.source === 'serpapi' && s.created_at >= monthStart
     ).length;
 
-    // SerpAPI share of profile loads in the selected period. A rising share means
-    // the free scrape path is increasingly blocked (Google 403s) and we're leaning
-    // on the paid fallback — a leading indicator of cost + reliability trouble.
-    const serpApiInPeriod = bySources['serpapi'] || 0;
-    const serpApiShare = searches.length > 0 ? serpApiInPeriod / searches.length : 0;
+    // --- Scholar fetch health ---
+    // Fetch chain is: cache → SerpAPI (primary) → scraper (fallback) → hard fail.
+    // request_logs source tells us which method *served* a fresh fetch:
+    //   serpapi = SerpAPI succeeded; scraper = SerpAPI FAILED but scraper saved it.
+    // edge_function_errors logs the cases where the whole chain failed, split by
+    // action: 'profile_fetch' (a profile load) vs 'search' (a name search).
+    const periodEdgeErrors = edgeErrors.filter(e => e.created_at && inPeriod(e.created_at, start));
+    const profileFetchFails = periodEdgeErrors.filter(e => e.action === 'profile_fetch').length;
+    const searchFails = periodEdgeErrors.filter(e => e.action === 'search').length;
+
+    const serpApiLoads = bySources['serpapi'] || 0;
+    const scraperLoads = bySources['scraper'] || 0;
+    const searchLoads = bySources['search'] || 0;
+
+    // SerpAPI (primary) — it's tried on every fresh, non-cache profile fetch.
+    // A scraper-served load or a hard fail both mean SerpAPI failed that request.
+    const serpApiAttempts = serpApiLoads + scraperLoads + profileFetchFails;
+    const serpApiFailures = scraperLoads + profileFetchFails;
+    const serpApiFailRate = serpApiAttempts > 0 ? serpApiFailures / serpApiAttempts : 0;
+
+    // Scraper (fallback) — only runs when SerpAPI failed. Of those, how often did
+    // it ALSO fail (→ user got nothing).
+    const scraperInvoked = serpApiFailures;
+    const scraperFailRate = scraperInvoked > 0 ? profileFetchFails / scraperInvoked : 0;
+
+    // Name-search path (method-agnostic in the logs): how often a search returned
+    // nothing from Scholar (now softened by the OpenAlex fallback).
+    const searchAttempts = searchLoads + searchFails;
+    const searchFailRate = searchAttempts > 0 ? searchFails / searchAttempts : 0;
+
+    const hardFailures = profileFetchFails + searchFails;
 
     // Revenue
     const revenue = purchases.reduce((sum, p) => sum + (p.amount_cents || 0), 0) / 100;
@@ -254,8 +283,16 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     return {
       serpApiThisMonth,
-      serpApiShare,
-      serpApiInPeriod,
+      serpApiAttempts,
+      serpApiFailures,
+      serpApiFailRate,
+      scraperInvoked,
+      scraperFailRate,
+      profileFetchFails,
+      searchAttempts,
+      searchFails,
+      searchFailRate,
+      hardFailures,
       searches: searches.length,
       searchesAllTime: rawData.dailyStats.reduce((sum, d) => sum + d.total_searches, 0) + todayLiveCount,
       bySources,
@@ -270,7 +307,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
       purchases,
       activityByDay,
     };
-  }, [rawData, period]);
+  }, [rawData, period, edgeErrors]);
 
   if (!isAdmin) {
     return (
@@ -378,40 +415,90 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               );
             })()}
 
-            {/* Scholar source health — SerpAPI fallback share */}
+            {/* Scholar fetch health — SerpAPI / scraper / search failure rates */}
             {(() => {
-              const sample = stats.searches;
-              if (sample < 10) return null; // too little data to be meaningful
-              const pct = Math.round(stats.serpApiShare * 100);
-              const isWarning = stats.serpApiShare >= 0.4;
-              const isCritical = stats.serpApiShare >= 0.6;
-              const scrapeCount = sample - stats.serpApiInPeriod;
-              return (
-                <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
-                  isCritical ? 'bg-red-50 border-red-200' : isWarning ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
-                }`}>
-                  {(isWarning || isCritical) && <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />}
-                  <div className="flex-1 min-w-0">
+              const fetchSample = stats.serpApiAttempts;
+              const searchSample = stats.searchAttempts;
+              if (fetchSample + searchSample < 5) return null; // too little signal
+
+              const serpPct = Math.round(stats.serpApiFailRate * 100);
+              const scrapPct = Math.round(stats.scraperFailRate * 100);
+              const searchPct = Math.round(stats.searchFailRate * 100);
+
+              const critical = stats.serpApiFailRate >= 0.25 || (stats.scraperFailRate >= 0.5 && stats.scraperInvoked >= 2) || stats.searchFailRate >= 0.4;
+              const warning = !critical && (stats.serpApiFailRate >= 0.1 || stats.searchFailRate >= 0.2 || stats.hardFailures > 0);
+              const healthy = !critical && !warning;
+
+              const box = critical ? 'bg-red-50 border-red-200' : warning ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100';
+
+              const FailRow = ({ label, attempts, failures, pct, note, hideWhenIdle }: { label: string; attempts: number; failures: number; pct: number; note: string; hideWhenIdle?: boolean }) => {
+                if (hideWhenIdle && attempts === 0) return null;
+                const rowTone = pct >= 25 ? 'text-red-600' : pct >= 10 ? 'text-amber-600' : 'text-gray-600';
+                const barTone = pct >= 25 ? 'bg-red-500' : pct >= 10 ? 'bg-amber-500' : 'bg-[#2d7d7d]';
+                return (
+                  <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-semibold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-gray-700'}`}>
-                        Scholar Fallback Share — {periodLabels[period]}
-                      </span>
-                      <span className={`text-xs font-mono font-bold ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-600'}`}>
-                        {pct}% via SerpAPI
+                      <span className="text-xs font-medium text-gray-700">{label}</span>
+                      <span className={`text-xs font-mono font-semibold ${attempts === 0 ? 'text-gray-400' : rowTone}`}>
+                        {attempts === 0 ? 'idle' : `${pct}% failed (${failures}/${attempts})`}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-[#2d7d7d]'}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div className={`h-1.5 rounded-full transition-all ${barTone}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                     </div>
-                    <p className={`text-[10px] mt-1 ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-400'}`}>
-                      {stats.serpApiInPeriod} of {sample} loads needed the paid SerpAPI fallback ({scrapeCount} from free scrape/cache).
-                      {isCritical && ' Critical: the free Google Scholar scrape path is largely failing.'}
-                      {isWarning && !isCritical && ' Elevated: free scraping is being blocked more than usual.'}
-                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{note}</p>
                   </div>
+                );
+              };
+
+              return (
+                <div className={`rounded-2xl border p-5 ${box}`}>
+                  <div className="flex items-center gap-2 mb-4">
+                    {healthy
+                      ? <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      : <AlertTriangle className={`h-4 w-4 ${critical ? 'text-red-500' : 'text-amber-500'}`} />}
+                    <h3 className="text-sm font-semibold text-gray-900">Scholar Fetch Health — {periodLabels[period]}</h3>
+                    <span className={`ml-auto text-[11px] font-semibold ${critical ? 'text-red-700' : warning ? 'text-amber-700' : 'text-emerald-700'}`}>
+                      {critical ? 'Disruption' : warning ? 'Degraded' : 'Healthy'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <FailRow
+                      label="SerpAPI (primary)"
+                      attempts={stats.serpApiAttempts}
+                      failures={stats.serpApiFailures}
+                      pct={serpPct}
+                      note={stats.serpApiFailures === 0
+                        ? 'Served every fresh profile fetch — no fallback needed.'
+                        : `Fell back to the scraper ${stats.serpApiFailures} time(s).`}
+                    />
+                    <FailRow
+                      label="Scraper (fallback)"
+                      attempts={stats.scraperInvoked}
+                      failures={stats.profileFetchFails}
+                      pct={scrapPct}
+                      hideWhenIdle
+                      note="Only runs when SerpAPI fails; failures here = user got nothing."
+                    />
+                    <FailRow
+                      label="Name search"
+                      attempts={stats.searchAttempts}
+                      failures={stats.searchFails}
+                      pct={searchPct}
+                      note="Searches that returned nothing from Scholar (now softened by OpenAlex fallback)."
+                    />
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between text-[11px]">
+                    <span className="text-gray-500">Hard failures (Scholar returned nothing)</span>
+                    <span className={`font-semibold ${stats.hardFailures > 0 ? (critical ? 'text-red-600' : 'text-amber-600') : 'text-emerald-600'}`}>
+                      {stats.hardFailures}
+                    </span>
+                  </div>
+                  {healthy && (
+                    <p className="text-[10px] text-emerald-600 mt-2">SerpAPI is handling every request — all systems normal.</p>
+                  )}
                 </div>
               );
             })()}
