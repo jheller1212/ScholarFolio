@@ -339,7 +339,9 @@ function AppContent() {
               });
           } else {
             setData(prev => prev ? { ...prev, openAccessFailed: true } : prev);
-            logError({ category: 'openalex', message: 'OA stats returned null', component: 'App', action: 'fetch-oa-stats', context: { name: sanitizedData.name } });
+            // Not an error — many authors simply aren't well-represented in OpenAlex.
+            // The profile still renders; track it as a signal, not a failure.
+            trackEvent('oa_stats_missing', { author: sanitizedData.name });
             // Still try S2 without DOI map (title search only, capped at 10)
             enrichWithSemanticScholar(sanitizedData.publications)
               .then(s2Result => {
