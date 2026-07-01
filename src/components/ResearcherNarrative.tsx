@@ -52,6 +52,12 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
         .replace(/,\s*\d[\d()–\-\s]*$/, '')
         .replace(/\s+\d+\s*,.*$/, '')
         .replace(/\s+\d+\s*$/, '')
+        // Collapse internal whitespace and strip trailing punctuation so
+        // "Computers in Human Behavior." folds into "Computers in Human Behavior"
+        // rather than splitting the count. Distinct titles (e.g. "… Reports")
+        // are preserved.
+        .replace(/\s+/g, ' ')
+        .replace(/[.,;:]+$/, '')
         .trim();
       // Skip non-journal venues (repositories, working papers, etc.)
       const lowerBase = baseName.toLowerCase();
