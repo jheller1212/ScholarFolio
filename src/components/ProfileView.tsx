@@ -27,7 +27,6 @@ import { extractLastName } from '../utils/names';
 import { useFeedback } from '../hooks/useFeedback';
 import { FeedbackModal } from './FeedbackModal';
 import { FeedbackPromptBanner } from './FeedbackPromptBanner';
-import { OpenAlexNotice } from './OpenAlexNotice';
 import { trackProfileView } from '../services/profile-views';
 import packageJson from '../../package.json';
 
@@ -657,22 +656,16 @@ export function ProfileView({
         )}
 
         {activeTab === 'worldmap' && (
-          <>
-            <OpenAlexNotice />
-            <CoAuthorMap
-              publications={data.publications}
-              authorName={data.name}
-              authorAffiliation={data.affiliation}
-              prefetchedData={prefetchedGeo}
-            />
-          </>
+          <CoAuthorMap
+            publications={data.publications}
+            authorName={data.name}
+            authorAffiliation={data.affiliation}
+            prefetchedData={prefetchedGeo}
+          />
         )}
 
         {activeTab === 'openscience' && (
-          <>
-            <OpenAlexNotice />
-            <OpenScienceTab data={data} />
-          </>
+          <OpenScienceTab data={data} />
         )}
 
         {activeTab === 'publications' && (

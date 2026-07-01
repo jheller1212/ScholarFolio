@@ -4,7 +4,6 @@ import { OA_API_URL, OA_EMAIL, oaRateLimiter, oaFetchJson } from '../services/op
 import { logCaughtError } from '../lib/errorLogger';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
-import { OpenAlexNotice } from './OpenAlexNotice';
 
 interface OpenAlexSearchResult {
   id: string;
@@ -287,8 +286,6 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
         P-Index
         <a href="https://academic.oup.com/jcr/article-abstract/51/1/191/7672992" target="_blank" rel="noopener noreferrer" className="text-[10px] font-normal text-gray-400 dark:text-gray-500 hover:text-[#2d7d7d] transition-colors">(Pham, Wu &amp; Wang, 2024)</a>
       </h3>
-
-      <OpenAlexNotice />
 
       {/* Step 1: Idle — info + search form */}
       {step === 'idle' && (
