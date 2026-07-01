@@ -1,4 +1,6 @@
 // Journal rankings data with extended information
+import { normalizeVenueName } from '../utils/venue';
+
 export const JOURNAL_RANKINGS: Record<string, {
   sjr?: 'Q1' | 'Q2' | 'Q3' | 'Q4';
   jcr?: string;
@@ -84,21 +86,6 @@ export const JOURNAL_RANKINGS: Record<string, {
   'frontiers in sports and active living': { sjr: 'Q2', jcr: '2.231', abdc: 'C' },
   'advances in consumer research': { sjr: 'Q2', abs: '2', abdc: 'B' }
 };
-
-// Helper function to normalize a venue/journal name for matching
-function normalizeVenueName(name: string): string {
-  return name.toLowerCase()
-    .replace(/,.*$/, '')           // Remove everything after first comma
-    .replace(/\s+\d+.*$/, '')      // Remove volume/issue numbers and everything after
-    .replace(/\([^)]*\)/g, '')     // Remove parenthetical content
-    .replace(/proceedings.*$/i, '')
-    .replace(/conference.*$/i, '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:\-]/g, '')
-    .replace(/&/g, 'and')
-    .replace(/^the\s+/, '');
-}
 
 // Helper function to find matching journal with strict matching logic
 export function findJournalRanking(venue: string) {
