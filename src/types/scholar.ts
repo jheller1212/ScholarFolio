@@ -115,6 +115,8 @@ export interface Author {
   openAccess?: OpenAccessStats;
   openAccessFailed?: boolean;
   fieldMetrics?: FieldNormalizedMetrics;
+  /** True while the OpenAlex field-normalized metrics are still being fetched. */
+  fieldMetricsLoading?: boolean;
   /** Semantic Scholar per-publication data, keyed by normalized title */
   s2Data?: Record<string, S2PublicationData>;
   s2Stats?: S2Stats;

@@ -6,7 +6,7 @@ import { ClaimProfileModal } from './ClaimProfileModal';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { TopicsList } from './TopicsList';
 import { PublicationsList } from './PublicationsList';
-import { MetricsCard } from './MetricsCard';
+import { MetricsCard, MetricsCardSkeleton } from './MetricsCard';
 import { ResearcherNarrative } from './ResearcherNarrative';
 import { PIndexSection } from './PIndexSection';
 
@@ -571,7 +571,15 @@ export function ProfileView({
               )}
             </div>
 
-            {data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null) && (
+            {data.fieldMetricsLoading && !data.fieldMetrics ? (
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-field-from"></span>Field-Normalized Metrics</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <MetricsCardSkeleton />
+                  <MetricsCardSkeleton />
+                </div>
+              </div>
+            ) : (data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null)) ? (
               <div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-field-from"></span>Field-Normalized Metrics</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -604,7 +612,7 @@ export function ProfileView({
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {data && (
               <PIndexSection authorName={data.name} affiliation={data.affiliation} scrapedPublications={data.publications} onResult={setPIndexResult} />
