@@ -45,10 +45,42 @@ function getRequestIp(req: Request): string {
 const CACHE_DURATION = 604800; // 7 days in seconds
 const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 
+// --- OpenAlex proxy config ---
+// OpenAlex made API keys mandatory on 2026-02-13 and now throttles keyless/anonymous
+// traffic. We inject a server-side key so every visitor shares one authenticated,
+// rate-stable pool instead of the best-effort anonymous tier.
+const OPENALEX_BASE = 'https://api.openalex.org';
+const OA_ALLOWED_ENDPOINTS = new Set([
+  'authors', 'works', 'institutions', 'sources', 'venues',
+  'concepts', 'topics', 'funders', 'publishers',
+]);
+const OA_CACHE_TTL_SECONDS = 259200; // 3 days
+
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
+
+// Resolve the OpenAlex API key. Prefers a platform env secret (OPENALEX_API_KEY);
+// falls back to the RLS-locked `app_config` table (service-role only) so the key
+// can be set/rotated via SQL without a redeploy. Cached per warm instance.
+let _oaKeyCache: string | null = null;
+async function getOpenAlexKey(): Promise<string> {
+  const envKey = Deno.env.get('OPENALEX_API_KEY');
+  if (envKey) return envKey;
+  if (_oaKeyCache !== null) return _oaKeyCache;
+  try {
+    const { data } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'openalex_api_key')
+      .maybeSingle();
+    _oaKeyCache = data?.value ?? '';
+  } catch {
+    _oaKeyCache = '';
+  }
+  return _oaKeyCache;
+}
 
 // --- SerpAPI fetch (primary) ---
 async function fetchViaSerpAPI(authorId: string) {
@@ -842,6 +874,120 @@ async function searchAuthorsByName(query: string) {
   throw new Error(`All search methods failed for "${query}": ${errors.join(' | ')}`);
 }
 
+// --- In-memory per-IP rate limit for the OpenAlex proxy ---
+// Module-scoped (per warm instance). Combined with response caching this bounds
+// credit-drain / DoS abuse of the shared server key without writing a row per call
+// to request_logs (which would bloat analytics and the daily_search_stats trigger).
+// A large profile view fans out ~50-60 OA calls, so the cap allows ~2 views/min/IP.
+const OA_RL_WINDOW_MS = 60_000;
+const OA_RL_MAX = 120;
+const oaRateHits = new Map<string, number[]>();
+
+function oaProxyRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const cutoff = now - OA_RL_WINDOW_MS;
+  const hits = (oaRateHits.get(ip) || []).filter((t) => t > cutoff);
+  // Opportunistic prune to keep the map from growing unbounded.
+  if (oaRateHits.size > 5000) {
+    for (const [k, v] of oaRateHits) {
+      if (v.every((t) => t <= cutoff)) oaRateHits.delete(k);
+    }
+  }
+  if (hits.length >= OA_RL_MAX) {
+    oaRateHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  oaRateHits.set(ip, hits);
+  return false;
+}
+
+// --- OpenAlex proxy ---
+// Accepts a relative OpenAlex path (e.g. "/authors?search=..."), validates the
+// endpoint against an allowlist (prevents this from becoming an open proxy),
+// injects the server-side API key, and caches responses in scholar_cache to
+// conserve the daily credit budget. Never throws — returns a status/body object.
+async function handleOpenAlexProxy(
+  oaPath: unknown
+): Promise<{ status: number; body: any; cache?: 'HIT' | 'MISS' }> {
+  if (typeof oaPath !== 'string' || !oaPath.startsWith('/') || oaPath.length > 2000) {
+    return { status: 400, body: { error: 'Invalid OpenAlex path' } };
+  }
+
+  const endpoint = oaPath.slice(1).split(/[/?]/)[0];
+  if (!OA_ALLOWED_ENDPOINTS.has(endpoint)) {
+    return { status: 400, body: { error: `OpenAlex endpoint not allowed: ${endpoint}` } };
+  }
+
+  let target: URL;
+  try {
+    target = new URL(OPENALEX_BASE + oaPath);
+  } catch {
+    return { status: 400, body: { error: 'Malformed OpenAlex path' } };
+  }
+  // Hard SSRF guard — the host must remain OpenAlex regardless of the input.
+  if (target.hostname !== 'api.openalex.org') {
+    return { status: 400, body: { error: 'Invalid OpenAlex host' } };
+  }
+
+  // Strip any client-supplied credentials; the server controls these.
+  target.searchParams.delete('api_key');
+  target.searchParams.delete('mailto');
+
+  // Cache key excludes auth params so it stays stable.
+  const cacheKey = `oa:${target.pathname}?${target.searchParams.toString()}`;
+
+  try {
+    const { data: cached } = await supabase
+      .from('scholar_cache')
+      .select('data')
+      .eq('url', cacheKey)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (cached?.data) {
+      return { status: 200, body: cached.data, cache: 'HIT' };
+    }
+  } catch (_) { /* cache miss is non-fatal */ }
+
+  // Attach server credentials: real key if configured, else fall back to the
+  // (now best-effort) polite pool so nothing hard-breaks before the key is set.
+  const oaKey = await getOpenAlexKey();
+  if (oaKey) {
+    target.searchParams.set('api_key', oaKey);
+  } else {
+    target.searchParams.set('mailto', 'info@scholarfolio.org');
+  }
+
+  let resp: Response;
+  try {
+    resp = await fetch(target.toString(), { signal: AbortSignal.timeout(15000) });
+  } catch (e) {
+    // Do NOT echo the error: Deno's fetch failure message embeds the full request
+    // URL, which includes the api_key. Log it server-side only, return generic text.
+    console.error('[OpenAlex proxy] fetch failed:', e instanceof Error ? e.message : String(e));
+    return { status: 502, body: { error: 'OpenAlex request failed' } };
+  }
+
+  if (!resp.ok) {
+    return { status: resp.status, body: { error: `OpenAlex HTTP ${resp.status}` } };
+  }
+
+  let json: any;
+  try {
+    json = await resp.json();
+  } catch {
+    return { status: 502, body: { error: 'OpenAlex returned invalid JSON' } };
+  }
+
+  // Best-effort cache write — never blocks the response.
+  try {
+    const expiresAt = new Date(Date.now() + OA_CACHE_TTL_SECONDS * 1000).toISOString();
+    await supabase.from('scholar_cache').upsert({ url: cacheKey, data: json, expires_at: expiresAt });
+  } catch (_) { /* non-fatal */ }
+
+  return { status: 200, body: json, cache: 'MISS' };
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -877,6 +1023,25 @@ Deno.serve(async (req) => {
       if (!authError && authUser) {
         userId = authUser.id;
       }
+    }
+
+    // --- OpenAlex proxy (server-keyed, cached, per-IP rate limited) ---
+    if (action === 'openalex') {
+      if (oaProxyRateLimited(clientIp)) {
+        return new Response(
+          JSON.stringify({ error: 'Too many requests. Please slow down.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const proxied = await handleOpenAlexProxy(requestData.oaPath);
+      return new Response(JSON.stringify(proxied.body), {
+        status: proxied.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          ...(proxied.cache ? { 'X-OA-Cache': proxied.cache } : {}),
+        },
+      });
     }
 
     // --- Author search by name (no credit cost, but rate limited) ---
