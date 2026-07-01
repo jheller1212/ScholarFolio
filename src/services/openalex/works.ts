@@ -76,6 +76,11 @@ export function fetchAuthorEnrichmentWorks(shortId: string): Promise<OaEnrichmen
         if (!data?.results) { incomplete = true; continue; }
         all.push(...data.results);
       }
+      // An empty-but-non-null page (e.g. a stale proxy cache entry) leaves the
+      // same hole as a failed one but passes the check above. Compare against
+      // meta.count so a short total also blocks caching and allows a retry.
+      const expected = Math.min(first.meta.count, MAX_PAGES * PER_PAGE);
+      if (all.length < expected) incomplete = true;
     } else {
       // meta missing (shouldn't happen) → fall back to sequential paging.
       for (let page = 2; page <= MAX_PAGES; page++) {
