@@ -60,24 +60,44 @@ export interface OpenAlexAuthor {
   }>;
 }
 
-// In-memory cache: keyed by "name|affiliation", valid for the page session
-const authorCache = new Map<string, OpenAlexAuthor | null>();
+// In-memory cache keyed by "name|affiliation", valid for the page session.
+// Caches the Promise (not just the result) so concurrent callers — OA stats,
+// field metrics, co-author geo — share ONE lookup instead of each searching.
+const authorCache = new Map<string, Promise<OpenAlexAuthor | null>>();
 
 /**
- * Single consolidated OpenAlex author lookup.
- * 1. Searches by name (per_page=10)
- * 2. Filters by display_name match
- * 3. Refines by affiliation match
- * 4. Fetches ORCID from full author record
- * Results are cached per session so all 3 services share one lookup.
+ * Single consolidated OpenAlex author lookup, shared per session so all services
+ * (including concurrent callers) reuse one lookup. Successful results are cached;
+ * null/failed results are dropped so a later call can retry rather than being
+ * poisoned by a transient OpenAlex hiccup.
  */
-export async function findOpenAlexAuthor(
+export function findOpenAlexAuthor(
   name: string,
   affiliation: string
 ): Promise<OpenAlexAuthor | null> {
   const cacheKey = `${name.toLowerCase().trim()}|${affiliation.toLowerCase().trim()}`;
-  if (authorCache.has(cacheKey)) return authorCache.get(cacheKey)!;
+  const cached = authorCache.get(cacheKey);
+  if (cached) return cached;
+  const promise = resolveOpenAlexAuthor(name, affiliation);
+  authorCache.set(cacheKey, promise);
+  promise.then(
+    (author) => { if (!author) authorCache.delete(cacheKey); },
+    () => { authorCache.delete(cacheKey); }
+  );
+  return promise;
+}
 
+/**
+ * Uncached author resolution:
+ * 1. Searches by name (per_page=10)
+ * 2. Filters by display_name match
+ * 3. Refines by affiliation match
+ * 4. Fetches ORCID from full author record
+ */
+async function resolveOpenAlexAuthor(
+  name: string,
+  affiliation: string
+): Promise<OpenAlexAuthor | null> {
   try {
     const searchData = await oaFetchJson<{ results: Array<{
       id: string;
@@ -95,7 +115,6 @@ export async function findOpenAlexAuthor(
 
     const results = searchData?.results;
     if (!results?.length) {
-      authorCache.set(cacheKey, null);
       return null;
     }
 
@@ -140,11 +159,9 @@ export async function findOpenAlexAuthor(
       lastKnownInstitutions: best.last_known_institutions || [],
     };
 
-    authorCache.set(cacheKey, author);
     return author;
   } catch (err) {
     logCaughtError(err, 'openalex', 'author-lookup', 'find-author', { name, affiliation });
-    authorCache.set(cacheKey, null);
     return null;
   }
 }

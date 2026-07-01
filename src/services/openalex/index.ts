@@ -1,5 +1,6 @@
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
 import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { fetchAuthorEnrichmentWorks } from './works';
 
 export { searchOpenAlexAuthors, fetchOpenAlexProfile, OPENALEX_ID_PREFIX, toOpenAlexShortId } from './profile';
 
@@ -14,6 +15,14 @@ export class OpenAlexService {
       const author = await findOpenAlexAuthor(name, affiliation);
       if (!author) return null;
       const authorId = author.id;
+      const shortId = authorId.replace('https://openalex.org/', '');
+
+      // Kick off the (multi-page) shared works fetch immediately so it runs
+      // concurrently with the cheap group_by request below. Also consumed by
+      // the field-normalized metrics, so profile load does one works fetch
+      // instead of two. oaFetchJson never rejects, so this can safely float
+      // across the early returns.
+      const worksPromise = fetchAuthorEnrichmentWorks(shortId);
 
       // Get works grouped by OA status
       const worksUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${OA_EMAIL}`;
@@ -39,47 +48,38 @@ export class OpenAlexService {
       // ORCID is already fetched by shared author lookup
       const orcid = author.orcid;
 
-      // Fetch per-publication OA status + DOIs + location data (paginated, up to 200 works per page)
+      // Per-publication OA status + DOIs + repository/preprint info from the
+      // shared works fetch started above.
       const publicationOa: Record<string, { status: OaStatus; oaUrl?: string }> = {};
       const doiMap: Record<string, string> = {};
       const repositoryCounts: Record<string, number> = {};
       let preprintCount = 0;
-      let page = 1;
-      const maxPages = 10;
-      while (page <= maxPages) {
-        const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,best_oa_location,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
-        const pubsData = await oaFetchJson<{ results?: any[] }>(pubsUrl);
-        if (!pubsData) break;
-        const results = pubsData.results || [];
-        if (results.length === 0) break;
 
-        for (const work of results) {
-          if (work.title) {
-            const normalizedTitle = work.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const status: OaStatus = work.open_access?.oa_status === 'diamond' ? 'gold' : (work.open_access?.oa_status || 'closed');
-            publicationOa[normalizedTitle] = {
-              status,
-              oaUrl: work.open_access?.oa_url || undefined,
-            };
-            // Extract DOI for Semantic Scholar batch lookup
-            if (work.doi) {
-              const doi = work.doi.replace('https://doi.org/', '');
-              if (doi) doiMap[normalizedTitle] = doi;
-            }
-            // Extract preprint/repository info from best_oa_location
-            const boa = work.best_oa_location;
-            if (boa?.version === 'submittedVersion') {
-              preprintCount++;
-            }
-            if (boa?.source?.display_name && boa?.is_oa) {
-              const repoName = boa.source.display_name;
-              repositoryCounts[repoName] = (repositoryCounts[repoName] || 0) + 1;
-            }
-          }
+      const works = await worksPromise;
+      for (const work of works) {
+        if (!work.title) continue;
+        const normalizedTitle = work.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const status: OaStatus = work.open_access?.oa_status === 'diamond'
+          ? 'gold'
+          : ((work.open_access?.oa_status as OaStatus) || 'closed');
+        publicationOa[normalizedTitle] = {
+          status,
+          oaUrl: work.open_access?.oa_url || undefined,
+        };
+        // Extract DOI for Semantic Scholar batch lookup
+        if (work.doi) {
+          const doi = work.doi.replace('https://doi.org/', '');
+          if (doi) doiMap[normalizedTitle] = doi;
         }
-
-        if (results.length < 200) break;
-        page++;
+        // Extract preprint/repository info from best_oa_location
+        const boa = work.best_oa_location;
+        if (boa?.version === 'submittedVersion') {
+          preprintCount++;
+        }
+        if (boa?.source?.display_name && boa?.is_oa) {
+          const repoName = boa.source.display_name;
+          repositoryCounts[repoName] = (repositoryCounts[repoName] || 0) + 1;
+        }
       }
 
       return {
