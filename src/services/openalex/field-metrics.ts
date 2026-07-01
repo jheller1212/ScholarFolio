@@ -1,25 +1,15 @@
-import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { findOpenAlexAuthor } from './author-lookup';
+import { fetchAuthorEnrichmentWorks } from './works';
 import { logCaughtError } from '../../lib/errorLogger';
 import type { FieldNormalizedMetrics } from '../../types/scholar';
 
 export type { FieldNormalizedMetrics };
 
-interface OpenAlexWork {
-  doi?: string;
-  cited_by_count?: number;
-  cited_by_percentile_year?: { min?: number; max?: number };
-  primary_location?: {
-    source?: {
-      display_name?: string;
-      summary_stats?: { '2yr_mean_citedness'?: number };
-    };
-  };
-}
-
 /**
  * Fetches field-normalized metrics for an author from OpenAlex:
  * - FWCI-like: average citation percentile across papers
  * - Mean journal citedness (proxy for mean IF)
+ * Reuses the shared author works fetch (also consumed by the OA enrichment).
  */
 export async function fetchFieldNormalizedMetrics(
   authorName: string,
@@ -30,20 +20,7 @@ export async function fetchFieldNormalizedMetrics(
     if (!author) return null;
 
     const shortId = author.id.replace('https://openalex.org/', '');
-
-    // Fetch works with citation percentiles and source stats
-    const allWorks: OpenAlexWork[] = [];
-    let page = 1;
-    while (page <= 5) {
-      const data = await oaFetchJson<{ results: OpenAlexWork[] }>(
-        `${OA_API_URL}/works?filter=authorships.author.id:${shortId}&per_page=200&page=${page}&select=doi,cited_by_count,cited_by_percentile_year,primary_location&mailto=${OA_EMAIL}`
-      );
-      if (!data?.results?.length) break;
-      allWorks.push(...data.results);
-      if (data.results.length < 200) break;
-      page++;
-    }
-
+    const allWorks = await fetchAuthorEnrichmentWorks(shortId);
     if (allWorks.length === 0) return null;
 
     // FWCI-like metric (average citation percentile / 50)
