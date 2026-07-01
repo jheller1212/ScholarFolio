@@ -16,7 +16,7 @@ Scholar Folio turns a Google Scholar profile into a shareable research portfolio
 Sign in, pick a slug, and get a permanent URL. Claimed profiles are always public and free to view — no login needed for visitors. Each claimed profile is served from cache, so it costs nothing to host.
 
 ### Research Reach
-Citation counts, h-index, g-index, i10-index, h5-index, growth trends, and per-year citation breakdowns. Field-normalized impact (FWCI) and Relative Citation Ratio (RCR) for cross-discipline comparison.
+Citation counts, h-index, g-index, i10-index, h5-index, growth trends, and per-year citation breakdowns. For cross-discipline comparison: median Field-Weighted Citation Impact (OpenAlex's native per-work FWCI), the share of papers in their field's top 10% most-cited (Leiden PP(top 10%)), and mean journal impact.
 
 ### P-Index
 Publication-level percentile metric (Pham, Wu & Wang, 2024) that ranks papers within their own journal and publication year. Includes a review step so researchers control which publications are included.

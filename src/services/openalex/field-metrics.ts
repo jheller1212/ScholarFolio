@@ -130,6 +130,7 @@ export async function fetchFieldNormalizedMetrics(
       fwci,
       fwciMean,
       topDecileShare,
+      topDecileCount: classified.length,
       meanCitedness,
       paperCount: allWorks.length,
       rcrMean: null,

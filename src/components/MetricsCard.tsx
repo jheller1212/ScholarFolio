@@ -55,10 +55,11 @@ function useCountUp(target: number | string, duration = 600) {
       setDisplay(String(target));
       return;
     }
-    // Preserve a leading "+" and any non-numeric suffix (e.g. "%") through the
-    // animation — parseFloat strips them, which used to freeze "53%" as "53".
+    // Preserve a leading "+" and any non-numeric suffix (e.g. "%", " yrs")
+    // through the animation — parseFloat strips them, which used to freeze
+    // "53%" as "53". The leading \s* keeps the space in "12 yrs".
     const prefix = typeof target === 'string' && target.trim().startsWith('+') ? '+' : '';
-    const suffix = typeof target === 'string' ? (target.match(/[^\d.,\s+-]+\s*$/)?.[0] ?? '') : '';
+    const suffix = typeof target === 'string' ? (target.match(/\s*[^\d.,\s+-]+\s*$/)?.[0] ?? '') : '';
 
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || hasRun.current) return;
@@ -74,15 +75,21 @@ function useCountUp(target: number | string, duration = 600) {
         const eased = 1 - Math.pow(1 - progress, 3);
         const current = numericTarget * eased;
 
-        if (isDecimal) {
-          setDisplay(prefix + current.toFixed(1) + suffix);
-        } else if (typeof target === 'string' && target.includes(',')) {
-          setDisplay(prefix + Math.round(current).toLocaleString() + suffix);
+        if (progress < 1) {
+          if (isDecimal) {
+            setDisplay(prefix + current.toFixed(1) + suffix);
+          } else if (typeof target === 'string' && target.includes(',')) {
+            setDisplay(prefix + Math.round(current).toLocaleString() + suffix);
+          } else {
+            setDisplay(prefix + String(Math.round(current)) + suffix);
+          }
+          requestAnimationFrame(animate);
         } else {
-          setDisplay(prefix + String(Math.round(current)) + suffix);
+          // Final frame: snap to the exact original value so no format the
+          // interpolation branches mishandle (2-decimal FWCI, "12 yrs", …)
+          // sticks on screen in a mangled form.
+          setDisplay(String(target));
         }
-
-        if (progress < 1) requestAnimationFrame(animate);
       };
       requestAnimationFrame(animate);
     }, { threshold: 0.3 });

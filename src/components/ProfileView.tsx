@@ -595,7 +595,7 @@ export function ProfileView({
                     <MetricsCard
                       title="Top 10% Papers"
                       value={`${data.fieldMetrics.topDecileShare}%`}
-                      subtitle="In field's most-cited decile"
+                      subtitle={`Of ${data.fieldMetrics.topDecileCount} classified paper${data.fieldMetrics.topDecileCount !== 1 ? 's' : ''}`}
                       icon="topDecile"
                     />
                   )}

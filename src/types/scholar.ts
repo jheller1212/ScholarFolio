@@ -89,6 +89,8 @@ export interface FieldNormalizedMetrics {
   fwciMean: number | null;
   /** % of classified works in the top 10% most-cited of their field (Leiden-style PP-top10%) */
   topDecileShare: number | null;
+  /** Denominator of topDecileShare: works OpenAlex classified with a citation percentile */
+  topDecileCount: number;
   meanCitedness: number | null;
   paperCount: number;
   rcrMean: number | null;

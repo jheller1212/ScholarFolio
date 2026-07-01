@@ -4,6 +4,23 @@ All notable changes to Scholar Folio are documented here.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.14.0] - 2026-07-02
+
+### Added
+- Top 10% Papers metric — share of works in the top decile of their field's citation distribution (the Leiden Ranking's PP(top 10%)), from OpenAlex citation-normalized percentiles
+- Mean Journal Impact now actually renders: journal 2-year citedness is resolved via batched `/sources` lookups (the source embedded in works results is dehydrated and never carried stats, so the metric had been silently null)
+- Loading skeletons for the async Field-Normalized metrics section
+
+### Changed
+- FWCI now uses OpenAlex's native per-work field-weighted citation impact (normalized by subfield, year, and publication type), reported as the **median** across papers — previously a year-normalized percentile proxy that wasn't comparable across disciplines
+- OpenAlex enrichment consolidated into one shared, memoized works fetch: profile load does one works fetch instead of two, with pages after the first fetched in parallel
+- OpenAlex `/venues` calls migrated to `/sources` (endpoint deprecated)
+
+### Fixed
+- Metric cards no longer mangle animated values — "53%" froze as "53", "+12%" as "12", and "12 yrs" would have lost its unit; cards now snap to the exact value on the final frame
+- A partial or failed works fetch (including an empty page mid-pagination) is no longer cached for the session, so a later profile load retries instead of under-counting all works-derived metrics
+- Mean journal citedness is withheld entirely when a journal-stats batch fails, rather than rendering a systematically skewed average
+
 ## [0.10.0] - 2026-03-06
 
 ### Added
