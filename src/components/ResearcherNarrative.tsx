@@ -5,6 +5,7 @@ import { logCaughtError } from '../lib/errorLogger';
 import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { findJournalRanking } from '../data/journalRankings';
+import { normalizeVenueName } from '../utils/venue';
 import { scholarService } from '../services/scholar';
 
 interface ResearcherNarrativeProps {
@@ -64,8 +65,11 @@ function getTopVenues(publications: Author['publications'], limit: number): { na
       const isNonJournal = /\b(ssrn|arxiv|researchgate|netspar|rijksoverheid|working paper|discussion paper|technical report|preprint|mimeo|unpublished|available at|course|thesis|dissertation|patent|us patent|google patent|university press|academic press|verlag|publisher|editora)\b/i.test(lowerBase);
       if (isNonJournal || baseName.length <= 3) return;
 
-      if (baseName.length > 0) {
-        const key = baseName.toLowerCase();
+      // Group on the canonical key (shared with journal-ranking lookup) so
+      // abbreviations and punctuation/whitespace variants fold together, while
+      // the human-readable baseName is kept for display.
+      const key = normalizeVenueName(venue);
+      if (key.length >= 3) {
         const existing = venueCounts.get(key);
         if (existing) {
           existing.count++;
