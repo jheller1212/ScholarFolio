@@ -14,13 +14,19 @@ const sourceCitednessCache = new Map<string, number | null>();
 /**
  * Resolve 2yr_mean_citedness for a set of source ids via batched /sources
  * calls (up to 100 ids per OR-filter). Cached per session; a failed batch is
- * left uncached so a later profile load can retry.
+ * left uncached so a later profile load can retry. `complete` is false when
+ * any batch failed — callers should then withhold the metric rather than
+ * compute a silently skewed mean.
  */
-async function resolveSourceCitedness(sourceIds: string[]): Promise<Map<string, number | null>> {
+async function resolveSourceCitedness(sourceIds: string[]): Promise<{
+  citedness: ReadonlyMap<string, number | null>;
+  complete: boolean;
+}> {
   const missing = sourceIds.filter(id => !sourceCitednessCache.has(id));
   const chunks: string[][] = [];
   for (let i = 0; i < missing.length; i += 100) chunks.push(missing.slice(i, i + 100));
 
+  let complete = true;
   await Promise.all(chunks.map(async chunk => {
     const data = await oaFetchJson<{ results?: Array<{
       id?: string;
@@ -28,7 +34,11 @@ async function resolveSourceCitedness(sourceIds: string[]): Promise<Map<string, 
     }> }>(
       `${OA_API_URL}/sources?filter=ids.openalex:${chunk.join('|')}&select=id,summary_stats&per_page=${chunk.length}&mailto=${OA_EMAIL}`
     );
-    if (!data) return; // fetch failed — leave uncached so it can retry later
+    if (!data) {
+      // Fetch failed — leave uncached so it can retry later.
+      complete = false;
+      return;
+    }
     for (const s of data.results ?? []) {
       if (!s.id) continue;
       const shortId = s.id.replace('https://openalex.org/', '');
@@ -40,7 +50,7 @@ async function resolveSourceCitedness(sourceIds: string[]): Promise<Map<string, 
     }
   }));
 
-  return sourceCitednessCache;
+  return { citedness: sourceCitednessCache, complete };
 }
 
 /**
@@ -80,9 +90,9 @@ export async function fetchFieldNormalizedMetrics(
       w.primary_location?.source?.id?.replace('https://openalex.org/', '')
     );
     const distinctSourceIds = [...new Set(workSourceIds.filter((id): id is string => !!id))];
-    const citednessBySource = distinctSourceIds.length > 0
+    const { citedness: citednessBySource, complete } = distinctSourceIds.length > 0
       ? await resolveSourceCitedness(distinctSourceIds)
-      : new Map<string, number | null>();
+      : { citedness: new Map<string, number | null>(), complete: true };
 
     const citednessValues: number[] = [];
     for (const sourceId of workSourceIds) {
@@ -90,7 +100,10 @@ export async function fetchFieldNormalizedMetrics(
       const citedness = citednessBySource.get(sourceId);
       if (citedness != null && citedness > 0) citednessValues.push(citedness);
     }
-    const meanCitedness = citednessValues.length > 0
+    // A failed batch would skew the mean systematically (a dropped chunk is a
+    // contiguous slice of the journal list) — withhold the metric instead; the
+    // UI hides the card on null.
+    const meanCitedness = complete && citednessValues.length > 0
       ? Number((citednessValues.reduce((a, b) => a + b, 0) / citednessValues.length).toFixed(2))
       : null;
 
