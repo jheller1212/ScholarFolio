@@ -105,16 +105,18 @@ export class OpenAlexService {
 
   public async getJournalMetrics(issn: string): Promise<JournalRanking | null> {
     try {
-      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; impact_factor?: number }> }>(
-        `${OA_API_URL}/venues?filter=issn:${issn}`
+      // OpenAlex deprecated /venues in favour of /sources; impact_factor is now
+      // exposed as summary_stats["2yr_mean_citedness"].
+      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; summary_stats?: { '2yr_mean_citedness'?: number } }> }>(
+        `${OA_API_URL}/sources?filter=issn:${issn}`
       );
-      const venue = data?.results?.[0];
-      if (!venue) return null;
+      const source = data?.results?.[0];
+      if (!source) return null;
 
       return {
-        sjr: this.mapQuartileToSJR(venue.x_concepts?.[0]?.score),
-        jcr: venue.impact_factor?.toFixed(3),
-        abdc: this.mapScoreToABDC(venue.x_concepts?.[0]?.score)
+        sjr: this.mapQuartileToSJR(source.x_concepts?.[0]?.score),
+        jcr: source.summary_stats?.['2yr_mean_citedness']?.toFixed(3),
+        abdc: this.mapScoreToABDC(source.x_concepts?.[0]?.score)
       };
     } catch (error) {
       console.error('[OpenAlex] Error fetching journal metrics:', error);
@@ -124,16 +126,17 @@ export class OpenAlexService {
 
   public async searchJournal(name: string): Promise<JournalRanking | null> {
     try {
-      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; impact_factor?: number }> }>(
-        `${OA_API_URL}/venues?search=${encodeURIComponent(name)}&per-page=1`
+      // OpenAlex deprecated /venues in favour of /sources.
+      const data = await oaFetchJson<{ results?: Array<{ x_concepts?: Array<{ score?: number }>; summary_stats?: { '2yr_mean_citedness'?: number } }> }>(
+        `${OA_API_URL}/sources?search=${encodeURIComponent(name)}&per_page=1`
       );
-      const venue = data?.results?.[0];
-      if (!venue) return null;
+      const source = data?.results?.[0];
+      if (!source) return null;
 
       return {
-        sjr: this.mapQuartileToSJR(venue.x_concepts?.[0]?.score),
-        jcr: venue.impact_factor?.toFixed(3),
-        abdc: this.mapScoreToABDC(venue.x_concepts?.[0]?.score)
+        sjr: this.mapQuartileToSJR(source.x_concepts?.[0]?.score),
+        jcr: source.summary_stats?.['2yr_mean_citedness']?.toFixed(3),
+        abdc: this.mapScoreToABDC(source.x_concepts?.[0]?.score)
       };
     } catch (error) {
       console.error('[OpenAlex] Error searching journal:', error);
