@@ -182,26 +182,27 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
                 <tbody>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Total Revenue</td>
-                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b] italic">—</td>
+                    <td className="px-4 py-3 border-b border-gray-100">&euro;25.00 <span className="text-[#64748b]">(4 credit-pack purchases)</span></td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Total Costs (API + Hosting)</td>
-                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b] italic">—</td>
+                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b]">Exceeds revenue — Google Scholar API, OpenAlex API key, domain</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Surplus</td>
-                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b] italic">—</td>
+                    <td className="px-4 py-3 border-b border-gray-100">&euro;0.00</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3">Donated To</td>
-                    <td className="px-4 py-3 text-[#64748b] italic">—</td>
+                    <td className="px-4 py-3 text-[#64748b]">Nothing yet — donations start once a surplus exists</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <p className="text-sm text-[#94a3b8] italic mt-4">
-              First report coming Q2 2026.
+              Figures as of July 2026, covering all sales since launch (first purchase March 2026).
+              Amounts are gross; Stripe&apos;s processing fees are not yet deducted. Updated as things change.
             </p>
           </section>
         </div>
