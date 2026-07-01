@@ -17,9 +17,11 @@ export interface OaEnrichmentWork {
     source?: { display_name?: string };
   };
   primary_location?: {
+    // NOTE: this is OpenAlex's DEHYDRATED source — it carries id/display_name
+    // but NOT summary_stats. Journal-level stats need a separate /sources call.
     source?: {
+      id?: string;
       display_name?: string;
-      summary_stats?: { '2yr_mean_citedness'?: number };
     };
   };
 }

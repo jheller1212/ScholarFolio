@@ -1,9 +1,47 @@
-import { findOpenAlexAuthor } from './author-lookup';
+import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
 import { fetchAuthorEnrichmentWorks } from './works';
 import { logCaughtError } from '../../lib/errorLogger';
 import type { FieldNormalizedMetrics } from '../../types/scholar';
 
 export type { FieldNormalizedMetrics };
+
+// Session cache: source short id (e.g. "S137773608") → 2yr_mean_citedness
+// (null = source resolved but has no stats). The dehydrated source embedded in
+// works results does NOT carry summary_stats, so journal citedness needs this
+// separate /sources lookup.
+const sourceCitednessCache = new Map<string, number | null>();
+
+/**
+ * Resolve 2yr_mean_citedness for a set of source ids via batched /sources
+ * calls (up to 100 ids per OR-filter). Cached per session; a failed batch is
+ * left uncached so a later profile load can retry.
+ */
+async function resolveSourceCitedness(sourceIds: string[]): Promise<Map<string, number | null>> {
+  const missing = sourceIds.filter(id => !sourceCitednessCache.has(id));
+  const chunks: string[][] = [];
+  for (let i = 0; i < missing.length; i += 100) chunks.push(missing.slice(i, i + 100));
+
+  await Promise.all(chunks.map(async chunk => {
+    const data = await oaFetchJson<{ results?: Array<{
+      id?: string;
+      summary_stats?: { '2yr_mean_citedness'?: number };
+    }> }>(
+      `${OA_API_URL}/sources?filter=ids.openalex:${chunk.join('|')}&select=id,summary_stats&per_page=${chunk.length}&mailto=${OA_EMAIL}`
+    );
+    if (!data) return; // fetch failed — leave uncached so it can retry later
+    for (const s of data.results ?? []) {
+      if (!s.id) continue;
+      const shortId = s.id.replace('https://openalex.org/', '');
+      sourceCitednessCache.set(shortId, s.summary_stats?.['2yr_mean_citedness'] ?? null);
+    }
+    // Ids the API didn't return: cache as null so we don't re-ask this session.
+    for (const id of chunk) {
+      if (!sourceCitednessCache.has(id)) sourceCitednessCache.set(id, null);
+    }
+  }));
+
+  return sourceCitednessCache;
+}
 
 /**
  * Fetches field-normalized metrics for an author from OpenAlex:
@@ -34,10 +72,22 @@ export async function fetchFieldNormalizedMetrics(
       ? Number((percentiles.reduce((a, b) => a + b, 0) / percentiles.length / 50).toFixed(2))
       : null;
 
-    // Mean journal citedness (proxy for mean IF)
+    // Mean journal citedness (proxy for mean IF). The embedded work source is
+    // dehydrated (no summary_stats), so resolve stats for the distinct journals
+    // via batched /sources lookups, then average PER WORK so journals the
+    // author publishes in more often weigh more.
+    const workSourceIds = allWorks.map(w =>
+      w.primary_location?.source?.id?.replace('https://openalex.org/', '')
+    );
+    const distinctSourceIds = [...new Set(workSourceIds.filter((id): id is string => !!id))];
+    const citednessBySource = distinctSourceIds.length > 0
+      ? await resolveSourceCitedness(distinctSourceIds)
+      : new Map<string, number | null>();
+
     const citednessValues: number[] = [];
-    for (const work of allWorks) {
-      const citedness = work.primary_location?.source?.summary_stats?.['2yr_mean_citedness'];
+    for (const sourceId of workSourceIds) {
+      if (!sourceId) continue;
+      const citedness = citednessBySource.get(sourceId);
       if (citedness != null && citedness > 0) citednessValues.push(citedness);
     }
     const meanCitedness = citednessValues.length > 0
