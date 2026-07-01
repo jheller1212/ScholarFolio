@@ -18,9 +18,11 @@ interface TransparencyReport {
   through: string;
 }
 
+// Date-only strings parse as UTC midnight — read them back in UTC too, or a
+// negative-offset browser shifts them into the previous day/month/quarter.
 function quarterLabel(dateStr: string): string {
   const d = new Date(dateStr);
-  return `Q${Math.floor(d.getMonth() / 3) + 1} ${d.getFullYear()}`;
+  return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}`;
 }
 
 export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps) {
@@ -28,10 +30,19 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
   const [reportFailed, setReportFailed] = useState(false);
 
   useEffect(() => {
-    supabase.rpc('transparency_report').then(({ data, error }) => {
-      if (error || !data) setReportFailed(true);
-      else setReport(data as TransparencyReport);
-    });
+    let cancelled = false;
+    supabase.rpc('transparency_report')
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Guard the shape so an RPC drift shows the fallback, not "€NaN".
+        if (error || !data || typeof (data as TransparencyReport).revenue_cents !== 'number') {
+          setReportFailed(true);
+        } else {
+          setReport(data as TransparencyReport);
+        }
+      })
+      .catch(() => { if (!cancelled) setReportFailed(true); });
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -235,7 +246,7 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
 
             <p className="text-sm text-[#94a3b8] italic mt-4">
               {report
-                ? `Figures through ${quarterLabel(report.through)}, covering all sales since launch${report.first_purchase ? ` (first purchase ${new Date(report.first_purchase).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })})` : ''}. `
+                ? `Figures through ${quarterLabel(report.through)}, covering all sales since launch${report.first_purchase ? ` (first purchase ${new Date(report.first_purchase).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })})` : ''}. `
                 : 'Figures cover all sales since launch through the last completed quarter. '}
               Updated automatically each quarter, straight from the payment records.
               Amounts are gross; Stripe&apos;s processing fees are not yet deducted.
