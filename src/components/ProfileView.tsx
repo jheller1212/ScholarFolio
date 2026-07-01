@@ -591,12 +591,17 @@ export function ProfileView({
                       icon="meanIF"
                     />
                   )}
-                  <MetricsCard
-                    title="RCR"
-                    value={data.fieldMetrics.rcrMean !== null ? data.fieldMetrics.rcrMean : 'N/A'}
-                    subtitle={data.fieldMetrics.rcrMean !== null ? `${data.fieldMetrics.rcrPaperCount} PubMed paper${data.fieldMetrics.rcrPaperCount !== 1 ? 's' : ''}` : 'PubMed papers only'}
-                    icon="rcr"
-                  />
+                  {/* Only render RCR when actually computed — it's currently
+                      sourced from NIH iCite which isn't wired up, so showing a
+                      permanent "N/A" card advertises a metric we don't provide. */}
+                  {data.fieldMetrics.rcrMean !== null && (
+                    <MetricsCard
+                      title="RCR"
+                      value={data.fieldMetrics.rcrMean}
+                      subtitle={`${data.fieldMetrics.rcrPaperCount} PubMed paper${data.fieldMetrics.rcrPaperCount !== 1 ? 's' : ''}`}
+                      icon="rcr"
+                    />
+                  )}
                 </div>
               </div>
             )}
