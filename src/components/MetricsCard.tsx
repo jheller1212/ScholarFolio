@@ -90,6 +90,24 @@ function useCountUp(target: number | string, duration = 600) {
   return { display, ref };
 }
 
+/** Placeholder card shown while an async metric section is still loading. */
+export function MetricsCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full">
+      <div className="flex items-start gap-2.5 animate-pulse">
+        <div className="p-1.5 bg-gray-200 dark:bg-slate-700 rounded-lg mt-0.5 flex-shrink-0">
+          <div className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="h-2 w-16 bg-gray-200 dark:bg-slate-700 rounded" />
+          <div className="h-3 w-10 bg-gray-200 dark:bg-slate-700 rounded mt-2" />
+          <div className="h-2 w-14 bg-gray-100 dark:bg-slate-700/60 rounded mt-1.5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) {
   const { display, ref: countRef } = useCountUp(value);
   const getIcon = () => {

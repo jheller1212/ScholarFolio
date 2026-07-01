@@ -326,7 +326,9 @@ function AppContent() {
       };
 
       setProfileUrl(url);
-      setData(sanitizedData);
+      // Mark field-normalized metrics as loading so the metrics tab can show a
+      // skeleton for that section while the (async) OpenAlex fetch runs.
+      setData({ ...sanitizedData, fieldMetricsLoading: true });
       trackEvent('search', { author_id: userId, cache: profileData.cacheStatus, bypass: bypassCredits });
 
       // Fetch Open Access stats from OpenAlex (non-blocking)
@@ -381,7 +383,8 @@ function AppContent() {
             setData(prev => prev ? { ...prev, fieldMetrics } : prev);
           }
         })
-        .catch((err) => logCaughtError(err, 'openalex', 'App', 'fetch-field-metrics', { name: sanitizedData.name }));
+        .catch((err) => logCaughtError(err, 'openalex', 'App', 'fetch-field-metrics', { name: sanitizedData.name }))
+        .finally(() => setData(prev => prev ? { ...prev, fieldMetricsLoading: false } : prev));
 
       // Update browser URL with shareable link (preserve vanity URL if loaded via slug)
       const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
