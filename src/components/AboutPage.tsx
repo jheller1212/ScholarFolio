@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
+import { supabase } from '../lib/supabase';
 
 interface AboutPageProps {
   onBack: () => void;
@@ -8,7 +9,42 @@ interface AboutPageProps {
   authControls?: React.ReactNode;
 }
 
+/** Aggregate-only figures from the `transparency_report` RPC — revenue through
+ *  the end of the last completed quarter, rolling over automatically. */
+interface TransparencyReport {
+  revenue_cents: number;
+  purchase_count: number;
+  first_purchase: string | null;
+  through: string;
+}
+
+// Date-only strings parse as UTC midnight — read them back in UTC too, or a
+// negative-offset browser shifts them into the previous day/month/quarter.
+function quarterLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}`;
+}
+
 export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps) {
+  const [report, setReport] = useState<TransparencyReport | null>(null);
+  const [reportFailed, setReportFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.rpc('transparency_report')
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        // Guard the shape so an RPC drift shows the fallback, not "€NaN".
+        if (error || !data || typeof (data as TransparencyReport).revenue_cents !== 'number') {
+          setReportFailed(true);
+        } else {
+          setReport(data as TransparencyReport);
+        }
+      })
+      .catch(() => { if (!cancelled) setReportFailed(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <main className="flex-1 mesh-bg min-h-screen">
       <nav className="border-b border-gray-200/60 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg sticky top-0 z-10">
@@ -182,7 +218,15 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
                 <tbody>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Total Revenue</td>
-                    <td className="px-4 py-3 border-b border-gray-100">&euro;25.00 <span className="text-[#64748b]">(4 credit-pack purchases)</span></td>
+                    <td className="px-4 py-3 border-b border-gray-100">
+                      {report ? (
+                        <>&euro;{(report.revenue_cents / 100).toFixed(2)} <span className="text-[#64748b]">({report.purchase_count} credit-pack purchase{report.purchase_count !== 1 ? 's' : ''})</span></>
+                      ) : reportFailed ? (
+                        <span className="text-[#64748b] italic">Temporarily unavailable</span>
+                      ) : (
+                        <span className="text-[#64748b] italic">Loading…</span>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Total Costs (API + Hosting)</td>
@@ -201,8 +245,11 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
             </div>
 
             <p className="text-sm text-[#94a3b8] italic mt-4">
-              Figures as of July 2026, covering all sales since launch (first purchase March 2026).
-              Amounts are gross; Stripe&apos;s processing fees are not yet deducted. Updated as things change.
+              {report
+                ? `Figures through ${quarterLabel(report.through)}, covering all sales since launch${report.first_purchase ? ` (first purchase ${new Date(report.first_purchase).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })})` : ''}. `
+                : 'Figures cover all sales since launch through the last completed quarter. '}
+              Updated automatically each quarter, straight from the payment records.
+              Amounts are gross; Stripe&apos;s processing fees are not yet deducted.
             </p>
           </section>
         </div>
