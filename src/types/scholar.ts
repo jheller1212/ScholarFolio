@@ -83,7 +83,14 @@ export interface OpenAccessStats {
 }
 
 export interface FieldNormalizedMetrics {
+  /** Median of OpenAlex's native per-work FWCI (field/year/type-normalized; 1.0 = world average) */
   fwci: number | null;
+  /** Mean of per-work FWCI — skew-prone (one viral paper dominates), shown as context only */
+  fwciMean: number | null;
+  /** % of classified works in the top 10% most-cited of their field (Leiden-style PP-top10%) */
+  topDecileShare: number | null;
+  /** Denominator of topDecileShare: works OpenAlex classified with a citation percentile */
+  topDecileCount: number;
   meanCitedness: number | null;
   paperCount: number;
   rcrMean: number | null;

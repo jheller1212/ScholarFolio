@@ -38,7 +38,7 @@ interface MetricsCardProps {
   icon: 'citations' | 'hIndex' | 'gIndex' | 'publications' | 'i10Index' | 'scr' | 'hpIndex' |
         'sIndex' | 'rcr' | 'pubsPerYear' | 'network' | 'coAuthors' | 'avgAuthors' | 'soloAuthor' |
         'h5Index' | 'acc5' | 'citationsPerYear' | 'topCoAuthor' | 'avgCitationsPerPaper' |
-        'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'halfLife' | 'gini' | 'ageNormalized' |
+        'citationGrowth' | 'peak' | 'trend' | 'fwci' | 'topDecile' | 'halfLife' | 'gini' | 'ageNormalized' |
         'oaPercent' | 'goldOa' | 'greenOa' | 'hybridOa' | 'bronzeOa' | 'closedAccess' | 'meanIF' |
         'pindex' | 'owpi' | 'weightedCitations' | 'influential' | 'preprint' | 'repository';
 }
@@ -55,6 +55,11 @@ function useCountUp(target: number | string, duration = 600) {
       setDisplay(String(target));
       return;
     }
+    // Preserve a leading "+" and any non-numeric suffix (e.g. "%", " yrs")
+    // through the animation — parseFloat strips them, which used to freeze
+    // "53%" as "53". The leading \s* keeps the space in "12 yrs".
+    const prefix = typeof target === 'string' && target.trim().startsWith('+') ? '+' : '';
+    const suffix = typeof target === 'string' ? (target.match(/\s*[^\d.,\s+-]+\s*$/)?.[0] ?? '') : '';
 
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || hasRun.current) return;
@@ -70,15 +75,21 @@ function useCountUp(target: number | string, duration = 600) {
         const eased = 1 - Math.pow(1 - progress, 3);
         const current = numericTarget * eased;
 
-        if (isDecimal) {
-          setDisplay(current.toFixed(1));
-        } else if (typeof target === 'string' && target.includes(',')) {
-          setDisplay(Math.round(current).toLocaleString());
+        if (progress < 1) {
+          if (isDecimal) {
+            setDisplay(prefix + current.toFixed(1) + suffix);
+          } else if (typeof target === 'string' && target.includes(',')) {
+            setDisplay(prefix + Math.round(current).toLocaleString() + suffix);
+          } else {
+            setDisplay(prefix + String(Math.round(current)) + suffix);
+          }
+          requestAnimationFrame(animate);
         } else {
-          setDisplay(String(Math.round(current)));
+          // Final frame: snap to the exact original value so no format the
+          // interpolation branches mishandle (2-decimal FWCI, "12 yrs", …)
+          // sticks on screen in a mangled form.
+          setDisplay(String(target));
         }
-
-        if (progress < 1) requestAnimationFrame(animate);
       };
       requestAnimationFrame(animate);
     }, { threshold: 0.3 });
@@ -129,6 +140,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       // Field metrics
       case 'rcr': return <Scale className="h-3.5 w-3.5" />;
       case 'fwci': return <Gauge className="h-3.5 w-3.5" />;
+      case 'topDecile': return <Crown className="h-3.5 w-3.5" />;
       case 'meanIF': return <TrendingUp className="h-3.5 w-3.5" />;
       
       // Publication metrics
@@ -188,6 +200,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'sIndex': return 'sIndex';
       case 'rcr': return 'rcr';
       case 'fwci': return 'fwci';
+      case 'topDecile': return 'topDecile';
       case 'meanIF': return 'meanIF';
       case 'pubsPerYear': return 'pubsPerYear';
       case 'network': return 'collaborationScore';
@@ -237,7 +250,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
       case 'pindex': case 'owpi': case 'weightedCitations':
         return 'from-violet-500 to-purple-600';
       // Field-normalized → indigo
-      case 'fwci': case 'rcr': case 'meanIF':
+      case 'fwci': case 'topDecile': case 'rcr': case 'meanIF':
         return 'from-cat-field-from to-cat-field-to';
       // Open access → green
       case 'oaPercent': case 'goldOa': case 'greenOa': case 'hybridOa': case 'bronzeOa': case 'closedAccess':
