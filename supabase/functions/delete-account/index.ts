@@ -76,9 +76,13 @@ Deno.serve(async (req) => {
       .delete()
       .eq('user_id', userId);
 
-    // user_credits and credit_purchases have ON DELETE CASCADE
+    // user_credits has ON DELETE CASCADE (balance goes with the account).
+    // credit_purchases has ON DELETE SET NULL: purchase rows are financial
+    // records — they survive anonymized (user link removed, only pack/amount/
+    // date remain) so the public transparency figures stay consistent with
+    // Stripe's ledger.
 
-    // Delete the auth user (this cascades to user_credits, credit_purchases)
+    // Delete the auth user (cascades to user_credits, anonymizes credit_purchases)
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
 
     if (deleteError) {
