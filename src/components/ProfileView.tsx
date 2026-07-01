@@ -579,7 +579,7 @@ export function ProfileView({
                   <MetricsCardSkeleton />
                 </div>
               </div>
-            ) : (data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null)) ? (
+            ) : (data.fieldMetrics && (data.fieldMetrics.fwci !== null || data.fieldMetrics.topDecileShare !== null || data.fieldMetrics.meanCitedness !== null || data.fieldMetrics.rcrMean !== null)) ? (
               <div>
                 <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-cat-field-from"></span>Field-Normalized Metrics</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -587,8 +587,16 @@ export function ProfileView({
                     <MetricsCard
                       title="FWCI"
                       value={data.fieldMetrics.fwci}
-                      subtitle={data.fieldMetrics.fwci >= 1.5 ? 'Well above average' : data.fieldMetrics.fwci >= 1.0 ? 'Above world average' : 'Below world average'}
+                      subtitle={`Median · ${data.fieldMetrics.fwci >= 1.5 ? 'well above avg' : data.fieldMetrics.fwci >= 1.0 ? 'above world avg' : 'below world avg'}`}
                       icon="fwci"
+                    />
+                  )}
+                  {data.fieldMetrics.topDecileShare !== null && (
+                    <MetricsCard
+                      title="Top 10% Papers"
+                      value={`${data.fieldMetrics.topDecileShare}%`}
+                      subtitle="In field's most-cited decile"
+                      icon="topDecile"
                     />
                   )}
                   {data.fieldMetrics.meanCitedness !== null && (

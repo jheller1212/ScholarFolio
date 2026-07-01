@@ -9,7 +9,13 @@ export interface OaEnrichmentWork {
   doi?: string;
   publication_year?: number;
   cited_by_count?: number;
-  cited_by_percentile_year?: { min?: number; max?: number };
+  /** Native field/year/type-normalized citation impact; 1.0 = world average. */
+  fwci?: number | null;
+  citation_normalized_percentile?: {
+    value?: number;
+    is_in_top_1_percent?: boolean;
+    is_in_top_10_percent?: boolean;
+  } | null;
   open_access?: { oa_status?: string; oa_url?: string };
   best_oa_location?: {
     version?: string;
@@ -27,7 +33,7 @@ export interface OaEnrichmentWork {
 }
 
 const SELECT =
-  'title,open_access,best_oa_location,publication_year,doi,cited_by_count,cited_by_percentile_year,primary_location';
+  'title,open_access,best_oa_location,publication_year,doi,cited_by_count,fwci,citation_normalized_percentile,primary_location';
 
 const PER_PAGE = 200;
 const MAX_PAGES = 10;

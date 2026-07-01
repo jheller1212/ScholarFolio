@@ -55,7 +55,8 @@ async function resolveSourceCitedness(sourceIds: string[]): Promise<{
 
 /**
  * Fetches field-normalized metrics for an author from OpenAlex:
- * - FWCI-like: average citation percentile across papers
+ * - FWCI: median (+ mean) of OpenAlex's native per-work FWCI
+ * - Top-decile share: % of works in the top 10% most-cited of their field
  * - Mean journal citedness (proxy for mean IF)
  * Reuses the shared author works fetch (also consumed by the OA enrichment).
  */
@@ -71,15 +72,33 @@ export async function fetchFieldNormalizedMetrics(
     const allWorks = await fetchAuthorEnrichmentWorks(shortId);
     if (allWorks.length === 0) return null;
 
-    // FWCI-like metric (average citation percentile / 50)
-    // 50th percentile = 1.0 (world average), >1.0 = above average
-    const percentiles: number[] = [];
-    for (const work of allWorks) {
-      const pct = work.cited_by_percentile_year?.min;
-      if (pct != null) percentiles.push(pct);
+    // Native OpenAlex FWCI (normalized by subfield × year × publication type;
+    // 1.0 = world average in that field). Median as the headline value — a
+    // single viral paper can drag the mean far above what's typical — with the
+    // mean kept as context for the narrative.
+    const fwciValues = allWorks
+      .map(w => w.fwci)
+      .filter((v): v is number => typeof v === 'number')
+      .sort((a, b) => a - b);
+    let fwci: number | null = null;
+    let fwciMean: number | null = null;
+    if (fwciValues.length > 0) {
+      const mid = Math.floor(fwciValues.length / 2);
+      const median = fwciValues.length % 2 === 1
+        ? fwciValues[mid]
+        : (fwciValues[mid - 1] + fwciValues[mid]) / 2;
+      fwci = Number(median.toFixed(2));
+      fwciMean = Number((fwciValues.reduce((a, b) => a + b, 0) / fwciValues.length).toFixed(2));
     }
-    const fwci = percentiles.length > 0
-      ? Number((percentiles.reduce((a, b) => a + b, 0) / percentiles.length / 50).toFixed(2))
+
+    // Share of works in the top 10% most-cited of their field/year/type —
+    // the Leiden Ranking's PP(top 10%), robust to single-hit outliers.
+    const classified = allWorks.filter(w => w.citation_normalized_percentile != null);
+    const topDecileShare = classified.length > 0
+      ? Math.round(
+          (classified.filter(w => w.citation_normalized_percentile?.is_in_top_10_percent).length /
+            classified.length) * 100
+        )
       : null;
 
     // Mean journal citedness (proxy for mean IF). The embedded work source is
@@ -109,6 +128,8 @@ export async function fetchFieldNormalizedMetrics(
 
     return {
       fwci,
+      fwciMean,
+      topDecileShare,
       meanCitedness,
       paperCount: allWorks.length,
       rcrMean: null,

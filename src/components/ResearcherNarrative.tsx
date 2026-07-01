@@ -768,11 +768,16 @@ function generateFieldMetricsParagraph(fieldMetrics?: FieldNormalizedMetrics | n
 
   if (fieldMetrics.fwci !== null) {
     const fwci = fieldMetrics.fwci.toFixed(2);
+    const meanSuffix = fieldMetrics.fwciMean !== null ? ` (mean: ${fieldMetrics.fwciMean.toFixed(2)})` : '';
     if (fieldMetrics.fwci >= 1.0) {
-      parts.push(`Their Field-Weighted Citation Impact (FWCI) is ${fwci}, meaning their publications receive ${fwci} times the world average citations for their field and publication year.`);
+      parts.push(`Their median Field-Weighted Citation Impact (FWCI) is ${fwci}${meanSuffix}, meaning a typical publication of theirs receives ${fwci} times the world-average citations for its field, year, and publication type.`);
     } else {
-      parts.push(`Their Field-Weighted Citation Impact (FWCI) is ${fwci}, relative to the world average of 1.00 for their field and publication year.`);
+      parts.push(`Their median Field-Weighted Citation Impact (FWCI) is ${fwci}${meanSuffix}, relative to the world average of 1.00 for their field, year, and publication type.`);
     }
+  }
+
+  if (fieldMetrics.topDecileShare !== null) {
+    parts.push(`${fieldMetrics.topDecileShare}% of their publications rank among the top 10% most-cited papers in their field (world baseline: 10%).`);
   }
 
   if (fieldMetrics.meanCitedness !== null) {

@@ -156,10 +156,16 @@ export const metricInfo = {
     link: "https://en.wikipedia.org/wiki/Open_access#Bronze_OA"
   },
   fwci: {
-    description: "Field-Weighted Citation Impact — a normalized measure of citation impact relative to the world average for the same field and publication year. Calculated from OpenAlex citation percentiles.\n\nA value of 1.0 means the researcher's papers are cited at the world average for their fields. Values above 1.0 indicate above-average impact.",
-    pros: "Accounts for field-specific citation norms, making it meaningful to compare researchers across disciplines. Based on per-paper percentiles, not raw counts.",
+    description: "Field-Weighted Citation Impact — OpenAlex's per-paper FWCI, normalized by subfield, publication year, and publication type. Shown as the MEDIAN across the researcher's papers.\n\nA value of 1.0 means a typical paper is cited at the world average for its field. Values above 1.0 indicate above-average impact. The median is used because a single highly-cited paper can inflate a mean far beyond what is typical.",
+    pros: "Directly comparable across disciplines — a 1.5 means the same thing in history as in medicine. Median is robust to one-hit outliers. Same concept as Scopus/SciVal's FWCI, but from open data.",
     cons: "Depends on OpenAlex field classification accuracy. May differ from Elsevier's proprietary FWCI calculation in Scopus/SciVal.",
     link: "https://en.wikipedia.org/wiki/Field-weighted_citation_impact"
+  },
+  topDecile: {
+    description: "Share of the researcher's papers ranking in the top 10% most-cited works of their field, publication year, and publication type — the PP(top 10%) indicator used by the CWTS Leiden Ranking.\n\nBased on OpenAlex's citation-normalized percentiles. The world baseline is 10%: a value above that means the researcher places papers in their field's top decile more often than average.",
+    pros: "Field-normalized and robust — unaffected by how extreme the top papers are, only by how many reach the top decile. A standard indicator in research evaluation (Leiden Ranking).",
+    cons: "Insensitive to impact differences within the top 10%. Recent papers have had less time to accumulate citations, which can understate the share for early-career researchers.",
+    link: "https://www.leidenranking.com/information/indicators"
   },
   rcr: {
     description: "Relative Citation Ratio — developed by NIH, measures how a paper's citation rate compares to the average for its field and age. An RCR of 1.0 means average; 2.0 means twice the expected citations.\n\nData sourced from NIH's iCite database. Only available for papers indexed in PubMed.",
