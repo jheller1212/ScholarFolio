@@ -10,13 +10,36 @@ export const OA_API_URL = API_URL;
 /** Shared rate limiter for all OpenAlex calls (polite pool allows ~100/sec) */
 export const oaRateLimiter = new RateLimiter(5000, 100);
 
-/** Generic JSON fetcher with rate limiting and timeout */
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+/** Strip the OpenAlex origin so only the path+query reaches our proxy. */
+function toOaPath(url: string): string {
+  return url.replace(/^https?:\/\/api\.openalex\.org/, '');
+}
+
+/**
+ * Generic OpenAlex JSON fetcher. Routed through the `scholar` edge function,
+ * which injects a server-side OpenAlex API key (mandatory since 2026-02-13) so
+ * every visitor shares one authenticated, rate-stable pool rather than the
+ * best-effort anonymous tier. Responses are cached server-side to conserve the
+ * daily credit budget.
+ */
 export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
   try {
     await oaRateLimiter.acquireToken();
-    const response = await fetch(url, { signal: timeoutSignal(timeoutMs) });
+    const oaPath = toOaPath(url);
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/scholar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ action: 'openalex', oaPath }),
+      signal: timeoutSignal(timeoutMs),
+    });
     if (!response.ok) {
-      console.warn(`[OpenAlex] HTTP ${response.status} for ${url.split('?')[0]}`);
+      console.warn(`[OpenAlex] proxy HTTP ${response.status} for ${toOaPath(url).split('?')[0]}`);
       return null;
     }
     return await response.json() as T;

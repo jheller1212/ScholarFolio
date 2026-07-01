@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { OA_API_URL, OA_EMAIL, oaRateLimiter } from '../services/openalex/author-lookup';
-import { timeoutSignal } from '../utils/api';
+import { OA_API_URL, OA_EMAIL, oaRateLimiter, oaFetchJson } from '../services/openalex/author-lookup';
 import { logCaughtError } from '../lib/errorLogger';
 import { fetchPIndexWorks, computePIndexFromWorks, type PIndexWork, type PIndexResult } from '../services/openalex/pindex';
 import { MetricsCard } from './MetricsCard';
+import { OpenAlexNotice } from './OpenAlexNotice';
 
 interface OpenAlexSearchResult {
   id: string;
@@ -133,16 +133,14 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
     try {
       const query = `${firstName} ${lastName}`;
       const url = `${OA_API_URL}/authors?search=${encodeURIComponent(query)}&per_page=10&select=id,display_name,works_count,cited_by_count,last_known_institutions&mailto=${OA_EMAIL}`;
-      // Direct fetch — bypass the shared rate limiter to avoid queuing behind OA stats
-      // Don't send OA_HEADERS (custom User-Agent is a forbidden header on Firefox/mobile)
-      // The mailto= param in the URL is sufficient for OpenAlex polite pool
-      const response = await fetch(url, { signal: timeoutSignal(15000) });
-      if (!response.ok) {
-        setErrorMsg(`Could not reach OpenAlex (HTTP ${response.status}). Please wait a moment and try again. (SF-PI-SEARCH)`);
+      // Routed through the scholar edge function, which injects the server-side
+      // OpenAlex API key (mandatory since 2026-02-13) and caches the response.
+      const data = await oaFetchJson<{ results: OpenAlexSearchResult[] }>(url);
+      if (!data) {
+        setErrorMsg('Could not reach OpenAlex. Please wait a moment and try again. (SF-PI-SEARCH)');
         setStep('error');
         return;
       }
-      const data: { results: OpenAlexSearchResult[] } = await response.json();
 
       if (!data.results?.length) {
         setErrorMsg('No authors found in OpenAlex. Try adjusting the name. (SF-PI-NORESULT)');
@@ -289,6 +287,8 @@ export function PIndexSection({ authorName, affiliation, onResult, scrapedPublic
         P-Index
         <a href="https://academic.oup.com/jcr/article-abstract/51/1/191/7672992" target="_blank" rel="noopener noreferrer" className="text-[10px] font-normal text-gray-400 dark:text-gray-500 hover:text-[#2d7d7d] transition-colors">(Pham, Wu &amp; Wang, 2024)</a>
       </h3>
+
+      <OpenAlexNotice />
 
       {/* Step 1: Idle — info + search form */}
       {step === 'idle' && (

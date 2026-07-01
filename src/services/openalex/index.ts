@@ -1,6 +1,5 @@
-import { timeoutSignal } from '../../utils/api';
 import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scholar';
-import { findOpenAlexAuthor, oaFetchJson, oaRateLimiter, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
 
 export { searchOpenAlexAuthors, fetchOpenAlexProfile, OPENALEX_ID_PREFIX, toOpenAlexShortId } from './profile';
 
@@ -17,14 +16,9 @@ export class OpenAlexService {
       const authorId = author.id;
 
       // Get works grouped by OA status
-      await oaRateLimiter.acquireToken();
       const worksUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&group_by=open_access.oa_status&per_page=10&mailto=${OA_EMAIL}`;
-      const worksResponse = await fetch(worksUrl, {
-        signal: timeoutSignal(10000)
-      });
-
-      if (!worksResponse.ok) return null;
-      const worksData = await worksResponse.json();
+      const worksData = await oaFetchJson<{ group_by?: Array<{ key: string; count: number }> }>(worksUrl);
+      if (!worksData) return null;
 
       const groups: Record<string, number> = {};
       let total = 0;
@@ -53,13 +47,9 @@ export class OpenAlexService {
       let page = 1;
       const maxPages = 10;
       while (page <= maxPages) {
-        await oaRateLimiter.acquireToken();
         const pubsUrl = `${OA_API_URL}/works?filter=authorships.author.id:${authorId}&select=title,open_access,best_oa_location,publication_year,doi&per_page=200&page=${page}&mailto=${OA_EMAIL}`;
-        const pubsResponse = await fetch(pubsUrl, {
-          signal: timeoutSignal(15000)
-        });
-        if (!pubsResponse.ok) break;
-        const pubsData = await pubsResponse.json();
+        const pubsData = await oaFetchJson<{ results?: any[] }>(pubsUrl);
+        if (!pubsData) break;
         const results = pubsData.results || [];
         if (results.length === 0) break;
 
