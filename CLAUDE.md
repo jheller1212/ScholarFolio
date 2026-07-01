@@ -16,4 +16,5 @@ React + TypeScript, Vite, Tailwind CSS.
 - One change per deploy. Never bundle unrelated changes.
 
 ## Git
-- Commit as: `Jonas Heller <jonasheller89@gmail.com>`
+- Commit as: `Jonas Heller <168646044+jheller1212@users.noreply.github.com>`
+  (GitHub email privacy is enabled — pushes using `jonasheller89@gmail.com` are rejected.)
