@@ -230,7 +230,7 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
                   </tr>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Total Costs (API + Hosting)</td>
-                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b]">Exceeds revenue — Google Scholar API, OpenAlex API key, domain</td>
+                    <td className="px-4 py-3 border-b border-gray-100 text-[#64748b]">Exceeds revenue — Google Scholar API, domain</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 border-b border-gray-100">Surplus</td>
