@@ -27,8 +27,31 @@ const TAG_STYLES = {
 
 const changelog: ChangelogWeek[] = [
   {
-    label: 'June 2–6, 2026',
+    label: 'June 30 – July 2, 2026',
     date: 'This week',
+    headline: 'Smarter metrics, faster profiles, transparency report',
+    entries: [
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'Top 10% Papers metric — the share of your works in the top decile of their field’s citation distribution, as used in the Leiden Ranking', tag: 'new' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'FWCI upgraded to OpenAlex’s native field-weighted citation impact, reported as the median across your papers — now comparable across disciplines', tag: 'improved' },
+      { icon: <Eye className="h-4 w-4" />, text: 'Transparency report on the About page now shows real revenue and cost figures, refreshed automatically every quarter', tag: 'new' },
+      { icon: <Zap className="h-4 w-4" />, text: 'Faster profile loads — publication data is fetched once and pages load in parallel', tag: 'improved' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Mean Journal Impact now displays correctly (it was silently empty), and metric values no longer lose their % or unit at the end of the count-up animation', tag: 'fix' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Also: more accurate top-venue counts (journal name variants folded together), loading skeletons for field-normalized metrics, and more reliable publication data fetching', tag: 'fix' },
+    ],
+  },
+  {
+    label: 'June 16, 2026',
+    date: '2 weeks ago',
+    headline: 'Fallback profiles, healthier data pipeline',
+    entries: [
+      { icon: <BookOpen className="h-4 w-4" />, text: 'Fallback profiles — when Google Scholar is unavailable, a profile can be built from OpenAlex data instead, free to view', tag: 'new' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Data-source health monitoring with failure-rate alerts, so outages get caught early', tag: 'new' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Cleaner error logging — cancelled requests are no longer reported as errors', tag: 'fix' },
+    ],
+  },
+  {
+    label: 'June 2–6, 2026',
+    date: '4 weeks ago',
     headline: 'Semantic Scholar, Narrative CV export, P-Index',
     entries: [
       { icon: <BookOpen className="h-4 w-4" />, text: 'Semantic Scholar integration — see influential citation counts and AI-generated TLDRs on your publications', tag: 'new' },
@@ -41,7 +64,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'May 7–22, 2026',
-    date: '3 weeks ago',
+    date: '7 weeks ago',
     headline: 'Co-author World Map, field metrics',
     entries: [
       { icon: <Globe className="h-4 w-4" />, text: 'Co-author World Map — interactive globe showing where your collaborators are based, with continent coloring and region presets', tag: 'new' },
@@ -51,7 +74,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'April 26–27, 2026',
-    date: '6 weeks ago',
+    date: '9 weeks ago',
     headline: 'Claim your profile, visual redesign',
     entries: [
       { icon: <Users className="h-4 w-4" />, text: 'Claim your profile — get a vanity URL (scholarfolio.org/yourname) with verified badge and share snippets', tag: 'new' },
@@ -61,7 +84,7 @@ const changelog: ChangelogWeek[] = [
   },
   {
     label: 'March 18–20, 2026',
-    date: '~12 weeks ago',
+    date: '~15 weeks ago',
     headline: 'Open Science tab, admin dashboard',
     entries: [
       { icon: <BookOpen className="h-4 w-4" />, text: 'Open Science tab — per-publication OA badges, interactive OA trend chart, ORCID integration via OpenAlex', tag: 'new' },
