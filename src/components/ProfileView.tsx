@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin, AlertTriangle } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 import { ProfileCorrectionModal } from './ProfileCorrectionModal';
@@ -299,6 +299,20 @@ export function ProfileView({
                   )}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.affiliation}</p>
+                {isOpenAlexProfile && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-[12px] leading-snug text-amber-800 dark:text-amber-300 max-w-2xl">
+                    <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Built from <b>OpenAlex</b> because Google Scholar couldn't be reached for this profile. Citation counts, affiliation, and the publication list may be incomplete or differ from Google Scholar.{' '}
+                      <button
+                        onClick={() => { setHeaderSearchQuery(data.name); setShowSearchModal(true); }}
+                        className="font-semibold underline hover:no-underline"
+                      >
+                        Search Google Scholar
+                      </button>
+                    </span>
+                  </div>
+                )}
                 {data.corrections && data.corrections.length > 0 && (
                   <p
                     className="text-[11px] text-[#2d7d7d] dark:text-[#5ab5a5] mb-2 inline-flex items-center gap-1"
