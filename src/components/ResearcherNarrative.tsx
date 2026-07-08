@@ -656,7 +656,7 @@ export function generateNarrativeParagraphs(data: Author, pIndexResult?: PIndexR
       }
       collabParagraph = `${collabPct} of ${lastNameCap}'s publications are co-authored, with an average of **${metrics.averageAuthors}** authors per paper across **${metrics.totalCoAuthors}** unique co-author${metrics.totalCoAuthors !== 1 ? 's' : ''}.`;
       if (metrics.topCoAuthor && metrics.topCoAuthorPapers >= 2) {
-        collabParagraph += ` ${lastNameCap}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have published **${metrics.topCoAuthorPapers}** papers.`;
+        collabParagraph += ` ${lastNameCap}'s most frequent collaborator is ${metrics.topCoAuthor}, with whom they have co-authored **${metrics.topCoAuthorPapers}** publication${metrics.topCoAuthorPapers !== 1 ? 's' : ''}.`;
       }
       const otherCoAuthors = (metrics.topCoAuthors ?? [])
         .slice(1) // skip #1 (already mentioned above)
