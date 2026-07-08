@@ -13,7 +13,7 @@ interface AdminDashboardProps {
 }
 
 interface RawData {
-  searches: Array<{ id: string; source: string; created_at: string; user_id: string | null; author_id: string | null }>;
+  searches: Array<{ id: string; source: string; created_at: string; user_id: string | null; author_id: string | null; ip: string | null }>;
   users: Array<{ user_id: string; credits_remaining: number; total_purchased: number; created_at: string }>;
   purchases: Array<{ pack: string; amount_cents: number; credits: number; created_at: string }>;
   dailyStats: Array<{ day: string; total_searches: number; auth_searches: number; anon_searches: number; unique_profiles: number }>;
@@ -92,7 +92,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           while (true) {
             const { data, error } = await supabase
               .from('request_logs')
-              .select('id,source,created_at,user_id,author_id')
+              .select('id,source,created_at,user_id,author_id,ip')
               .order('created_at', { ascending: false })
               .range(from, from + batchSize - 1);
             if (error) throw error;
@@ -244,9 +244,29 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
     // SerpAPI usage this calendar month
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const serpApiThisMonth = rawData.searches.filter(
-      s => s.source === 'serpapi' && s.created_at >= monthStart
-    ).length;
+    // Both a profile fetch (source 'serpapi') and a name search (source 'search')
+    // consume a SerpAPI credit; 'cache'/'scraper' do not. Count both.
+    const isSerpCall = (s: { source: string }) => s.source === 'serpapi' || s.source === 'search';
+    const dayAgo = new Date(now.getTime() - 24 * 3600e3).toISOString();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 3600e3).toISOString();
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 3600e3).toISOString();
+    const serpCalls = rawData.searches.filter(isSerpCall);
+    const serpApiThisMonth = serpCalls.filter(s => s.created_at >= monthStart).length;
+    const serpApiToday = serpCalls.filter(s => s.created_at >= dayAgo).length;
+    const serpApiWeek = serpCalls.filter(s => s.created_at >= weekAgo).length;
+    const serpApi30d = serpCalls.filter(s => s.created_at >= monthAgo).length;
+    // Who is driving it — authenticated user id, else anon:<ip>. Last 30 days.
+    const consumerCounts = new Map<string, number>();
+    for (const s of serpCalls) {
+      if (s.created_at < monthAgo) continue;
+      const who = s.user_id ? `user:${s.user_id}` : `anon:${s.ip || 'unknown'}`;
+      consumerCounts.set(who, (consumerCounts.get(who) || 0) + 1);
+    }
+    const topSerpConsumers = [...consumerCounts.entries()]
+      .map(([who, count]) => ({ who, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+    const serpAnon30d = serpCalls.filter(s => s.created_at >= monthAgo && !s.user_id).length;
 
     // --- Scholar fetch health ---
     // Fetch chain is: cache → SerpAPI (primary) → scraper (fallback) → hard fail.
@@ -286,6 +306,11 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
 
     return {
       serpApiThisMonth,
+      serpApiToday,
+      serpApiWeek,
+      serpApi30d,
+      serpAnon30d,
+      topSerpConsumers,
       serpApiAttempts,
       serpApiFailures,
       serpApiFailRate,
@@ -384,39 +409,36 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
               <StatCard icon={<TrendingUp className="h-4 w-4" />} label={`Credits sold (${periodLabels[period].toLowerCase()})`} value={stats.creditsSold} />
             </div>
 
-            {/* SerpAPI usage */}
-            {(() => {
-              const limit = 250;
-              const used = stats.serpApiThisMonth;
-              const pct = Math.round((used / limit) * 100);
-              const isWarning = used >= 200;
-              const isCritical = used >= 230;
-              return (
-                <div className={`rounded-2xl border p-4 flex items-center gap-4 ${
-                  isCritical ? 'bg-red-50 border-red-200' : isWarning ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'
-                }`}>
-                  {(isWarning || isCritical) && <AlertTriangle className={`h-5 w-5 flex-shrink-0 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-semibold ${isCritical ? 'text-red-700' : isWarning ? 'text-amber-700' : 'text-gray-700'}`}>
-                        SerpAPI Usage — {new Date().toLocaleString('en-US', { month: 'long' })}
-                      </span>
-                      <span className={`text-xs font-mono font-bold ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-gray-600'}`}>
-                        {used} / {limit}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${isCritical ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-[#2d7d7d]'}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                    </div>
-                    {isCritical && <p className="text-[10px] text-red-600 mt-1">Critical: approaching monthly limit. New lookups may fail.</p>}
-                    {isWarning && !isCritical && <p className="text-[10px] text-amber-600 mt-1">Warning: 80% of monthly SerpAPI quota used.</p>}
+            {/* SerpAPI usage — profile fetches + name searches both consume a credit */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-4 w-4 text-[#2d7d7d]" />
+                <span className="text-xs font-semibold text-gray-700">SerpAPI Usage <span className="font-normal text-gray-400">(profile fetches + name searches)</span></span>
+              </div>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {([['Today', stats.serpApiToday], ['7 days', stats.serpApiWeek], ['30 days', stats.serpApi30d], ['This month', stats.serpApiThisMonth]] as [string, number][]).map(([label, val]) => (
+                  <div key={label} className="rounded-lg bg-gray-50 p-2 text-center">
+                    <div className="text-lg font-bold text-gray-900 tabular-nums">{val}</div>
+                    <div className="text-[10px] text-gray-500">{label}</div>
                   </div>
-                </div>
-              );
-            })()}
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500 mb-1.5">
+                Top consumers (30d) — <span className="font-medium text-gray-700">{stats.serpAnon30d}</span> of these calls are anonymous
+              </p>
+              <div className="space-y-1">
+                {stats.topSerpConsumers.length === 0 && <p className="text-[11px] text-gray-400">No SerpAPI calls in the last 30 days.</p>}
+                {stats.topSerpConsumers.map(c => (
+                  <div key={c.who} className="flex items-center justify-between text-[11px]">
+                    <span className="font-mono text-gray-600 truncate mr-2">
+                      {c.who.startsWith('user:') ? `👤 user ${c.who.slice(5, 13)}…` : `🌐 ${c.who.slice(5)}`}
+                    </span>
+                    <span className="font-mono font-semibold text-gray-800 tabular-nums">{c.count}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">Live % of your SerpAPI plan limit is shown separately once the plan quota is wired (email alerts at 50/80/90%).</p>
+            </div>
 
             {/* Scholar fetch health — SerpAPI / scraper / search failure rates */}
             {(() => {
