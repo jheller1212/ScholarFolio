@@ -24,6 +24,7 @@ import { ADMIN_EMAIL } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService, fetchOpenAlexProfile, OPENALEX_ID_PREFIX } from './services/openalex';
+import { fetchProfileOverrides, applyProfileOverrides } from './services/corrections';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
@@ -308,6 +309,24 @@ function AppContent() {
         return;
       }
 
+      // Preserve the source-derived identity for the OpenAlex metric lookups
+      // below. A display correction (name/affiliation) must not change which
+      // OpenAlex author the field-normalized metrics are computed against —
+      // corrections are display-only, metrics stay purely source-derived.
+      const sourceName = profileData.name;
+      const sourceAffiliation = profileData.affiliation;
+
+      // Apply any verified corrections (wrong affiliation, stale title, etc.) on
+      // top of the source-derived profile. No-op for profiles without overrides.
+      try {
+        const overrides = await fetchProfileOverrides(userId ?? url);
+        if (overrides.length > 0) {
+          profileData = applyProfileOverrides(profileData, overrides);
+        }
+      } catch {
+        // Corrections are best-effort — never block a profile from rendering.
+      }
+
       // Track usage (skip for direct profile links and OpenAlex fallbacks)
       if (!bypassCredits && !isOpenAlex) {
         if (!user) {
@@ -332,7 +351,7 @@ function AppContent() {
       trackEvent('search', { author_id: userId, cache: profileData.cacheStatus, bypass: bypassCredits });
 
       // Fetch Open Access stats from OpenAlex (non-blocking)
-      openAlexService.fetchOpenAccessStats(sanitizedData.name, sanitizedData.affiliation)
+      openAlexService.fetchOpenAccessStats(sourceName, sourceAffiliation)
         .then(oaStats => {
           if (oaStats) {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
@@ -377,7 +396,7 @@ function AppContent() {
         });
 
       // Fetch field-normalized metrics from OpenAlex + iCite (non-blocking)
-      fetchFieldNormalizedMetrics(sanitizedData.name, sanitizedData.affiliation)
+      fetchFieldNormalizedMetrics(sourceName, sourceAffiliation)
         .then(fieldMetrics => {
           if (fieldMetrics) {
             setData(prev => prev ? { ...prev, fieldMetrics } : prev);
