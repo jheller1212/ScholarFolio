@@ -126,6 +126,33 @@ function isSameAuthor(nameA: string, nameB: string): boolean {
   return true;
 }
 
+/** Decide whether an author string on a paper is the profile owner (and should
+ *  therefore be excluded from the co-author list).
+ *
+ *  Uses isSameAuthor(), plus a looser rule for the one case it misses: an
+ *  initials-only variant of the owner whose extra middle initial isn't present
+ *  in the owner's stored name — e.g. a profile for "Jane Doe" whose papers
+ *  list her as "JM Doe". isSameAuthor rejects that because the "m" has nothing
+ *  to match. Here we treat it as the owner when the surnames match and the
+ *  co-author side is a pure initials form (every given token ≤ 2 chars) whose
+ *  first initial matches the owner's first initial.
+ *
+ *  Capping at 2-char tokens keeps real first names out (e.g. "James Doe" stays a
+ *  co-author). Worst case this drops a same-surname co-author who both shares
+ *  the owner's first initial and publishes under two initials — rare and
+ *  low-harm — and in exchange the owner never appears as their own collaborator. */
+function isProfileOwner(coAuthor: string, owner: string): boolean {
+  if (isSameAuthor(coAuthor, owner)) return true;
+
+  const a = parseName(normalizeName(coAuthor));
+  const b = parseName(normalizeName(owner));
+  if (!a.last || a.last !== b.last) return false;
+  if (a.given.length === 0 || b.given.length === 0) return false;
+
+  const coAuthorIsInitialsOnly = a.given.every(part => part.length <= 2);
+  return coAuthorIsInitialsOnly && a.given[0][0] === b.given[0][0];
+}
+
 export function calculateCoAuthorMetrics(publications: Publication[], authorName: string): CoAuthorStats {
   const coAuthorCounts = new Map<string, {
     count: number;
@@ -151,7 +178,7 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
     totalAuthors += pub.authors.length;
 
     pub.authors.forEach(author => {
-      if (!isSameAuthor(author, cleanAuthorName)) {
+      if (!isProfileOwner(author, cleanAuthorName)) {
         const existingData = coAuthorCounts.get(author) || {
           count: 0,
           citations: 0,
