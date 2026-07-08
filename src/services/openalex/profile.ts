@@ -154,12 +154,16 @@ function affiliationOf(a: OaAuthorRecord): string {
   if (lastKnown.length === 1) return lastKnown[0];
 
   // OpenAlex often returns several "last known" institutions when it isn't sure
-  // which is current (e.g. a scholar with visiting/adjunct roles). Its ordering
-  // isn't meaningful, so picking [0] can surface a short visiting stint over a
-  // decades-long home institution. Rank the candidates by how long the author
-  // has actually published under each (years in `affiliations`), tie-breaking on
-  // recency. This only re-ranks within OpenAlex's own candidate set, so it can
-  // never surface a misattributed one-off institution.
+  // which is current (e.g. a scholar with visiting/adjunct roles, or one who
+  // recently moved). Its ordering isn't meaningful, so picking [0] can surface a
+  // short visiting stint — or a stale former employer — over the real current
+  // institution. Rank candidates by recency FIRST (most recent publication year
+  // under that institution), then by tenure (how many years published there).
+  // Recency-first avoids showing a 20-year former institution to someone who
+  // moved two years ago; tenure breaks ties among concurrently-active
+  // appointments (favouring the long-term home over a brief visiting role).
+  // This only re-ranks within OpenAlex's own candidate set, so it can never
+  // surface a misattributed one-off institution.
   const tenure = new Map<string, { years: number; recent: number }>();
   for (const aff of a.affiliations ?? []) {
     const name = aff.institution?.display_name;
@@ -171,7 +175,7 @@ function affiliationOf(a: OaAuthorRecord): string {
   return lastKnown.reduce((best, name) => {
     const s = tenure.get(name) ?? { years: 0, recent: 0 };
     const b = tenure.get(best) ?? { years: 0, recent: 0 };
-    if (s.years > b.years || (s.years === b.years && s.recent > b.recent)) return name;
+    if (s.recent > b.recent || (s.recent === b.recent && s.years > b.years)) return name;
     return best;
   }, lastKnown[0]);
 }
