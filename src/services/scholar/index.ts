@@ -1,4 +1,4 @@
-import type { Author } from '../../types/scholar';
+import type { Author, Publication } from '../../types/scholar';
 import { findJournalRanking } from '../../data/journalRankings';
 import { metricsCalculator } from '../metrics';
 import { ApiError, timeoutSignal } from '../../utils/api';
@@ -147,13 +147,55 @@ function stripTitleSuffix(name: string): string {
   return name.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research|Senior|Junior|Distinguished|Clinical|Tenured)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr|MD|Instructor|Postdoc|PostDoc)\b.*/i, '').trim() || name;
 }
 
+/** Normalized title key for exact-duplicate detection. */
+function normalizeTitleKey(title: string): string {
+  return (title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * Remove exact-duplicate publication records: same normalized title AND same
+ * year. These come from sources indexing one work twice (e.g. a preprint and
+ * the published version, or a double-listed record) and inflate publication and
+ * citation counts. Deliberately keyed on title+year, NOT title alone — collapsing
+ * same-title-different-year works would wrongly merge genuinely distinct outputs
+ * (e.g. two different "Introduction" book chapters, or revised editions). When a
+ * duplicate is found, the record with more citations (then more authors) is kept.
+ */
+function dedupeExactPublications(pubs: Publication[]): Publication[] {
+  const byKey = new Map<string, Publication>();
+  const out: Publication[] = [];
+  for (const pub of pubs) {
+    const nt = normalizeTitleKey(pub.title);
+    if (!nt) { out.push(pub); continue; } // no title — can't safely dedupe
+    const key = `${nt}|${pub.year || 0}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, pub);
+      out.push(pub);
+    } else {
+      const better =
+        (pub.citations || 0) > (existing.citations || 0) ||
+        ((pub.citations || 0) === (existing.citations || 0) &&
+          (pub.authors?.length || 0) > (existing.authors?.length || 0));
+      if (better) {
+        const idx = out.indexOf(existing);
+        if (idx >= 0) out[idx] = pub;
+        byKey.set(key, pub);
+      }
+    }
+  }
+  return out;
+}
+
 export function buildAuthorResult(data: any): Author {
   const cleanName = stripTitleSuffix(data.name || '');
 
-  const publications = (data.publications || []).map(pub => ({
-    ...pub,
-    journalRanking: pub.journalRanking || findJournalRanking(pub.venue)
-  }));
+  const publications = dedupeExactPublications(
+    (data.publications || []).map(pub => ({
+      ...pub,
+      journalRanking: pub.journalRanking || findJournalRanking(pub.venue)
+    }))
+  );
 
   // Merge near-duplicate author names (case, middle names, initials)
   normalizeAuthorNames(publications);
