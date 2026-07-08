@@ -147,50 +147,90 @@ function stripTitleSuffix(name: string): string {
   return name.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research|Senior|Junior|Distinguished|Clinical|Tenured)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr|MD|Instructor|Postdoc|PostDoc)\b.*/i, '').trim() || name;
 }
 
-/** Normalized title key for exact-duplicate detection. */
+/** Normalized title key (lowercase, alphanumeric words). */
 function normalizeTitleKey(title: string): string {
   return (title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+/** Journal/venue reduced to its alphabetic words, dropping volume/issue/page
+ *  noise (e.g. "Journal of Service Research 26 (1), 3-20, 2023" → "journal of
+ *  service research"). Used to confirm two title-variants are the same outlet. */
+function normalizeVenueKey(venue: string): string {
+  return (venue || '').toLowerCase().replace(/[^a-z]+/g, ' ').trim();
+}
+
+/** Extract a bare DOI from a work URL, if present. */
+function extractDoi(url: string): string {
+  const m = (url || '').toLowerCase().match(/doi\.org\/(10\.\S+)/);
+  return m ? m[1] : '';
+}
+
+interface DedupeEntry { pub: Publication; nt: string; doi: string; venue: string; }
+
+/** Is `a` a duplicate of already-kept `b`? Three tiers, each strictly guarded so
+ *  genuinely distinct works are never merged. */
+function isDuplicatePub(a: DedupeEntry, b: DedupeEntry): boolean {
+  if (!a.nt || !b.nt) return false;
+  // 1. Exact: same normalized title + same year.
+  if (a.nt === b.nt && (a.pub.year || 0) === (b.pub.year || 0)) return true;
+  // 2. Same DOI ⇒ same work (independent of title/year formatting).
+  if (a.doi && a.doi === b.doi) return true;
+  // 3. Version / early-access: one title is a clean prefix of the other, in the
+  //    same venue, within a few years (final vs online-first of one article).
+  //    Guarded by a length floor so generic prefixes ("Introduction") never match.
+  if (a.venue && a.venue === b.venue && Math.abs((a.pub.year || 0) - (b.pub.year || 0)) <= 3) {
+    const [short, long] = a.nt.length <= b.nt.length ? [a.nt, b.nt] : [b.nt, a.nt];
+    if (short.length >= 20 && (long === short || long.startsWith(short + ' '))) return true;
+  }
+  return false;
+}
+
+/** Prefer the richer record when merging duplicates: more citations, then the
+ *  longer (usually final/complete) title, then the later year. */
+function betterPub(a: Publication, b: Publication): Publication {
+  if ((a.citations || 0) !== (b.citations || 0)) return (a.citations || 0) > (b.citations || 0) ? a : b;
+  if ((a.title || '').length !== (b.title || '').length) return (a.title || '').length > (b.title || '').length ? a : b;
+  return (a.year || 0) >= (b.year || 0) ? a : b;
+}
+
 /**
- * Remove exact-duplicate publication records: same normalized title AND same
- * year. These come from sources indexing one work twice (e.g. a preprint and
- * the published version, or a double-listed record) and inflate publication and
- * citation counts. Deliberately keyed on title+year, NOT title alone — collapsing
- * same-title-different-year works would wrongly merge genuinely distinct outputs
- * (e.g. two different "Introduction" book chapters, or revised editions). When a
- * duplicate is found, the record with more citations (then more authors) is kept.
+ * Collapse duplicate publication records so every downstream surface (narrative
+ * counts, publication list, metrics, co-author stats, OA-tab title matching, CV
+ * export) sees one canonical entry per work. Runs once here, the single assembly
+ * point for both Google Scholar and OpenAlex profiles. Tiers: exact title+year,
+ * same DOI, and version/early-access (same-venue title-prefix). See isDuplicatePub
+ * for the guards that prevent merging genuinely distinct works.
  */
-function dedupeExactPublications(pubs: Publication[]): Publication[] {
-  const byKey = new Map<string, Publication>();
-  const out: Publication[] = [];
+function dedupePublications(pubs: Publication[]): Publication[] {
+  const kept: DedupeEntry[] = [];
   for (const pub of pubs) {
-    const nt = normalizeTitleKey(pub.title);
-    if (!nt) { out.push(pub); continue; } // no title — can't safely dedupe
-    const key = `${nt}|${pub.year || 0}`;
-    const existing = byKey.get(key);
-    if (!existing) {
-      byKey.set(key, pub);
-      out.push(pub);
+    const entry: DedupeEntry = {
+      pub,
+      nt: normalizeTitleKey(pub.title),
+      doi: extractDoi(pub.url),
+      venue: normalizeVenueKey(pub.venue),
+    };
+    if (!entry.nt) { kept.push(entry); continue; } // no title — can't safely dedupe
+    const dupIdx = kept.findIndex(k => isDuplicatePub(entry, k));
+    if (dupIdx === -1) {
+      kept.push(entry);
     } else {
-      const better =
-        (pub.citations || 0) > (existing.citations || 0) ||
-        ((pub.citations || 0) === (existing.citations || 0) &&
-          (pub.authors?.length || 0) > (existing.authors?.length || 0));
-      if (better) {
-        const idx = out.indexOf(existing);
-        if (idx >= 0) out[idx] = pub;
-        byKey.set(key, pub);
-      }
+      const winner = betterPub(kept[dupIdx].pub, pub);
+      kept[dupIdx] = {
+        pub: winner,
+        nt: normalizeTitleKey(winner.title),
+        doi: extractDoi(winner.url) || kept[dupIdx].doi,
+        venue: normalizeVenueKey(winner.venue) || kept[dupIdx].venue,
+      };
     }
   }
-  return out;
+  return kept.map(k => k.pub);
 }
 
 export function buildAuthorResult(data: any): Author {
   const cleanName = stripTitleSuffix(data.name || '');
 
-  const publications = dedupeExactPublications(
+  const publications = dedupePublications(
     (data.publications || []).map(pub => ({
       ...pub,
       journalRanking: pub.journalRanking || findJournalRanking(pub.venue)
