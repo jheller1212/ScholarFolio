@@ -9,13 +9,23 @@ export class OpenAlexService {
    * Search OpenAlex for an author by name + affiliation, return OA stats.
    * Non-blocking — returns null on any failure.
    */
-  public async fetchOpenAccessStats(name: string, affiliation: string): Promise<OpenAccessStats | null> {
+  public async fetchOpenAccessStats(name: string, affiliation: string, publicationTitles?: string[]): Promise<OpenAccessStats | null> {
     try {
       // Use shared author lookup (cached across services)
       const author = await findOpenAlexAuthor(name, affiliation);
       if (!author) return null;
       const authorId = author.id;
       const shortId = authorId.replace('https://openalex.org/', '');
+
+      // When the profile's real publication list is provided, restrict OA stats
+      // to works whose title matches it. OpenAlex author disambiguation can merge
+      // a different same-named person's works (e.g. an unrelated book) into the
+      // record; without this filter those show up in the totals and the
+      // repository breakdown. Keyed on the same alphanumeric normalization used
+      // for publicationOa below.
+      const titleFilter = publicationTitles && publicationTitles.length
+        ? new Set(publicationTitles.map(t => (t || '').toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean))
+        : null;
 
       // Kick off the (multi-page) shared works fetch immediately so it runs
       // concurrently with the cheap group_by request below. Also consumed by
@@ -55,13 +65,19 @@ export class OpenAlexService {
       const repositoryCounts: Record<string, number> = {};
       let preprintCount = 0;
 
+      // Filtered OA-status tallies (used instead of the group_by totals when a
+      // publication list is supplied, so misattributed works don't count).
+      let fTotal = 0, fGold = 0, fGreen = 0, fHybrid = 0, fBronze = 0, fClosed = 0;
+
       const works = await worksPromise;
       for (const work of works) {
         if (!work.title) continue;
         const normalizedTitle = work.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const status: OaStatus = work.open_access?.oa_status === 'diamond'
+        if (titleFilter && !titleFilter.has(normalizedTitle)) continue; // skip misattributed works
+        const rawStatus = work.open_access?.oa_status;
+        const status: OaStatus = rawStatus === 'diamond'
           ? 'gold'
-          : ((work.open_access?.oa_status as OaStatus) || 'closed');
+          : ((rawStatus as OaStatus) || 'closed');
         publicationOa[normalizedTitle] = {
           status,
           oaUrl: work.open_access?.oa_url || undefined,
@@ -80,17 +96,35 @@ export class OpenAlexService {
           const repoName = boa.source.display_name;
           repositoryCounts[repoName] = (repositoryCounts[repoName] || 0) + 1;
         }
+        // Tally OA buckets for the filtered total.
+        fTotal++;
+        if (rawStatus === 'gold' || rawStatus === 'diamond') fGold++;
+        else if (rawStatus === 'green') fGreen++;
+        else if (rawStatus === 'hybrid') fHybrid++;
+        else if (rawStatus === 'bronze') fBronze++;
+        else fClosed++;
       }
 
+      // When filtering, report the counts recomputed from the matched works so
+      // the headline totals and % exclude misattributed records.
+      const useFiltered = !!titleFilter && fTotal > 0;
+      const oTotal = useFiltered ? fTotal : total;
+      const oGold = useFiltered ? fGold : gold;
+      const oGreen = useFiltered ? fGreen : green;
+      const oHybrid = useFiltered ? fHybrid : hybrid;
+      const oBronze = useFiltered ? fBronze : bronze;
+      const oClosed = useFiltered ? fClosed : closed;
+      const oOa = oGold + oGreen + oHybrid + oBronze;
+
       return {
-        total,
-        oa,
-        gold,
-        green,
-        hybrid,
-        bronze,
-        closed,
-        oaPercent: Math.round((oa / total) * 100),
+        total: oTotal,
+        oa: oOa,
+        gold: oGold,
+        green: oGreen,
+        hybrid: oHybrid,
+        bronze: oBronze,
+        closed: oClosed,
+        oaPercent: oTotal > 0 ? Math.round((oOa / oTotal) * 100) : 0,
         orcid,
         publicationOa,
         doiMap,
