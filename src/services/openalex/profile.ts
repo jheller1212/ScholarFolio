@@ -28,7 +28,7 @@ interface OaAuthorRecord {
   cited_by_count?: number;
   summary_stats?: { h_index?: number; i10_index?: number };
   last_known_institutions?: Array<{ display_name?: string }>;
-  affiliations?: Array<{ institution?: { display_name?: string } }>;
+  affiliations?: Array<{ institution?: { display_name?: string }; years?: number[] }>;
   counts_by_year?: Array<{ year: number; cited_by_count: number }>;
   topics?: Array<{ id: string; display_name: string; count?: number }>;
   x_concepts?: Array<{ id: string; display_name: string; score?: number }>;
@@ -144,11 +144,36 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
 }
 
 function affiliationOf(a: OaAuthorRecord): string {
-  return (
-    a.last_known_institutions?.[0]?.display_name ||
-    a.affiliations?.[0]?.institution?.display_name ||
-    ''
-  );
+  const lastKnown = (a.last_known_institutions ?? [])
+    .map(i => i.display_name)
+    .filter((n): n is string => Boolean(n));
+
+  if (lastKnown.length === 0) {
+    return a.affiliations?.[0]?.institution?.display_name || '';
+  }
+  if (lastKnown.length === 1) return lastKnown[0];
+
+  // OpenAlex often returns several "last known" institutions when it isn't sure
+  // which is current (e.g. a scholar with visiting/adjunct roles). Its ordering
+  // isn't meaningful, so picking [0] can surface a short visiting stint over a
+  // decades-long home institution. Rank the candidates by how long the author
+  // has actually published under each (years in `affiliations`), tie-breaking on
+  // recency. This only re-ranks within OpenAlex's own candidate set, so it can
+  // never surface a misattributed one-off institution.
+  const tenure = new Map<string, { years: number; recent: number }>();
+  for (const aff of a.affiliations ?? []) {
+    const name = aff.institution?.display_name;
+    if (!name) continue;
+    const years = aff.years ?? [];
+    tenure.set(name, { years: years.length, recent: years.length ? Math.max(...years) : 0 });
+  }
+
+  return lastKnown.reduce((best, name) => {
+    const s = tenure.get(name) ?? { years: 0, recent: 0 };
+    const b = tenure.get(best) ?? { years: 0, recent: 0 };
+    if (s.years > b.years || (s.years === b.years && s.recent > b.recent)) return name;
+    return best;
+  }, lastKnown[0]);
 }
 
 function interestsOf(a: OaAuthorRecord): string[] {
