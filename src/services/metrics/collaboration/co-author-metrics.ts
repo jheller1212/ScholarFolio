@@ -153,7 +153,30 @@ function isProfileOwner(coAuthor: string, owner: string): boolean {
   return coAuthorIsInitialsOnly && a.given[0][0] === b.given[0][0];
 }
 
+// Venues that indicate non-journal output, used only for Google Scholar profiles
+// (which carry no work type). OpenAlex profiles use the reliable `type` field.
+const NON_JOURNAL_VENUE = /\b(book|chapter|handbook|encyclopedia|proceedings|press|thesis|dissertation|working paper|discussion paper|mimeo|preprint)\b/i;
+
+/** Whether a publication is a peer-reviewed journal article for the purposes of
+ *  collaboration counting. Books and book chapters must not count toward
+ *  "co-authored N publications with X". OpenAlex gives a reliable work type;
+ *  Google Scholar doesn't, so there we keep everything except clearly
+ *  non-journal venues (Scholar entries are overwhelmingly articles). */
+function isJournalArticle(pub: Publication): boolean {
+  if (pub.type) return pub.type === 'article' || pub.type === 'review';
+  const venue = pub.venue || '';
+  if (!venue) return true;
+  return !NON_JOURNAL_VENUE.test(venue);
+}
+
 export function calculateCoAuthorMetrics(publications: Publication[], authorName: string): CoAuthorStats {
+  // Collaboration stats count peer-reviewed journal articles only — books and
+  // book chapters shouldn't inflate "co-authored N publications with X". Fall
+  // back to all publications when a profile has no detectable articles, so a
+  // book-only scholar still gets sensible (non-empty) collaboration stats.
+  const journalPubs = publications.filter(isJournalArticle);
+  const pubs = journalPubs.length > 0 ? journalPubs : publications;
+
   const coAuthorCounts = new Map<string, {
     count: number;
     citations: number;
@@ -170,7 +193,7 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
   const cleanAuthorName = authorName.replace(/\s*[-–—]\s*(Full|Associate|Assistant|Emeritus|Adjunct|Visiting|Research)?\s*(Professor|Lecturer|Fellow|Director|Dean|Chair|Researcher|Scientist|Engineer|Doctor|PhD|Dr)\b.*/i, '').trim() || authorName;
 
   // Process each publication
-  publications.forEach(pub => {
+  pubs.forEach(pub => {
     if (pub.authors.length === 1) {
       soloCount++;
     }
@@ -227,9 +250,9 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
 
   return {
     totalCoAuthors: coAuthorCounts.size,
-    averageAuthors: parseFloat((totalAuthors / publications.length).toFixed(1)),
-    soloAuthorScore: Math.round((soloCount / publications.length) * 100),
-    collaborationScore: Math.round(((publications.length - soloCount) / publications.length) * 100),
+    averageAuthors: parseFloat((totalAuthors / pubs.length).toFixed(1)),
+    soloAuthorScore: Math.round((soloCount / pubs.length) * 100),
+    collaborationScore: Math.round(((pubs.length - soloCount) / pubs.length) * 100),
     topCoAuthor,
     topCoAuthorPapers: topCoAuthorData.count,
     topCoAuthorCitations: topCoAuthorData.citations,
