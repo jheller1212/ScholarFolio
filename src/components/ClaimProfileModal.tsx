@@ -35,7 +35,17 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [existingClaim, setExistingClaim] = useState<string | null>(null);
+  const [needsOrcid, setNeedsOrcid] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Start the ORCID sign-in flow (same as the auth modal) so an account without
+  // a linked ORCID can connect one, then return to claim.
+  const connectOrcid = () => {
+    const state = crypto.randomUUID();
+    sessionStorage.setItem('orcid_oauth_state', state);
+    const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
+    window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
+  };
 
   // Check if user already claimed a profile
   useEffect(() => {
@@ -98,24 +108,33 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
 
     setSubmitting(true);
     setError(null);
+    setNeedsOrcid(false);
 
-    const { error: insertError } = await supabase
-      .from('claimed_profiles')
-      .insert({
-        user_id: user.id,
-        author_id: authorId,
-        slug,
-        display_name: displayName || null,
-        bio: bio || null,
+    let data: { claimed?: boolean; reason?: string; message?: string; error?: string } = {};
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ action: 'claim', authorId, profileName: authorName, slug, displayName: displayName || undefined, bio: bio || undefined }),
       });
-
-    if (insertError) {
-      if (insertError.code === '23505') {
-        setError('This URL is already taken. Please choose another.');
-        setSlugStatus('taken');
-      } else {
-        setError(insertError.message);
+      data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.claimed) {
+        if (data.reason === 'no-orcid') {
+          setNeedsOrcid(true);
+        } else if (data.reason === 'not-owner') {
+          setError("We couldn't verify that this profile is yours from your ORCID iD. Make sure your ORCID is connected to your publications.");
+        } else if (res.status === 409 || /taken|duplicate|unique/i.test(data.error || '')) {
+          setError('This URL is already taken. Please choose another.');
+          setSlugStatus('taken');
+        } else {
+          setError(data.message || data.error || 'Could not claim this profile.');
+        }
+        setSubmitting(false);
+        return;
       }
+    } catch {
+      setError('Could not reach the server. Please try again.');
       setSubmitting(false);
       return;
     }
@@ -415,21 +434,38 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
             </div>
           )}
 
-          {/* Submit */}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || slugStatus !== 'available' || !user}
-            className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] shadow-md shadow-[#2d7d7d]/20 hover:shadow-lg hover:shadow-[#2d7d7d]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Claiming...
-              </span>
-            ) : (
-              'Claim this profile'
-            )}
-          </button>
+          {/* ORCID connect prompt (account has no linked ORCID) */}
+          {needsOrcid ? (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-600">
+                To claim your profile we verify it's yours via your ORCID iD. Connect your ORCID to continue.
+              </p>
+              <button
+                onClick={connectOrcid}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg bg-[#A6CE39] text-white hover:brightness-95 transition-all"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 256 256"><path fill="#fff" d="M86.3 186.2H70.9V79.1h15.4v107.1zm22.2 0h15.4V127c0-10.9 5.1-17.4 14.9-17.4 8.3 0 12.9 5.1 12.9 15v61.6h15.4V121.1c0-17.9-10.1-28.4-26.6-28.4-11.7 0-18.7 5.1-22.2 12.6h-.3V79.1H108v107.1h.5zM86.3 65.4c-5.1 0-9.1 4-9.1 9.1s4 9.1 9.1 9.1 9.1-4 9.1-9.1-4.1-9.1-9.1-9.1z"/></svg>
+                Connect your ORCID iD
+              </button>
+            </div>
+          ) : (
+            /* Submit */
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || slugStatus !== 'available' || !user}
+              className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] shadow-md shadow-[#2d7d7d]/20 hover:shadow-lg hover:shadow-[#2d7d7d]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying with ORCID…
+                </span>
+              ) : (
+                'Verify with ORCID & claim'
+              )}
+            </button>
+          )}
+          <p className="text-[11px] text-gray-400 text-center">We confirm ownership via your ORCID iD before claiming.</p>
         </div>
       </div>
     </div>
