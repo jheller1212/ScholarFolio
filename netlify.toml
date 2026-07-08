@@ -32,6 +32,15 @@
   to = "/.netlify/functions/orcid-callback"
   status = 200
 
+# Canonicalize www → non-www. Auth (incl. the ORCID magic-link round-trip) and
+# the session live per-origin; serving both www and non-www split the session
+# and silently signed ORCID users out. Force a 301 to the non-www canonical host.
+[[redirects]]
+  from = "https://www.scholarfolio.org/*"
+  to = "https://scholarfolio.org/:splat"
+  status = 301
+  force = true
+
 # Sitemap redirect must come before the SPA catch-all
 [[redirects]]
   from = "/sitemap.xml"
