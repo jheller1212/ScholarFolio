@@ -44,11 +44,12 @@ function asText(value: unknown): string {
 }
 
 /**
- * Apply verified corrections to a profile. Phase 1 handles the descriptive
- * string fields (affiliation, display name); metric-affecting corrections such
- * as `hide_work` are applied earlier in the pipeline (before metrics are
- * computed) and are ignored here. Returns the input unchanged when there are no
- * overrides, so this is a no-op for the overwhelming majority of profiles.
+ * Apply verified corrections to a profile. Phase 1 handles only the descriptive
+ * string fields (affiliation, display name). Metric-affecting corrections such
+ * as `hide_work` are not implemented yet and are ignored here (they will need a
+ * hook before metrics are computed, not a post-assembly patch). Returns the
+ * input unchanged when there are no overrides, so this is a no-op for the
+ * overwhelming majority of profiles.
  */
 export function applyProfileOverrides(profile: Author, overrides: ProfileOverride[]): Author {
   if (!overrides || overrides.length === 0) return profile;

@@ -309,6 +309,13 @@ function AppContent() {
         return;
       }
 
+      // Preserve the source-derived identity for the OpenAlex metric lookups
+      // below. A display correction (name/affiliation) must not change which
+      // OpenAlex author the field-normalized metrics are computed against —
+      // corrections are display-only, metrics stay purely source-derived.
+      const sourceName = profileData.name;
+      const sourceAffiliation = profileData.affiliation;
+
       // Apply any verified corrections (wrong affiliation, stale title, etc.) on
       // top of the source-derived profile. No-op for profiles without overrides.
       try {
@@ -344,7 +351,7 @@ function AppContent() {
       trackEvent('search', { author_id: userId, cache: profileData.cacheStatus, bypass: bypassCredits });
 
       // Fetch Open Access stats from OpenAlex (non-blocking)
-      openAlexService.fetchOpenAccessStats(sanitizedData.name, sanitizedData.affiliation)
+      openAlexService.fetchOpenAccessStats(sourceName, sourceAffiliation)
         .then(oaStats => {
           if (oaStats) {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
@@ -389,7 +396,7 @@ function AppContent() {
         });
 
       // Fetch field-normalized metrics from OpenAlex + iCite (non-blocking)
-      fetchFieldNormalizedMetrics(sanitizedData.name, sanitizedData.affiliation)
+      fetchFieldNormalizedMetrics(sourceName, sourceAffiliation)
         .then(fieldMetrics => {
           if (fieldMetrics) {
             setData(prev => prev ? { ...prev, fieldMetrics } : prev);
