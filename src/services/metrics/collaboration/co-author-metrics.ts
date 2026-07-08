@@ -155,7 +155,11 @@ function isProfileOwner(coAuthor: string, owner: string): boolean {
 
 // Venues that indicate non-journal output, used only for Google Scholar profiles
 // (which carry no work type). OpenAlex profiles use the reliable `type` field.
-const NON_JOURNAL_VENUE = /\b(book|chapter|handbook|encyclopedia|proceedings|press|thesis|dissertation|working paper|discussion paper|mimeo|preprint)\b/i;
+// Deliberately excludes "proceedings"/"press": conference papers are the primary
+// peer-reviewed venue in CS/engineering, and excluding them gutted co-author
+// stats for conference-heavy scholars (measured: 18–53% of works dropped). This
+// targets the actual reported issue — book chapters — plus theses and preprints.
+const NON_JOURNAL_VENUE = /\b(book|chapter|handbook|encyclopedia|encyclopaedia|thesis|dissertation|working paper|discussion paper|mimeo|preprint|arxiv|ssrn|biorxiv)\b/i;
 
 /** Whether a publication is a peer-reviewed journal article for the purposes of
  *  collaboration counting. Books and book chapters must not count toward
