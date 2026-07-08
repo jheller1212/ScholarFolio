@@ -683,7 +683,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                             type="text"
                             value={correctionValue}
                             onChange={e => setCorrectionValue(e.target.value)}
-                            placeholder={correctionField === 'affiliation' ? 'e.g. Babson College' : 'Corrected name'}
+                            placeholder={correctionField === 'affiliation' ? 'Corrected affiliation' : 'Corrected name'}
                             className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
                           />
                         )}
