@@ -24,6 +24,7 @@ import { ADMIN_EMAIL } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService, fetchOpenAlexProfile, OPENALEX_ID_PREFIX } from './services/openalex';
+import { fetchProfileOverrides, applyProfileOverrides } from './services/corrections';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
@@ -306,6 +307,17 @@ function AppContent() {
         setError('Unable to fetch profile data. Please try again later or contact the site administrator.');
         setShowError(true);
         return;
+      }
+
+      // Apply any verified corrections (wrong affiliation, stale title, etc.) on
+      // top of the source-derived profile. No-op for profiles without overrides.
+      try {
+        const overrides = await fetchProfileOverrides(userId ?? url);
+        if (overrides.length > 0) {
+          profileData = applyProfileOverrides(profileData, overrides);
+        }
+      } catch {
+        // Corrections are best-effort — never block a profile from rendering.
       }
 
       // Track usage (skip for direct profile links and OpenAlex fallbacks)
