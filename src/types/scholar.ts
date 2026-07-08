@@ -21,6 +21,9 @@ export interface Publication {
   citations: number;
   url: string;
   journalRanking?: JournalRanking;
+  /** OpenAlex work type (article, review, book-chapter, book, …). Absent for
+   *  Google Scholar profiles, which don't expose a reliable work type. */
+  type?: string;
 }
 
 export interface Metrics {

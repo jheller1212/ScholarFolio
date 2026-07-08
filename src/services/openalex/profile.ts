@@ -139,6 +139,7 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
       year: w.publication_year || 0,
       citations: w.cited_by_count ?? 0,
       url: workUrl(w),
+      type: w.type,
     }));
 
   // Real citations-per-year straight from OpenAlex's author counts.
