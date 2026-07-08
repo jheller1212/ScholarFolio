@@ -27,8 +27,20 @@ const TAG_STYLES = {
 
 const changelog: ChangelogWeek[] = [
   {
-    label: 'June 30 – July 2, 2026',
+    label: 'July 7–8, 2026',
     date: 'This week',
+    headline: 'More accurate metrics, profile corrections',
+    entries: [
+      { icon: <Users className="h-4 w-4" />, text: 'Co-authorship stats now count peer-reviewed journal articles only — book chapters, books, and datasets no longer inflate your most-frequent-collaborator counts', tag: 'improved' },
+      { icon: <Wrench className="h-4 w-4" />, text: 'Your own name in initials form (e.g. “IJ Smith” for “Irene J. Smith”) is no longer counted as a separate co-author', tag: 'fix' },
+      { icon: <BarChart3 className="h-4 w-4" />, text: 'Publication and citation counts now exclude non-publications (datasets, peer-review records) and merge exact duplicates such as a preprint and its published version', tag: 'improved' },
+      { icon: <Globe className="h-4 w-4" />, text: 'Smarter primary affiliation when the data source lists several institutions — favouring your current, long-standing one over a brief or secondary role', tag: 'improved' },
+      { icon: <Shield className="h-4 w-4" />, text: 'Verified profile corrections — report an error on your profile and we can now apply a reviewed correction that everyone sees', tag: 'new' },
+    ],
+  },
+  {
+    label: 'June 30 – July 2, 2026',
+    date: 'Last week',
     headline: 'Smarter metrics, faster profiles, transparency report',
     entries: [
       { icon: <BarChart3 className="h-4 w-4" />, text: 'Top 10% Papers metric — the share of your works in the top decile of their field’s citation distribution, as used in the Leiden Ranking', tag: 'new' },
