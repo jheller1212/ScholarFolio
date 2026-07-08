@@ -54,6 +54,9 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string; resolved: boolean; resolved_note: string | null }>>([]);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolveNote, setResolveNote] = useState('');
+  const [correctionField, setCorrectionField] = useState<'' | 'affiliation' | 'display_name'>('');
+  const [correctionValue, setCorrectionValue] = useState('');
+  const [applyingCorrection, setApplyingCorrection] = useState(false);
   const [clientErrors, setClientErrors] = useState<Array<{
     id: number; created_at: string; category: string; message: string;
     stack: string | null; component: string | null; action: string | null;
@@ -647,7 +650,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                       )}
                       {!report.resolved && (
                         <button
-                          onClick={() => { setResolvingId(resolvingId === report.id ? null : report.id); setResolveNote(''); }}
+                          onClick={() => { setResolvingId(resolvingId === report.id ? null : report.id); setResolveNote(''); setCorrectionField(''); setCorrectionValue(''); }}
                           className="text-xs text-gray-500 hover:text-emerald-600 transition-colors"
                         >
                           Resolve
@@ -656,25 +659,72 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
                     </div>
                   </div>
                   {resolvingId === report.id && (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-col gap-2">
                       <input
                         type="text"
                         value={resolveNote}
                         onChange={e => setResolveNote(e.target.value)}
                         placeholder="What was fixed? (optional)"
-                        className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
+                        className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
                       />
-                      <button
-                        onClick={async () => {
-                          await supabase.from('profile_reports').update({ resolved: true, resolved_note: resolveNote || null }).eq('id', report.id);
-                          setReports(prev => prev.map(r => r.id === report.id ? { ...r, resolved: true, resolved_note: resolveNote || null } : r));
-                          setResolvingId(null);
-                          setResolveNote('');
-                        }}
-                        className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
-                      >
-                        Done
-                      </button>
+                      {/* Optional: apply a verified correction that overrides the source data on the live profile */}
+                      <div className="flex gap-2">
+                        <select
+                          value={correctionField}
+                          onChange={e => setCorrectionField(e.target.value as '' | 'affiliation' | 'display_name')}
+                          className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none bg-white"
+                        >
+                          <option value="">No correction — just resolve</option>
+                          <option value="affiliation">Correct affiliation</option>
+                          <option value="display_name">Correct display name</option>
+                        </select>
+                        {correctionField && (
+                          <input
+                            type="text"
+                            value={correctionValue}
+                            onChange={e => setCorrectionValue(e.target.value)}
+                            placeholder={correctionField === 'affiliation' ? 'Corrected affiliation' : 'Corrected name'}
+                            className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
+                          />
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-gray-400">
+                          {correctionField
+                            ? 'Correction applies to the live profile for all viewers; reversible later.'
+                            : ''}
+                        </span>
+                        <button
+                          disabled={applyingCorrection || (!!correctionField && !correctionValue.trim())}
+                          onClick={async () => {
+                            setApplyingCorrection(true);
+                            try {
+                              if (correctionField && correctionValue.trim()) {
+                                const { error: ovErr } = await supabase.from('profile_overrides').insert({
+                                  author_id: report.author_id,
+                                  field: correctionField,
+                                  value: correctionValue.trim(),
+                                  note: resolveNote || null,
+                                  source_report_id: report.id,
+                                  verified_via: 'admin',
+                                });
+                                if (ovErr) { alert(`Could not apply correction: ${ovErr.message}`); setApplyingCorrection(false); return; }
+                              }
+                              await supabase.from('profile_reports').update({ resolved: true, resolved_note: resolveNote || null }).eq('id', report.id);
+                              setReports(prev => prev.map(r => r.id === report.id ? { ...r, resolved: true, resolved_note: resolveNote || null } : r));
+                              setResolvingId(null);
+                              setResolveNote('');
+                              setCorrectionField('');
+                              setCorrectionValue('');
+                            } finally {
+                              setApplyingCorrection(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          {applyingCorrection ? 'Saving…' : correctionField ? 'Apply & resolve' : 'Done'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
