@@ -54,11 +54,14 @@ export function applyProfileOverrides(profile: Author, overrides: ProfileOverrid
   if (!overrides || overrides.length === 0) return profile;
 
   let next = profile;
+  const applied: Author['corrections'] = [];
   for (const o of overrides) {
     const text = asText(o.value);
     if (!text) continue;
     if (o.field === 'affiliation') next = { ...next, affiliation: text };
     else if (o.field === 'display_name') next = { ...next, name: text };
+    else continue; // unhandled field (e.g. hide_work, applied elsewhere) — no marker
+    applied.push({ field: o.field, note: o.note, verifiedVia: o.verified_via });
   }
-  return next;
+  return applied.length > 0 ? { ...next, corrections: applied } : next;
 }

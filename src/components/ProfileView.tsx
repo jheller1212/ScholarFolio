@@ -291,6 +291,15 @@ export function ProfileView({
                   )}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.affiliation}</p>
+                {data.corrections && data.corrections.length > 0 && (
+                  <p
+                    className="text-[11px] text-[#2d7d7d] dark:text-[#5ab5a5] mb-2 inline-flex items-center gap-1"
+                    title={`Corrected at the author's request: ${data.corrections.map(c => c.field.replace(/_/g, ' ')).join(', ')}`}
+                  >
+                    <BadgeCheck className="h-3 w-3" />
+                    Corrected at the author&rsquo;s request
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <button

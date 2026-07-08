@@ -128,6 +128,14 @@ export interface Author {
   s2Data?: Record<string, S2PublicationData>;
   s2Stats?: S2Stats;
   cacheStatus?: 'hit' | 'miss';
+  /** Verified corrections applied on top of the source data (for provenance UI). */
+  corrections?: AppliedCorrection[];
+}
+
+export interface AppliedCorrection {
+  field: string;
+  note: string | null;
+  verifiedVia: string;
 }
 
 export interface CoAuthorGeoData {
