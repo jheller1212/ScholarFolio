@@ -41,13 +41,30 @@ interface OaWork {
   cited_by_count?: number;
   doi?: string;
   id?: string;
+  type?: string;
   authorships?: Array<{ author?: { display_name?: string } }>;
   primary_location?: { source?: { display_name?: string } };
 }
 
 const SELECT_AUTHOR = 'id,display_name,works_count,cited_by_count,summary_stats,last_known_institutions,affiliations,counts_by_year,topics,x_concepts';
-const SELECT_WORK = 'title,display_name,publication_year,cited_by_count,doi,id,authorships,primary_location';
+const SELECT_WORK = 'title,display_name,publication_year,cited_by_count,doi,id,type,authorships,primary_location';
 const MAX_WORKS = 400;
+
+// OpenAlex `type` values that are not scholarly publications. These are excluded
+// from the publications list so they don't inflate publication counts, co-author
+// tallies, venue stats, or any metric derived from the works array. (h-index and
+// total citations come from OpenAlex's own author-level summary_stats, so they are
+// unaffected.) Denylist rather than allowlist so unknown/new real work types are
+// kept by default.
+const NON_PUBLICATION_TYPES = new Set([
+  'dataset',
+  'peer-review',
+  'paratext',
+  'grant',
+  'erratum',
+  'retraction',
+  'supplementary-materials',
+]);
 
 /**
  * Search OpenAlex for authors by name, returning candidates shaped like Scholar
@@ -112,7 +129,7 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
   }
 
   const publications: Publication[] = works
-    .filter(w => w.title || w.display_name)
+    .filter(w => (w.title || w.display_name) && !NON_PUBLICATION_TYPES.has(w.type ?? ''))
     .map(w => ({
       title: (w.title || w.display_name || '').trim(),
       authors: (w.authorships || [])
