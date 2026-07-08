@@ -350,8 +350,10 @@ function AppContent() {
       setData({ ...sanitizedData, fieldMetricsLoading: true });
       trackEvent('search', { author_id: userId, cache: profileData.cacheStatus, bypass: bypassCredits });
 
-      // Fetch Open Access stats from OpenAlex (non-blocking)
-      openAlexService.fetchOpenAccessStats(sourceName, sourceAffiliation)
+      // Fetch Open Access stats from OpenAlex (non-blocking). Pass the real
+      // publication titles so OA stats exclude works misattributed to a
+      // same-named author by OpenAlex disambiguation.
+      openAlexService.fetchOpenAccessStats(sourceName, sourceAffiliation, sanitizedData.publications.map(p => p.title))
         .then(oaStats => {
           if (oaStats) {
             setData(prev => prev ? { ...prev, openAccess: oaStats } : prev);
