@@ -108,10 +108,35 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, authorId, profileName, slug } = body as {
+    const { action, authorId, profileName, slug, displayName, bio, field, value } = body as {
       action?: string; authorId?: string; profileName?: string; slug?: string;
+      displayName?: string; bio?: string; field?: string; value?: string;
     };
     if (!authorId) return json({ error: "authorId is required" }, 400);
+
+    // --- Owner self-service correction (requires an existing verified claim) ---
+    if (action === "correct") {
+      const { data: claim } = await supabase
+        .from("claimed_profiles")
+        .select("id")
+        .eq("user_id", user.id).eq("author_id", authorId).eq("verified", true)
+        .maybeSingle();
+      if (!claim) return json({ error: "You can only correct a profile you have verified as yours." }, 403);
+
+      const allowed = ["affiliation", "display_name"];
+      if (!field || !allowed.includes(field)) return json({ error: "Unsupported field" }, 400);
+      const text = (value ?? "").trim();
+      if (!text || text.length > 300) return json({ error: "Provide a value (max 300 chars)" }, 400);
+
+      // Deactivate any prior self-correction for this field, then insert the new one.
+      await supabase.from("profile_overrides").update({ active: false })
+        .eq("author_id", authorId).eq("field", field).eq("created_by", user.id);
+      const { error: ovErr } = await supabase.from("profile_overrides").insert({
+        author_id: authorId, field, value: text, verified_via: "orcid", created_by: user.id, active: true,
+      });
+      if (ovErr) return json({ error: ovErr.message }, 400);
+      return json({ ok: true });
+    }
 
     // --- Verify ownership via ORCID -------------------------------------------
     let verified = false;
@@ -147,6 +172,8 @@ Deno.serve(async (req) => {
         verified_via: "orcid",
       };
       if (slug) row.slug = slug;
+      if (displayName) row.display_name = displayName;
+      if (bio) row.bio = bio;
       const { error: upErr } = await supabase.from("claimed_profiles").upsert(row, { onConflict: "user_id" });
       if (upErr) return json({ error: upErr.message }, 400);
       return json({ verified: true, claimed: true });

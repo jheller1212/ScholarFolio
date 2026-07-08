@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
+import { ProfileCorrectionModal } from './ProfileCorrectionModal';
 // pdfExport is dynamically imported on click to avoid bundling jsPDF (344KB)
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { TopicsList } from './TopicsList';
@@ -103,6 +104,8 @@ export function ProfileView({
   }, [updateIndicator]);
   const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
+  const [claimedVerified, setClaimedVerified] = useState(false);
+  const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [prefetchedGeo, setPrefetchedGeo] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [pIndexResult, setPIndexResult] = useState<PIndexResult | null>(null);
 
@@ -125,26 +128,31 @@ export function ProfileView({
     || '';
   const isOpenAlexProfile = rawUserId.startsWith('openalex:') || (!!profileUrl && profileUrl.startsWith('openalex:'));
   const scholarId = isOpenAlexProfile ? '' : rawUserId;
+  // Identity for claiming/correcting — works for both Scholar (bare id) and
+  // OpenAlex ("openalex:<id>"). ORCID verification makes claiming safe for both.
+  const claimAuthorId = isOpenAlexProfile ? rawUserId : scholarId;
 
   // Check if this profile has been claimed
   useEffect(() => {
-    if (!scholarId) return;
+    if (!claimAuthorId) return;
     const checkClaim = async () => {
       const { data: claim } = await supabase
         .from('claimed_profiles')
-        .select('slug, user_id')
-        .eq('author_id', scholarId)
+        .select('slug, user_id, verified')
+        .eq('author_id', claimAuthorId)
         .maybeSingle();
       if (claim) {
         setClaimedSlug(claim.slug);
         setClaimedByCurrentUser(user?.id === claim.user_id);
+        setClaimedVerified(!!claim.verified);
       } else {
         setClaimedSlug(null);
         setClaimedByCurrentUser(false);
+        setClaimedVerified(false);
       }
     };
     checkClaim();
-  }, [scholarId, user?.id]);
+  }, [claimAuthorId, user?.id]);
 
   // Track profile views for feedback prompt + trending leaderboard
   useEffect(() => {
@@ -381,7 +389,7 @@ export function ProfileView({
                         'Verified profile'
                       )}
                     </span>
-                  ) : user && scholarId ? (
+                  ) : user && claimAuthorId ? (
                     <button
                       onClick={() => setShowClaimModal(true)}
                       className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
@@ -390,6 +398,15 @@ export function ProfileView({
                       Claim profile
                     </button>
                   ) : null}
+                  {claimedByCurrentUser && claimedVerified && (
+                    <button
+                      onClick={() => setShowCorrectModal(true)}
+                      className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
+                    >
+                      <FileText className="h-3 w-3" />
+                      Correct details
+                    </button>
+                  )}
                   {data.openAccess?.orcid && (
                     <a
                       href={`https://orcid.org/${data.openAccess.orcid}`}
@@ -724,12 +741,21 @@ export function ProfileView({
         />
       )}
 
-      {showClaimModal && scholarId && data && (
+      {showClaimModal && claimAuthorId && data && (
         <ClaimProfileModal
           onClose={() => setShowClaimModal(false)}
-          authorId={scholarId}
+          authorId={claimAuthorId}
           authorName={data.name}
           onClaimed={handleClaimed}
+        />
+      )}
+
+      {showCorrectModal && claimAuthorId && data && (
+        <ProfileCorrectionModal
+          onClose={() => setShowCorrectModal(false)}
+          authorId={claimAuthorId}
+          currentName={data.name}
+          currentAffiliation={data.affiliation}
         />
       )}
 
