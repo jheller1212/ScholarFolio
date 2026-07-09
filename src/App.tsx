@@ -79,30 +79,34 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
           >
             GitHub <ExternalLink className="h-3 w-3" />
           </a>
-          <button
-            onClick={() => onNavigate('about')}
+          <a
+            href="/about"
+            onClick={(e) => { e.preventDefault(); onNavigate('about'); }}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             About
-          </button>
-          <button
-            onClick={() => onNavigate('terms')}
+          </a>
+          <a
+            href="/terms"
+            onClick={(e) => { e.preventDefault(); onNavigate('terms'); }}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             Terms
-          </button>
-          <button
-            onClick={() => onNavigate('privacy')}
+          </a>
+          <a
+            href="/privacy"
+            onClick={(e) => { e.preventDefault(); onNavigate('privacy'); }}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             Privacy
-          </button>
-          <button
-            onClick={() => onNavigate('changelog')}
+          </a>
+          <a
+            href="/changelog"
+            onClick={(e) => { e.preventDefault(); onNavigate('changelog'); }}
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             Changelog
-          </button>
+          </a>
           <a
             href="mailto:info@scholarfolio.org"
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
@@ -163,8 +167,17 @@ function AppContent() {
       setPage('admin');
       return;
     }
-    if (params.get('page') === 'trending') {
-      setPage('trending');
+    // Deep-linkable content pages, reachable at both /privacy and ?page=privacy
+    // so they're crawlable/indexable (and can't be shadowed by a vanity slug,
+    // which is why this runs before the slug lookup below).
+    const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+    const pageParam = params.get('page');
+    const pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
+    const routed = (pageParam && (PAGE_ROUTES as string[]).includes(pageParam))
+      ? pageParam
+      : ((PAGE_ROUTES as string[]).includes(pathName) ? pathName : null);
+    if (routed) {
+      setPage(routed as Page);
       return;
     }
     // Handle ORCID OAuth error
@@ -218,6 +231,17 @@ function AppContent() {
         .catch((err: unknown) => logCaughtError(err, 'navigation', 'App', 'load-vanity-slug', { pathSlug }));
     }
   }, [initialUrlHandled]);
+
+  // Keep the page in sync with browser back/forward for the content-page routes.
+  useEffect(() => {
+    const onPop = () => {
+      const p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
+      const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+      setPage((PAGE_ROUTES as string[]).includes(p) ? (p as Page) : 'home');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   // Handle payment success redirect
   useEffect(() => {
@@ -455,6 +479,12 @@ function AppContent() {
   const handleNavigate = useCallback((newPage: Page) => {
     setPage(newPage);
     window.scrollTo(0, 0);
+    // Reflect the page in the URL so content pages are shareable + deep-linkable.
+    const PATH_PAGES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+    const path = newPage === 'home' ? '/' : (PATH_PAGES.includes(newPage) ? `/${newPage}` : window.location.pathname);
+    if (path !== window.location.pathname) {
+      window.history.pushState({}, '', path);
+    }
   }, []);
 
   const authControls = (
