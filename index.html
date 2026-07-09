@@ -20,6 +20,19 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Static, crawlable links to legal/info pages. ScholarFolio is a SPA, so
+         these ensure the policy pages are discoverable by crawlers and
+         compliance scanners that don't execute JavaScript. -->
+    <noscript>
+      <div style="max-width:640px;margin:2rem auto;padding:1rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">
+        <p>ScholarFolio needs JavaScript enabled to run. Legal and information pages:</p>
+        <ul>
+          <li><a href="/privacy">Privacy Policy</a> — how we collect, use, and protect your data (GDPR rights, cookies, first-party analytics)</li>
+          <li><a href="/terms">Terms of Service</a></li>
+          <li><a href="/about">About</a> · <a href="/changelog">Changelog</a></li>
+        </ul>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
