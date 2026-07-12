@@ -15,6 +15,14 @@
   --muted: #94a3b8;
   --gradient-start: #2d7d7d;
   --gradient-end: #1f5c5c;
+  --teal-faint-hover: #d5ecec;
+  /* Status tokens (v1.1) */
+  --success: #059669;
+  --success-bg: #ecfdf5;
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+  --orcid: #a6ce39;
+  --orcid-bg: #f3f9e8;
 }
 
 body {
@@ -152,6 +160,19 @@ body {
 .btn-lift:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px -2px rgba(45, 125, 125, 0.3);
+}
+
+/* Translucent sticky nav / header (v1.1) — frosted warm glass over the mesh bg */
+.nav-glass {
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.dark .nav-glass {
+  background-color: rgba(15, 23, 42, 0.6);
+  border-bottom-color: rgba(51, 65, 85, 0.6);
 }
 
 /* Nav link underline animation */
