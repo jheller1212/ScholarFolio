@@ -264,8 +264,32 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
     }
   };
 
+  // v1.2: soft category-tinted card background (light mode) so each metric
+  // family reads as a cohesive block. Dark mode stays on the slate surface.
+  const getCategoryBg = () => {
+    switch (icon) {
+      case 'citations': case 'hIndex': case 'gIndex': case 'i10Index': case 'h5Index':
+      case 'avgCitationsPerPaper': case 'citationsPerYear': case 'peak': case 'acc5':
+      case 'ageNormalized': case 'halfLife': case 'gini':
+        return 'bg-cat-impact-bg';
+      case 'citationGrowth': case 'trend': case 'publications': case 'pubsPerYear':
+        return 'bg-cat-trend-bg';
+      case 'network': case 'coAuthors': case 'avgAuthors': case 'soloAuthor': case 'topCoAuthor':
+        return 'bg-cat-collab-bg';
+      case 'pindex': case 'owpi': case 'weightedCitations':
+        return 'bg-violet-50';
+      case 'fwci': case 'topDecile': case 'rcr': case 'meanIF': case 'influential':
+        return 'bg-cat-field-bg';
+      case 'oaPercent': case 'goldOa': case 'greenOa': case 'hybridOa': case 'bronzeOa': case 'closedAccess':
+      case 'preprint': case 'repository':
+        return 'bg-cat-oa-bg';
+      default:
+        return 'bg-white';
+    }
+  };
+
   const cardContent = (
-    <div ref={countRef} className={`bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
+    <div ref={countRef} className={`${getCategoryBg()} dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100/80 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
       <div className="flex items-start gap-2.5">
         <div className={`p-1.5 bg-gradient-to-br ${getIconGradient()} rounded-lg text-white mt-0.5 flex-shrink-0`}>
           {getIcon()}

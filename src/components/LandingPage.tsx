@@ -183,7 +183,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-16 pb-6 px-6">
+      <section className="relative pt-24 pb-10 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="animate-fade-up animate-delay-150 font-serif text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-[#1e293b] dark:text-gray-100 mb-4 leading-[1.05]">
             Claim your
@@ -231,9 +231,9 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       </section>
 
       {/* Features */}
-      <section id="features" className="py-14 px-6" ref={featuresRef}>
+      <section id="features" className="py-20 px-6" ref={featuresRef}>
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-10 scroll-reveal">
+          <div className="text-center mb-12 scroll-reveal">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] dark:text-gray-100 mb-3">
               Your research, one link away
             </h2>
@@ -304,9 +304,9 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       </section>
 
       {/* Bottom CTA */}
-      <section className="py-14 px-6" ref={ctaRef}>
+      <section className="py-20 px-6" ref={ctaRef}>
         <div className="max-w-3xl mx-auto scroll-reveal">
-          <div className="bg-[#1e293b] rounded-2xl p-8 md:p-10 text-center">
+          <div className="bg-[#1e293b] rounded-2xl p-10 md:p-12 text-center">
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-white mb-3">
               Claim your profile
             </h2>

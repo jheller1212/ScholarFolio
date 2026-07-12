@@ -60,11 +60,11 @@ export default {
       backgroundImage: {
         'gradient-primary': 'linear-gradient(135deg, #2d7d7d, #1f5c5c)',
       },
-      // Design-system v1.1 radii — softened for a more modern, rounded surface language.
+      // Design-system radii — softened for a more modern, rounded surface language.
       borderRadius: {
         lg: '10px',      // v1.1: was 8px — buttons, inputs, dropdowns
-        xl: '14px',      // v1.1: was 12px — metric cards, banners
-        '2xl': '18px',   // v1.1: was 16px — summary cards, feature cards, modals
+        xl: '16px',      // v1.2: 12→14→16 — metric cards, banners
+        '2xl': '20px',   // v1.2: 16→18→20 — summary cards, feature cards, modals
       },
       boxShadow: {
         'card': '0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)',
