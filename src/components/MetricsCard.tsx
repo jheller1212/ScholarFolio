@@ -104,7 +104,7 @@ function useCountUp(target: number | string, duration = 600) {
 /** Placeholder card shown while an async metric section is still loading. */
 export function MetricsCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full">
+    <div className="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full">
       <div className="flex items-start gap-2.5 animate-pulse">
         <div className="p-1.5 bg-gray-200 dark:bg-slate-700 rounded-lg mt-0.5 flex-shrink-0">
           <div className="h-3.5 w-3.5" />
@@ -265,14 +265,14 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
   };
 
   const cardContent = (
-    <div ref={countRef} className={`bg-white dark:bg-slate-800 p-3 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
+    <div ref={countRef} className={`bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
       <div className="flex items-start gap-2.5">
         <div className={`p-1.5 bg-gradient-to-br ${getIconGradient()} rounded-lg text-white mt-0.5 flex-shrink-0`}>
           {getIcon()}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 leading-none">{title}</p>
-          <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1.5 truncate">{display}</p>
+          <p className="text-[17px] font-bold text-gray-900 dark:text-gray-100 mt-1.5 truncate">{display}</p>
           {subtitle && (
             <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5 truncate">{subtitle}</p>
           )}
