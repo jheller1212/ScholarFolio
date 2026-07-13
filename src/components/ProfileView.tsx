@@ -752,6 +752,10 @@ export function ProfileView({
           isOpen={showEmbed}
           onClose={() => setShowEmbed(false)}
           scholarId={scholarId}
+          authorName={data.name}
+          profileUrl={claimedSlug
+            ? `https://scholarfolio.org/${claimedSlug}`
+            : `https://scholarfolio.org/scholar/${encodeURIComponent(scholarId)}`}
         />
       )}
 

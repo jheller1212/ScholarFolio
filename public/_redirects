@@ -1,4 +1,5 @@
 https://www.scholarfolio.org/*  https://scholarfolio.org/:splat  301!
 /api/orcid-callback  /.netlify/functions/orcid-callback  200!
 /sitemap.xml  /.netlify/functions/sitemap  200!
+/badge/*  /.netlify/functions/badge?id=:splat  200!
 /*    /index.html   200
