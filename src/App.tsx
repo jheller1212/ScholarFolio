@@ -260,7 +260,7 @@ function AppContent() {
     localStorage.setItem('sf_searches', String(count));
     return count;
   };
-  const ANON_FREE_LIMIT = 5;
+  const ANON_FREE_LIMIT = 2;
 
   /** Re-key S2 enrichment results to PublicationsList normalization and update state */
   const applyS2Data = (s2Result: Awaited<ReturnType<typeof enrichWithSemanticScholar>>, pubs: Array<{ title: string }>) => {
@@ -354,9 +354,9 @@ function AppContent() {
       // Track usage (skip for direct profile links and OpenAlex fallbacks)
       if (!bypassCredits && !isOpenAlex) {
         if (!user) {
-          if (profileData.cacheStatus !== 'hit') {
-            incrementAnonSearches();
-          }
+          // Cache hits count too — the free limit meters value delivered to the
+          // visitor, not upstream fetch cost.
+          incrementAnonSearches();
         } else {
           refreshCredits();
         }
