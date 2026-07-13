@@ -4,6 +4,10 @@ const SUPABASE_URL = 'https://mixaxkywkojoclgbjjur.supabase.co';
 // Publishable key — safe to embed, same as client-side
 const SUPABASE_ANON_KEY = 'sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5';
 
+// Social preview bots AND search engines: search bots get a real title,
+// canonical, meta description, and Person JSON-LD injected from the cache,
+// so every /scholar/ page indexes as a unique structured document instead
+// of the empty SPA shell. Cache-only — never triggers a paid fetch.
 const CRAWLER_AGENTS = [
   'facebookexternalhit',
   'twitterbot',
@@ -12,6 +16,12 @@ const CRAWLER_AGENTS = [
   'whatsapp',
   'telegrambot',
   'discordbot',
+  'googlebot',
+  'bingbot',
+  'duckduckbot',
+  'applebot',
+  'yandex',
+  'baiduspider',
 ];
 
 const DEFAULT_TITLE = 'ScholarFolio — Academic Research Profiles';
@@ -55,7 +65,21 @@ async function fetchScholarData(userId: string): Promise<ScholarData | null> {
   }
 }
 
-function buildOgTags(data: ScholarData, userId: string): string {
+async function fetchClaimedSlug(userId: string): Promise<string | null> {
+  const apiUrl = `${SUPABASE_URL}/rest/v1/claimed_profiles?author_id=eq.${encodeURIComponent(userId)}&select=slug&limit=1`;
+  try {
+    const res = await fetch(apiUrl, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows?.[0]?.slug ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildHead(data: ScholarData, userId: string, claimedSlug: string | null): { tags: string; title: string } {
   const title = data.name ? `${data.name} — ScholarFolio` : DEFAULT_TITLE;
 
   let description = DEFAULT_DESCRIPTION;
@@ -64,13 +88,39 @@ function buildOgTags(data: ScholarData, userId: string): string {
     if (data.affiliation) parts.push(data.affiliation);
     if (data.totalCitations != null) parts.push(`${data.totalCitations} citations`);
     if (data.hIndex != null) parts.push(`h-index ${data.hIndex}`);
-    if (parts.length > 0) description = parts.join(' · ');
+    if (parts.length > 0) description = `${data.name}: ${parts.join(' · ')}. Citation trends, co-author network, and field-normalized metrics on ScholarFolio.`;
   }
 
   const image = data.imageUrl || DEFAULT_IMAGE;
-  const url = `https://scholarfolio.org/scholar/${encodeURIComponent(userId)}`;
+  // Claimed profiles' canonical is their vanity slug (also what the sitemap
+  // lists); unclaimed profiles canonicalize to /scholar/<id>.
+  const url = claimedSlug
+    ? `https://scholarfolio.org/${claimedSlug}`
+    : `https://scholarfolio.org/scholar/${encodeURIComponent(userId)}`;
 
-  return `
+  // schema.org Person — structured data for search engines. JSON.stringify
+  // handles escaping; "<" is additionally escaped so cached profile text can
+  // never break out of the script element.
+  let jsonLd = '';
+  if (data.name) {
+    const person: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: data.name,
+      url,
+      mainEntityOfPage: url,
+    };
+    if (data.affiliation) person.affiliation = { '@type': 'Organization', name: data.affiliation };
+    if (!userId.startsWith('openalex:')) {
+      person.sameAs = [`https://scholar.google.com/citations?user=${encodeURIComponent(userId)}`];
+    }
+    const payload = JSON.stringify(person).replace(/</g, '\\u003c');
+    jsonLd = `\n    <script type="application/ld+json">${payload}</script>`;
+  }
+
+  const tags = `
+    <meta name="description" content="${escapeAttr(description)}" />
+    <link rel="canonical" href="${escapeAttr(url)}" />
     <meta property="og:title" content="${escapeAttr(title)}" />
     <meta property="og:description" content="${escapeAttr(description)}" />
     <meta property="og:image" content="${escapeAttr(image)}" />
@@ -79,7 +129,9 @@ function buildOgTags(data: ScholarData, userId: string): string {
     <meta property="og:site_name" content="ScholarFolio" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${escapeAttr(title)}" />
-    <meta name="twitter:description" content="${escapeAttr(description)}" />`;
+    <meta name="twitter:description" content="${escapeAttr(description)}" />${jsonLd}`;
+
+  return { tags, title };
 }
 
 function escapeAttr(str: string): string {
@@ -90,13 +142,15 @@ function escapeAttr(str: string): string {
     .replace(/>/g, '&gt;');
 }
 
-function injectOgTags(html: string, tags: string): string {
-  // Remove any existing og: and twitter: meta tags from the static HTML
+function injectHead(html: string, tags: string, title: string): string {
+  // Remove tags we replace: og:/twitter: metas, the static description, and
+  // swap the <title> so search engines index a unique one per profile.
   const cleaned = html
     .replace(/<meta\s+property="og:[^"]*"[^>]*\/?>/gi, '')
-    .replace(/<meta\s+name="twitter:[^"]*"[^>]*\/?>/gi, '');
+    .replace(/<meta\s+name="twitter:[^"]*"[^>]*\/?>/gi, '')
+    .replace(/<meta\s+name="description"[^>]*\/?>/gi, '')
+    .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeAttr(title)}</title>`);
 
-  // Inject new tags before </head>
   return cleaned.replace('</head>', `${tags}\n  </head>`);
 }
 
@@ -141,10 +195,13 @@ export default async function handler(req: Request, context: Context): Promise<R
     return originalResponse;
   }
 
-  // Fetch scholar data from Supabase cache
-  const scholarData = await fetchScholarData(userId);
-  const ogTags = buildOgTags(scholarData || {}, userId);
-  const modifiedHtml = injectOgTags(html, ogTags);
+  // Fetch scholar data + claimed slug from Supabase (cache reads only)
+  const [scholarData, claimedSlug] = await Promise.all([
+    fetchScholarData(userId),
+    fetchClaimedSlug(userId),
+  ]);
+  const { tags, title } = buildHead(scholarData || {}, userId, claimedSlug);
+  const modifiedHtml = injectHead(html, tags, title);
 
   return new Response(modifiedHtml, {
     status: originalResponse.status,
