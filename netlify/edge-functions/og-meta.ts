@@ -1,9 +1,8 @@
 import type { Context } from '@netlify/edge-functions';
 
 const SUPABASE_URL = 'https://mixaxkywkojoclgbjjur.supabase.co';
-// Publishable anon key — safe to embed, same as client-side
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1peGF4a3l3a29qb2NsZ2JqanVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIyMjg5NTcsImV4cCI6MjA1NzgwNDk1N30.sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5';
+// Publishable key — safe to embed, same as client-side
+const SUPABASE_ANON_KEY = 'sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5';
 
 const CRAWLER_AGENTS = [
   'facebookexternalhit',
