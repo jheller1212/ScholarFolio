@@ -13,7 +13,7 @@ interface AuthHeaderControlsProps {
   anonFreeLimit?: number;
 }
 
-export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0, anonFreeLimit = 3 }: AuthHeaderControlsProps) {
+export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0, anonFreeLimit = 2 }: AuthHeaderControlsProps) {
   const { user, credits, signOut } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [unresolvedCount, setUnresolvedCount] = useState(0);

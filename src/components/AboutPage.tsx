@@ -161,9 +161,9 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Pricing</h2>
 
             <p className="mb-4">
-              You get 5 free searches without signing up, and 5 more when you create an account (which is also free).
-              If a profile was already searched by someone else in the last 7 days, viewing it costs nothing: the
-              cached version loads for free.
+              You get 2 free searches without signing up, and 5 more when you create an account (which is also free).
+              For signed-in users, viewing a profile that was already searched by someone else in the last 7 days
+              costs nothing: the cached version loads without using a credit.
             </p>
 
             <p className="mb-4">After that, there are two supporter packs:</p>
