@@ -5,6 +5,7 @@ import { ScholarSearchModal } from './ScholarSearchModal';
 import { ThemeToggle } from './ThemeToggle';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
+import { LandingSeoSections } from './LandingSeoSections';
 
 interface LandingPageProps {
   onSearch: (url: string) => void;
@@ -302,6 +303,8 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
           </div>
         </div>
       </section>
+
+      <LandingSeoSections />
 
       {/* Bottom CTA */}
       <section className="py-20 px-6" ref={ctaRef}>
