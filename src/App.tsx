@@ -214,6 +214,25 @@ function AppContent() {
       return;
     }
 
+    // Real profile path (/scholar/<id>), the canonical shareable form.
+    // Checked before the vanity-slug lookup; a slug can never contain "/".
+    const scholarPathMatch = window.location.pathname.match(/^\/scholar\/([^/]+)\/?$/);
+    if (scholarPathMatch && handleSearchRef.current) {
+      let pathId: string;
+      try {
+        pathId = decodeURIComponent(scholarPathMatch[1]);
+      } catch {
+        return; // malformed percent-encoding in a mangled link — treat as not found
+      }
+      if (pathId.startsWith(OPENALEX_ID_PREFIX)) {
+        handleSearchRef.current(pathId, true);
+      } else {
+        const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(pathId)}`;
+        handleSearchRef.current(scholarUrl, true);
+      }
+      return;
+    }
+
     // Check for vanity slug in the path (e.g. /jonas-heller)
     const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
     if (pathSlug && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(pathSlug)) {
@@ -435,7 +454,7 @@ function AppContent() {
       const pathSlug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
       const isVanityUrl = pathSlug && /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(pathSlug);
       if (!isVanityUrl && userId) {
-        window.history.replaceState({}, '', `?user=${encodeURIComponent(userId)}`);
+        window.history.replaceState({}, '', `/scholar/${encodeURIComponent(userId)}`);
       }
     } catch (err) {
       let errorMessage: string;
@@ -473,7 +492,7 @@ function AppContent() {
     requestInProgressRef.current = false;
     setShowError(false);
     setPage('home');
-    window.history.replaceState({}, '', window.location.pathname);
+    window.history.replaceState({}, '', '/');
   }, []);
 
   const handleNavigate = useCallback((newPage: Page) => {

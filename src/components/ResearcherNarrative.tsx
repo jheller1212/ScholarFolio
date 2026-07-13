@@ -912,8 +912,7 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
     try {
       const results = await scholarService.searchAuthors(authorName);
       if (results.length >= 1 && newWindow) {
-        const userId = encodeURIComponent(results[0].authorId);
-        newWindow.location.href = `${window.location.origin}?user=${userId}`;
+        newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(results[0].authorId)}`;
       } else {
         newWindow?.close();
       }

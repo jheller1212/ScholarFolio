@@ -69,7 +69,7 @@ function buildOgTags(data: ScholarData, userId: string): string {
   }
 
   const image = data.imageUrl || DEFAULT_IMAGE;
-  const url = `https://scholarfolio.org/?user=${userId}`;
+  const url = `https://scholarfolio.org/scholar/${encodeURIComponent(userId)}`;
 
   return `
     <meta property="og:title" content="${escapeAttr(title)}" />
@@ -103,7 +103,17 @@ function injectOgTags(html: string, tags: string): string {
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
   const url = new URL(req.url);
-  const userId = url.searchParams.get('user');
+  // Profile id from either the canonical path (/scholar/<id>) or the legacy
+  // query form (?user=<id>) still present in previously shared links.
+  let userId: string | null = url.searchParams.get('user');
+  const pathMatch = url.pathname.match(/^\/scholar\/([^/]+)\/?$/);
+  if (pathMatch) {
+    try {
+      userId = decodeURIComponent(pathMatch[1]);
+    } catch {
+      userId = null; // malformed percent-encoding — serve the plain shell
+    }
+  }
   const userAgent = req.headers.get('user-agent') || '';
 
   // Pass through non-crawler requests immediately

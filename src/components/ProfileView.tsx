@@ -173,7 +173,7 @@ export function ProfileView({
     // (openalex:<id>) so link-preview crawlers get a URL that resolves.
     const url = claimedSlug
       ? `https://scholarfolio.org/${claimedSlug}`
-      : `https://scholarfolio.org/?user=${scholarId || rawUserId}`;
+      : `https://scholarfolio.org/scholar/${encodeURIComponent(scholarId || rawUserId)}`;
 
     document.title = title;
 
@@ -703,7 +703,7 @@ export function ProfileView({
               }
               scholarService.searchAuthors(name).then(results => {
                 if (results.length >= 1 && newWindow) {
-                  newWindow.location.href = `${window.location.origin}?user=${encodeURIComponent(results[0].authorId)}`;
+                  newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(results[0].authorId)}`;
                 } else if (newWindow) {
                   newWindow.location.href = `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
                 }
