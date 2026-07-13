@@ -8,8 +8,11 @@ const supabaseAnonKey = 'sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5';
 const handler: Handler = async () => {
   const staticPages = [
     { loc: 'https://scholarfolio.org/', changefreq: 'weekly', priority: '1.0' },
-    { loc: 'https://scholarfolio.org/?page=changelog', changefreq: 'weekly', priority: '0.5' },
-    { loc: 'https://scholarfolio.org/?page=privacy', changefreq: 'monthly', priority: '0.3' },
+    { loc: 'https://scholarfolio.org/about', changefreq: 'monthly', priority: '0.6' },
+    { loc: 'https://scholarfolio.org/trending', changefreq: 'daily', priority: '0.6' },
+    { loc: 'https://scholarfolio.org/changelog', changefreq: 'weekly', priority: '0.5' },
+    { loc: 'https://scholarfolio.org/privacy', changefreq: 'monthly', priority: '0.3' },
+    { loc: 'https://scholarfolio.org/terms', changefreq: 'monthly', priority: '0.3' },
   ];
 
   // Fetch claimed profiles from Supabase

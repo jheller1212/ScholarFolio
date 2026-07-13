@@ -26,6 +26,11 @@
   path = "/"
   function = "og-meta"
 
+# Canonical profile paths (/scholar/<id>) need the same crawler OG injection
+[[edge_functions]]
+  path = "/scholar/*"
+  function = "og-meta"
+
 # ORCID OAuth callback
 [[redirects]]
   from = "/api/orcid-callback"

@@ -624,7 +624,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                 onClick={async () => {
                   if (scholarIdLookup.loading) return;
                   if (scholarIdLookup.scholarId) {
-                    window.open(`${window.location.origin}/?user=${scholarIdLookup.scholarId}`, '_blank');
+                    window.open(`${window.location.origin}/scholar/${encodeURIComponent(scholarIdLookup.scholarId)}`, '_blank');
                     return;
                   }
                   if (scholarIdLookup.notFound) {
@@ -647,7 +647,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                     if (cached?.scholar_id) {
                       setScholarIdLookup({ loading: false, scholarId: cached.scholar_id, notFound: false });
                       if (newWindow) {
-                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(cached.scholar_id)}`;
+                        newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(cached.scholar_id)}`;
                       }
                       return;
                     }
@@ -670,7 +670,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                       saveCoAuthorLink({ name: searchName, scholarId: match.authorId, openalexId: clickedCoAuthor.openalexId, institution: clickedCoAuthor.institution }).catch(() => {});
                       setScholarIdLookup({ loading: false, scholarId: match.authorId, notFound: false });
                       if (newWindow) {
-                        newWindow.location.href = `${window.location.origin}/?user=${encodeURIComponent(match.authorId)}`;
+                        newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(match.authorId)}`;
                       }
                     } else {
                       setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
@@ -726,7 +726,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
                         }).catch(() => {});
                         setScholarIdLookup({ loading: false, scholarId, notFound: false });
                         setShowUrlInput(false);
-                        window.open(`${window.location.origin}/?user=${encodeURIComponent(scholarId)}`, '_blank');
+                        window.open(`${window.location.origin}/scholar/${encodeURIComponent(scholarId)}`, '_blank');
                       }}
                       className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
                     >

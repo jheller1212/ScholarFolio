@@ -19,8 +19,11 @@ function nameToSlug(name: string): string {
     .slice(0, 40);
 }
 
+// Path segments the router owns — a vanity slug must never occupy them.
+const RESERVED_SLUGS = ['scholar', 'about', 'terms', 'privacy', 'changelog', 'trending', 'admin', 'api', 'sitemap'];
+
 function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug);
+  return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) && !RESERVED_SLUGS.includes(slug);
 }
 
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
