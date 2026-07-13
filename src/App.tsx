@@ -252,6 +252,26 @@ function AppContent() {
     }
   }, [initialUrlHandled]);
 
+  // Unique document titles per content page (Google renders JS, so these
+  // count for indexing). ProfileView owns the title while a profile is shown.
+  useEffect(() => {
+    const DEFAULT_TITLE = 'Scholar Folio — Your research, at a glance';
+    const PAGE_TITLES: Partial<Record<Page, string>> = {
+      about: 'About & Pricing — ScholarFolio',
+      trending: 'Trending Researchers — ScholarFolio',
+      changelog: 'Changelog — ScholarFolio',
+      privacy: 'Privacy Policy — ScholarFolio',
+      terms: 'Terms of Use — ScholarFolio',
+      unsubscribe: 'Email Preferences — ScholarFolio',
+      admin: 'Admin — ScholarFolio',
+    };
+    if (page === 'home') {
+      if (!data) document.title = DEFAULT_TITLE;
+    } else {
+      document.title = PAGE_TITLES[page] ?? DEFAULT_TITLE;
+    }
+  }, [page, data]);
+
   // Keep the page in sync with browser back/forward for the content-page routes.
   useEffect(() => {
     const onPop = () => {
