@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download } from 'lucide-react';
+import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download, Mail } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';
+import { EmailPreferencesModal } from './EmailPreferencesModal';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
@@ -18,6 +19,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [unresolvedCount, setUnresolvedCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEmailPrefs, setShowEmailPrefs] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -162,6 +164,14 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
               {exporting ? 'Exporting...' : 'Download my data'}
             </DropdownMenu.Item>
 
+            <DropdownMenu.Item
+              className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 outline-none cursor-pointer hover:bg-[#eaf4f4] dark:hover:bg-[#2d7d7d]/20 hover:text-[#2d7d7d] transition-colors"
+              onSelect={() => setShowEmailPrefs(true)}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Email preferences
+            </DropdownMenu.Item>
+
             {isAdmin && onAdmin && (
               <DropdownMenu.Item
                 className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 outline-none cursor-pointer hover:bg-[#eaf4f4] dark:hover:bg-[#2d7d7d]/20 hover:text-[#2d7d7d] transition-colors"
@@ -201,6 +211,8 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
+
+      {showEmailPrefs && <EmailPreferencesModal onClose={() => setShowEmailPrefs(false)} />}
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto p-4 bg-black/50 backdrop-blur-sm" onClick={() => { if (!deleting) { setShowDeleteConfirm(false); setDeleteError(null); setDeleteConfirmText(''); } }}>

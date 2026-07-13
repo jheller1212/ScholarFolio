@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
 
 interface SignUpWallProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +35,16 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
         if (error) {
           setError(error);
         } else {
+          // Park consent locally only once signup succeeded; written to the
+          // DB on first sign-in. Email stored so the flush verifies ownership.
+          if (emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup-wall', email);
+          else clearPendingEmailConsent();
           onClose();
         }
       } else {
+        // A sign-in must never inherit consent parked by someone else's
+        // abandoned signup on this browser.
+        clearPendingEmailConsent();
         const { error } = await signIn(email, password);
         if (error) {
           setError(error);
@@ -93,6 +102,21 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
           </label>
         )}
 
+        {/* Optional email consent — must stay unticked by default (GDPR) */}
+        {isSignUp && (
+          <label className="flex items-start gap-2 text-xs text-gray-600 mb-3">
+            <input
+              type="checkbox"
+              checked={emailOptIn}
+              onChange={e => setEmailOptIn(e.target.checked)}
+              className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
+            />
+            <span>
+              Email me when my citation metrics change. <span className="text-gray-400">(optional, unsubscribe anytime)</span>
+            </span>
+          </label>
+        )}
+
         {/* Google sign-up */}
         <button
           onClick={async () => {
@@ -100,6 +124,10 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
               setError('Please agree to the Terms of Use to continue.');
               return;
             }
+            // Consent must survive the OAuth redirect; flushed on return
+            // (the flush verifies the account is newly created).
+            if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup-wall');
+            else clearPendingEmailConsent();
             const { error } = await signInWithGoogle();
             if (error) setError(error);
           }}
