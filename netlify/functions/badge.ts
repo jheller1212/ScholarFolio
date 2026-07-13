@@ -43,7 +43,15 @@ interface ScholarData {
 }
 
 const handler: Handler = async (event) => {
-  const raw = (event.queryStringParameters?.id || '').replace(/\.svg$/i, '');
+  // Netlify 200-rewrites don't reliably interpolate :splat into query params,
+  // but event.path keeps the original request path (/badge/<id>.svg).
+  const fromPath = event.path.match(/\/badge\/([^/]+?)(?:\.svg)?$/i)?.[1];
+  let raw: string;
+  try {
+    raw = decodeURIComponent(fromPath || event.queryStringParameters?.id || '').replace(/\.svg$/i, '');
+  } catch {
+    return { statusCode: 400, body: 'Invalid profile id' };
+  }
   // Scholar IDs are alnum/_/-; OpenAlex fallbacks are "openalex:A<digits>"
   if (!/^[A-Za-z0-9_-]{5,30}$/.test(raw) && !/^openalex:A\d{4,15}$/.test(raw)) {
     return { statusCode: 400, body: 'Invalid profile id' };
