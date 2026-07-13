@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
 import { trackEvent } from '../lib/analytics';
+import { flushPendingEmailConsent } from '../lib/emailPreferences';
 
 interface AuthState {
   user: User | null;
@@ -72,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchCredits(session.user.id);
+        // Consent given on a signup form lands before the session exists
+        // (email confirm / OAuth redirect) — persist it now.
+        flushPendingEmailConsent(session.user);
       }
       setLoading(false);
     });
@@ -82,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchCredits(session.user.id);
+          flushPendingEmailConsent(session.user);
           // Show password reset modal when user clicks recovery link
           if (event === 'PASSWORD_RECOVERY') {
             setShowPasswordReset(true);

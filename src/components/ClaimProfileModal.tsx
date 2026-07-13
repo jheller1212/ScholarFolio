@@ -3,6 +3,7 @@ import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linke
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
+import { saveEmailPreferences } from '../lib/emailPreferences';
 
 interface ClaimProfileModalProps {
   onClose: () => void;
@@ -20,7 +21,7 @@ function nameToSlug(name: string): string {
 }
 
 // Path segments the router owns — a vanity slug must never occupy them.
-const RESERVED_SLUGS = ['scholar', 'about', 'terms', 'privacy', 'changelog', 'trending', 'admin', 'api', 'sitemap'];
+const RESERVED_SLUGS = ['scholar', 'about', 'terms', 'privacy', 'changelog', 'trending', 'admin', 'api', 'sitemap', 'unsubscribe'];
 
 function isValidSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) && !RESERVED_SLUGS.includes(slug);
@@ -37,6 +38,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [digestOptIn, setDigestOptIn] = useState(false);
   const [existingClaim, setExistingClaim] = useState<string | null>(null);
   const [needsOrcid, setNeedsOrcid] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -142,6 +144,10 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
       return;
     }
 
+    if (digestOptIn) {
+      // Fire-and-forget: consent record must never block the claim UX
+      void saveEmailPreferences(user.id, { digest_opt_in: true }, 'claim');
+    }
     setSuccess(true);
     // Confetti burst
     const colors = ['#2d7d7d', '#3d9494', '#f59e0b', '#10b981', '#6366f1', '#ec4899'];
@@ -428,6 +434,19 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
               maxLength={500}
             />
           </div>
+
+          {/* Optional email consent — must stay unticked by default (GDPR) */}
+          <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={digestOptIn}
+              onChange={e => setDigestOptIn(e.target.checked)}
+              className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
+            />
+            <span>
+              Email me when my citation metrics change. <span className="text-gray-400">(optional, unsubscribe anytime)</span>
+            </span>
+          </label>
 
           {/* Error */}
           {error && (

@@ -12,6 +12,7 @@ import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { ChangelogPage } from './components/ChangelogPage';
 import { TrendingPage } from './components/TrendingPage';
+import { UnsubscribePage } from './components/UnsubscribePage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
@@ -35,7 +36,7 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
-type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog' | 'trending';
+type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog' | 'trending' | 'unsubscribe';
 
 function SocialLinks() {
   return (
@@ -170,7 +171,7 @@ function AppContent() {
     // Deep-linkable content pages, reachable at both /privacy and ?page=privacy
     // so they're crawlable/indexable (and can't be shadowed by a vanity slug,
     // which is why this runs before the slug lookup below).
-    const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+    const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
     const pageParam = params.get('page');
     const pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
     const routed = (pageParam && (PAGE_ROUTES as string[]).includes(pageParam))
@@ -255,7 +256,7 @@ function AppContent() {
   useEffect(() => {
     const onPop = () => {
       const p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
-      const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+      const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
       setPage((PAGE_ROUTES as string[]).includes(p) ? (p as Page) : 'home');
     };
     window.addEventListener('popstate', onPop);
@@ -525,6 +526,7 @@ function AppContent() {
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'changelog') return <div className="page-enter"><ChangelogPage onBack={() => handleNavigate('home')} /></div>;
+    if (page === 'unsubscribe') return <div className="page-enter"><UnsubscribePage onBack={() => handleNavigate('home')} /></div>;
 
     if (loading && !data) {
       return <ProfileSkeleton />;
