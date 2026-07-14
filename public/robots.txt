@@ -1,16 +1,18 @@
 # ScholarFolio - robots.txt
-# Allow search engines, block AI training crawlers
+#
+# Policy: answer engines that fetch/cite pages on behalf of a user's question
+# (ChatGPT-User, OAI-SearchBot, PerplexityBot, Claude-User, Claude-SearchBot,
+# YouBot) are ALLOWED — they cite and link the site, driving discovery.
+# Bulk crawlers that ingest content for AI model TRAINING remain blocked.
 
 User-agent: *
 Allow: /
 
 Sitemap: https://scholarfolio.org/sitemap.xml
 
-# Block AI training crawlers
-User-agent: GPTBot
-Disallow: /
+# --- Blocked: AI training crawlers ---
 
-User-agent: ChatGPT-User
+User-agent: GPTBot
 Disallow: /
 
 User-agent: Google-Extended
@@ -31,10 +33,10 @@ Disallow: /
 User-agent: cohere-ai
 Disallow: /
 
-User-agent: PerplexityBot
+User-agent: FacebookBot
 Disallow: /
 
-User-agent: FacebookBot
+User-agent: Meta-ExternalAgent
 Disallow: /
 
 User-agent: Applebot-Extended
@@ -44,7 +46,4 @@ User-agent: Diffbot
 Disallow: /
 
 User-agent: Omgilibot
-Disallow: /
-
-User-agent: YouBot
 Disallow: /
