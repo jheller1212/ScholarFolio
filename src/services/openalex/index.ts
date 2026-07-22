@@ -96,13 +96,30 @@ export class OpenAlexService {
           const repoName = boa.source.display_name;
           repositoryCounts[repoName] = (repositoryCounts[repoName] || 0) + 1;
         }
-        // Tally OA buckets for the filtered total.
+        // Tally OA buckets for the filtered total. A work whose oa_status is
+        // absent is unknown, not closed — counting it as closed can only drag
+        // the percentage down.
+        if (!rawStatus) continue;
         fTotal++;
         if (rawStatus === 'gold' || rawStatus === 'diamond') fGold++;
         else if (rawStatus === 'green') fGreen++;
         else if (rawStatus === 'hybrid') fHybrid++;
         else if (rawStatus === 'bronze') fBronze++;
         else fClosed++;
+      }
+
+      // Guard against a wrong author match: if almost none of the profile's
+      // publications appear on the resolved OpenAlex record, its totals
+      // describe somebody else. Reporting "unavailable" is far better than a
+      // confident 0% — the failure mode a user hit when a sparse duplicate
+      // record (1 work) was picked over their real one (61 works).
+      // The bar is deliberately low so profiles that merely index poorly
+      // (books, non-English venues) still get stats.
+      if (titleFilter && titleFilter.size >= 5 && fTotal < titleFilter.size * 0.1) {
+        console.warn(
+          `[OpenAlex] Resolved author matches only ${fTotal}/${titleFilter.size} of the profile's publications — skipping OA stats`
+        );
+        return null;
       }
 
       // When filtering, report the counts recomputed from the matched works so
