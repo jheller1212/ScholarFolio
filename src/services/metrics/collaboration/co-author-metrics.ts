@@ -51,21 +51,28 @@ function parseName(normalized: string): { given: string[]; last: string } {
   };
 }
 
-/** Same cleaning as normalizeName but keeps casing, so initials blocks stay
- *  detectable ("RFJ" vs "Ann"). */
+/** Same cleaning as normalizeName but keeps casing AND diacritics: casing is
+ *  what distinguishes an initials block ("RFJ") from a short given name
+ *  ("Ann"), and the diacritics are needed to tell "Schäfer" from "Schafer"
+ *  when matching against the "Schaefer" spelling. */
 function cleanKeepCase(name: string): string {
   return foldNamePunctuation(name)
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[.,;:'"()]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Strip diacritics for letter-shape tests, without lowercasing. */
+function bareLetters(token: string): string {
+  return token.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 /** A compact block of initials: "R", "RFJ", "HHHW" — all caps, ≤5 letters —
  *  or a ≤2-char token, which is an initials form regardless of casing. */
 function isInitialsBlock(token: string): boolean {
   if (!token) return false;
-  return /^[A-Z]{1,5}$/.test(token) || token.length <= 2;
+  const bare = bareLetters(token);
+  return /^[A-Z]{1,5}$/.test(bare) || bare.length <= 2;
 }
 
 /** Expand given names into their initials sequence:
@@ -76,10 +83,13 @@ function initialsSequence(given: string[]): string[] {
   const out: string[] = [];
   for (const token of given) {
     for (const part of token.split('-').filter(Boolean)) {
+      // Compare on the diacritic-stripped letter so "Á" and "A" agree.
+      const bare = canonicalNameKey(part);
+      if (!bare) continue;
       if (isInitialsBlock(part)) {
-        for (const ch of part) out.push(ch.toLowerCase());
+        for (const ch of bare) out.push(ch);
       } else {
-        out.push(part[0].toLowerCase());
+        out.push(bare[0]);
       }
     }
   }
@@ -175,32 +185,82 @@ function isSameAuthor(nameA: string, nameB: string): boolean {
  *  the owner's first initial and publishes under two initials — rare and
  *  low-harm — and in exchange the owner never appears as their own collaborator. */
 function isProfileOwner(coAuthor: string, owner: string): boolean {
+  if (!isRealAuthorName(coAuthor)) return false;
   if (isSameAuthor(coAuthor, owner)) return true;
 
-  const a = parseName(normalizeName(coAuthor));
-  const b = parseName(normalizeName(owner));
-  if (!a.last || a.given.length === 0 || b.given.length === 0) return false;
-  // Surnames may differ by a maiden/married component ("MK Pein" vs
-  // "M Pein-Hackelbusch"): authors keep publishing under both, and without
-  // this they rank as their own most frequent collaborator.
-  if (!surnamesCompatible(a.last, b.last)) return false;
-
-  // Case-preserved parse: only the original casing distinguishes an initials
-  // block ("RFJ") from a short given name ("Ann").
+  // Case- and diacritic-preserving parse. Casing is what distinguishes an
+  // initials block ("RFJ") from a short given name ("Ann"), and the umlauts
+  // must survive for surname comparison ("Schäfer" vs "Schaefer") — the
+  // normalized parse has already stripped them.
   const aOrig = parseName(cleanKeepCase(coAuthor));
   const bOrig = parseName(cleanKeepCase(owner));
-  if (!aOrig.given.every(isInitialsBlock)) return false;
+  if (!aOrig.last || aOrig.given.length === 0 || bOrig.given.length === 0) return false;
 
   // The byline often carries more initials than the profile name
   // ("Marnik Dekimpe" → "MGM Dekimpe", "Richard F.J. Haans" → "RFJ Haans").
-  // Treat them as the same person when one initials sequence is a prefix of
-  // the other — a different first initial still means a different person.
+  // Same person when one initials sequence is a prefix of the other; a
+  // different initial anywhere still means a different person.
+  const initialsCompatible = (a: string[], b: string[]): boolean => {
+    if (a.length === 0 || b.length === 0) return false;
+    const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+    return shorter.every((ch, i) => ch === longer[i]);
+  };
+
   const aInitials = initialsSequence(aOrig.given);
   const bInitials = initialsSequence(bOrig.given);
-  if (aInitials.length === 0 || bInitials.length === 0) return false;
-  const shorter = aInitials.length <= bInitials.length ? aInitials : bInitials;
-  const longer = aInitials.length <= bInitials.length ? bInitials : aInitials;
-  return shorter.every((ch, i) => ch === longer[i]);
+
+  // Surnames may differ by a maiden/married component ("MK Pein" vs
+  // "M Pein-Hackelbusch") or by spelling ("Schäfer"/"Schaefer"): authors keep
+  // publishing under all of them, and without this they rank as their own most
+  // frequent collaborator.
+  if (
+    surnamesCompatible(aOrig.last, bOrig.last)
+    && aOrig.given.every(isInitialsBlock)
+    && initialsCompatible(aInitials, bInitials)
+  ) {
+    return true;
+  }
+
+  // Compound surnames written with a space instead of a hyphen, and
+  // Spanish/Portuguese double surnames ("Joan Díaz-Calafat" vs "J Diaz
+  // Calafat"): the surname spills into tokens the parser read as given names.
+  // Compare the trailing tokens as a component SET, which must match exactly —
+  // a subset would merge "J García" into "Juan García López", i.e. anyone
+  // sharing one surname.
+  return compoundSurnamesMatch(aOrig, bOrig) && initialsCompatible(aInitials, bInitials);
+}
+
+/** Surname component sets built from the trailing tokens, for names whose
+ *  compound surname isn't marked by a hyphen. Only considers splits that leave
+ *  at least one given-name token, and only multi-component surnames — single
+ *  surnames are already handled by surnamesCompatible. */
+function surnameComponentSets(parsed: { given: string[]; last: string }): Array<Set<string>> {
+  const tokens = [...parsed.given, ...parsed.last.split(/\s+/).filter(Boolean)];
+  const sets: Array<Set<string>> = [];
+  for (let take = 1; take <= 2 && take < tokens.length; take++) {
+    const tail = tokens.slice(tokens.length - take);
+    const components = tail
+      .flatMap(token => token.split('-'))
+      .map(part => canonicalNameKey(part))
+      .filter(part => part.length >= 3);
+    if (components.length >= 2) sets.push(new Set(components));
+  }
+  return sets;
+}
+
+function compoundSurnamesMatch(
+  a: { given: string[]; last: string },
+  b: { given: string[]; last: string }
+): boolean {
+  const setsA = surnameComponentSets(a);
+  const setsB = surnameComponentSets(b);
+  for (const sa of setsA) {
+    for (const sb of setsB) {
+      if (sa.size !== sb.size) continue;
+      if ([...sa].every(part => sb.has(part))) return true;
+    }
+  }
+  return false;
 }
 
 // Venues that indicate non-journal output, used only for Google Scholar profiles
