@@ -49,12 +49,45 @@ export function canonicalNameKey(name: string): string {
 }
 
 /**
+ * Comparison key that spells umlauts and related letters out as the digraphs
+ * used when a name is typed on an ASCII keyboard: Müller → "mueller", so it
+ * matches a byline written "Mueller". `canonicalNameKey` strips the diacritic
+ * instead ("muller"), which matches "Muller"; comparing under both keys covers
+ * all three spellings a German or Nordic name appears in.
+ *
+ * Deliberately expands rather than collapses. Collapsing digraphs to the base
+ * vowel would also merge genuinely distinct surnames — measured against the
+ * cache it conflated Yu/Yue, Cho/Choe, Sun/Suen and Baur/Bauer.
+ */
+export function umlautExpandedKey(name: string): string {
+  return foldNamePunctuation(name)
+    .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[.,;:'"()]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** True when two name fragments match under either normalization — diacritic
+ *  stripped ("Müller" = "Muller") or umlaut expanded ("Müller" = "Mueller"). */
+export function nameFragmentsEquivalent(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  return canonicalNameKey(a) === canonicalNameKey(b)
+    || umlautExpandedKey(a) === umlautExpandedKey(b);
+}
+
+/**
  * Split a surname into its meaningful components: "pein-hackelbusch" →
  * ["pein", "hackelbusch"]. Used to recognise maiden/married name pairs, where
  * one surname is a component of the other.
  */
 export function surnameComponents(lastName: string): string[] {
-  return canonicalNameKey(lastName)
+  // Punctuation-folded but NOT diacritic-stripped: callers compare components
+  // with nameFragmentsEquivalent, which needs the umlauts intact.
+  return foldNamePunctuation(lastName)
     .split(/[-\s]+/)
     .map(part => part.trim())
     .filter(Boolean);
@@ -68,21 +101,21 @@ export function surnameComponents(lastName: string): string[] {
  * unrelated surnames. Callers must additionally check given names.
  */
 export function surnamesCompatible(lastA: string, lastB: string): boolean {
-  const a = canonicalNameKey(lastA);
-  const b = canonicalNameKey(lastB);
-  if (!a || !b) return false;
-  if (a === b) return true;
+  if (!canonicalNameKey(lastA) || !canonicalNameKey(lastB)) return false;
+  // Compare the originals: canonicalizing first would strip the umlaut that
+  // the expanded-key comparison needs (Müller vs Mueller).
+  if (nameFragmentsEquivalent(lastA, lastB)) return true;
 
-  const partsA = surnameComponents(a);
-  const partsB = surnameComponents(b);
+  const partsA = surnameComponents(lastA);
+  const partsB = surnameComponents(lastB);
   if (partsA.length === 0 || partsB.length === 0) return false;
   // Only bridge when one side is a single surname contained in the other's
   // compound form — never merge two different compounds.
   const single = partsA.length === 1 ? partsA[0] : partsB.length === 1 ? partsB[0] : null;
-  if (!single || single.length < 3) return false;
+  if (!single || canonicalNameKey(single).length < 3) return false;
   const compound = partsA.length === 1 ? partsB : partsA;
   if (compound.length < 2) return false;
-  return compound.includes(single);
+  return compound.some(part => nameFragmentsEquivalent(part, single));
 }
 
 /**
@@ -175,26 +208,57 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
     }
   }
 
-  // Build a fuzzy key for each name: "baselastname|firstinitial" (lowercased, prefix-stripped)
-  function fuzzyKey(name: string): string {
+  // Two fuzzy keys per name — "baselastname|firstinitial" under each surname
+  // normalization. A German name reaches us spelled three ways (Müller,
+  // Muller, Mueller); the diacritic-stripped key unites the first two and the
+  // umlaut-expanded key the first and third, so grouping under both keys
+  // brings all three together without merging unrelated surnames.
+  function fuzzyKeys(name: string): string[] {
     // Fold Unicode punctuation first so "Pein‐Hackelbusch" (U+2010) and
     // "Pein-Hackelbusch" (ASCII) land in the same group.
     const trimmed = foldNamePunctuation(name);
-    if (!trimmed) return '';
-    const lastName = extractLastName(trimmed);
-    const baseLast = canonicalNameKey(stripLastNamePrefix(lastName));
+    if (!trimmed) return [];
+    const lastName = stripLastNamePrefix(extractLastName(trimmed));
     const firstPart = trimmed.split(/\s+/)[0];
     const firstInitial = firstPart ? firstPart[0].toLowerCase() : '';
-    return `${baseLast}|${firstInitial}`;
+    const canon = canonicalNameKey(lastName);
+    const expanded = umlautExpandedKey(lastName);
+    if (!canon && !expanded) return [];
+    // Deliberately one shared namespace: an umlaut name's expanded key must be
+    // able to meet a digraph name's plain key ("Müller" → mueller ← "Mueller").
+    const keys = [`${canon}|${firstInitial}`];
+    if (expanded && expanded !== canon) keys.push(`${expanded}|${firstInitial}`);
+    return keys;
   }
 
-  // Group names by fuzzy key
+  // Union-find over names, joined by any shared key.
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    while (parent.get(x) !== root) { const next = parent.get(x)!; parent.set(x, root); x = next; }
+    return root;
+  };
+  const union = (a: string, b: string) => {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(ra, rb);
+  };
+  for (const name of nameFreq.keys()) if (!parent.has(name)) parent.set(name, name);
+  const keyOwner = new Map<string, string>();
+  for (const name of nameFreq.keys()) {
+    for (const key of fuzzyKeys(name)) {
+      const seen = keyOwner.get(key);
+      if (seen) union(name, seen);
+      else keyOwner.set(key, name);
+    }
+  }
+
   const groups = new Map<string, string[]>();
   for (const name of nameFreq.keys()) {
-    const key = fuzzyKey(name);
-    if (!key) continue;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(name);
+    if (fuzzyKeys(name).length === 0) continue;
+    const root = find(name);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(name);
   }
 
   // Count non-initial words before the last name (words with >2 chars that aren't the last name)
@@ -210,11 +274,12 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
   for (const variants of groups.values()) {
     if (variants.length <= 1) continue;
 
-    // Safety check: all variants must have same base last name (prefix-stripped, case-insensitive)
-    const baseLastNames = new Set(variants.map(v =>
-      canonicalNameKey(stripLastNamePrefix(extractLastName(foldNamePunctuation(v))))
-    ));
-    if (baseLastNames.size > 1) continue;
+    // Safety check: every variant's base surname must be mutually equivalent —
+    // identical once diacritics are stripped, or once umlauts are spelled out.
+    const baseLastNames = variants.map(v =>
+      stripLastNamePrefix(extractLastName(foldNamePunctuation(v)))
+    );
+    if (!baseLastNames.every(l => nameFragmentsEquivalent(l, baseLastNames[0]))) continue;
 
     // Safety check: reject groups where variants have different numbers of
     // non-initial words before the last name (e.g. "J Bloemer" vs "J Sit Bloemer")

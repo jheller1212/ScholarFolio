@@ -1,0 +1,1133 @@
+{
+  "_comment": "Regression sample for author-name matching. See README.md. Generated 2026-07-22 from cached profiles; deterministic (seed 42).",
+  "profiles": [
+    {
+      "scholarId": "VJTDvJQAAAAJ",
+      "name": "Blair Wang",
+      "publications": 15,
+      "reason": "baseline",
+      "traits": [
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "nC_yAqUAAAAJ",
+      "name": "Dr Maksym Koghut",
+      "publications": 10,
+      "reason": "baseline",
+      "traits": [
+        "unicode-dash-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "YxupCr0AAAAJ",
+      "name": "Fabio Tollon",
+      "publications": 32,
+      "reason": "baseline",
+      "traits": [
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Zpn08WoAAAAJ",
+      "name": "Jason Bennett Thatcher",
+      "publications": 210,
+      "reason": "baseline",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "6rA6A90AAAAJ",
+      "name": "Mohammad Aghajohari",
+      "publications": 7,
+      "reason": "baseline",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "JVVhfCQAAAAJ",
+      "name": "Paul L. Christ",
+      "publications": 16,
+      "reason": "baseline",
+      "traits": [
+        "dotted-initials",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "gwqQamEAAAAJ",
+      "name": "Temitope Farinloye",
+      "publications": 33,
+      "reason": "baseline",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "FTl3bwUAAAAJ",
+      "name": "Arnold B. Bakker",
+      "publications": 1000,
+      "reason": "dotted-initials",
+      "traits": [
+        "unicode-dash-authors",
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "SQLUVSEAAAAJ",
+      "name": "Benedikt M. Brand",
+      "publications": 20,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "3BsdBosAAAAJ",
+      "name": "Daniel S. Quintana",
+      "publications": 169,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "IPSRo_cAAAAJ",
+      "name": "EDIDIONG N. OROK",
+      "publications": 31,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "JHcPqTAAAAAJ",
+      "name": "Frederic R. Hopp",
+      "publications": 48,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Ru5nuPYAAAAJ",
+      "name": "Grant E. Donnelly",
+      "publications": 40,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "4KCWk_YAAAAJ",
+      "name": "Harald H.H.W. Schmidt",
+      "publications": 419,
+      "reason": "dotted-initials",
+      "traits": [
+        "unicode-dash-authors",
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "TF4817UAAAAJ",
+      "name": "J.W.B. Bos",
+      "publications": 173,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "iS4HAEMAAAAJ",
+      "name": "James A. Densley",
+      "publications": 170,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "CtQqj9kAAAAJ",
+      "name": "Mathew S. Isaac",
+      "publications": 61,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "uTWBmVMAAAAJ",
+      "name": "Michail D. Kokkoris",
+      "publications": 33,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "o_vJLUkAAAAJ",
+      "name": "Oleg V. Petrenko",
+      "publications": 52,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "kplx7AUAAAAJ",
+      "name": "Rogier A. Kievit",
+      "publications": 176,
+      "reason": "dotted-initials",
+      "traits": [
+        "unicode-dash-authors",
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "DTjXb64AAAAJ",
+      "name": "Sebastian J. Goerg",
+      "publications": 62,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Cp5t7D4AAAAJ",
+      "name": "Simon J. Blanchard",
+      "publications": 47,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "jVZ6rbMAAAAJ",
+      "name": "Y. S. Scharp",
+      "publications": 24,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "lUkV58wAAAAJ",
+      "name": "Yochanan E. Bigman",
+      "publications": 34,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "O_YXPFsAAAAJ",
+      "name": "Yuosre F. Badir",
+      "publications": 90,
+      "reason": "dotted-initials",
+      "traits": [
+        "dotted-initials",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "mG4imMEAAAAJ",
+      "name": "Andrew Ng",
+      "publications": 530,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "BdwP-3QAAAAJ",
+      "name": "Chris Biemann",
+      "publications": 420,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "fH3wcA8AAAAJ",
+      "name": "Frank Teuteberg",
+      "publications": 535,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "3IeyXt4AAAAJ",
+      "name": "Ganesh Jeevanandan",
+      "publications": 245,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "nIYeV-wAAAAJ",
+      "name": "Harald Reiterer",
+      "publications": 418,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "DWhZ5wwAAAAJ",
+      "name": "Johan Stahre",
+      "publications": 235,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "hpEmhxwAAAAJ",
+      "name": "Marija Boskovic Cabrol",
+      "publications": 184,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "xtH9QNgAAAAJ",
+      "name": "Stijn Viaene",
+      "publications": 340,
+      "reason": "heavy-ellipsis",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "5Om6NYoAAAAJ",
+      "name": "Aires Oliva-Teles",
+      "publications": 332,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Epn5U-0AAAAJ",
+      "name": "Annouk Lievens - Full Professor",
+      "publications": 106,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "ellipsis-authors",
+        "long-name"
+      ]
+    },
+    {
+      "scholarId": "h8LFExAAAAAJ",
+      "name": "David Simchi-Levi",
+      "publications": 533,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "W7_jNk0AAAAJ",
+      "name": "Eline CHM Haijen-Bongers",
+      "publications": 21,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "yYJ8kgsAAAAJ",
+      "name": "Enrique A. Lopez-Poveda",
+      "publications": 134,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "4A1g8oIAAAAJ",
+      "name": "Ezgi Merdin-Uygur",
+      "publications": 27,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "B6-bWG0AAAAJ",
+      "name": "Jorge García-Márquez",
+      "publications": 49,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "tEMuAlAAAAAJ",
+      "name": "Jorge Serrano-Malebrán (ORCID: 0000-0001-6932-1556)",
+      "publications": 34,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "long-name"
+      ]
+    },
+    {
+      "scholarId": "d8j0F2UAAAAJ",
+      "name": "Lilian Kloft-Heller",
+      "publications": 36,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "C65V52sAAAAJ",
+      "name": "Mariana Kovacic-Lukic",
+      "publications": 4,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "2wqk2I8AAAAJ",
+      "name": "Milda Aleknonyte-Resch",
+      "publications": 27,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "F0aVUUsAAAAJ",
+      "name": "Miriam Pein-Hackelbusch",
+      "publications": 62,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "EjLvG5cAAAAJ",
+      "name": "Zhi-Qin John Xu",
+      "publications": 89,
+      "reason": "hyphen-surname",
+      "traits": [
+        "hyphen-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "3R9ZhooAAAAJ",
+      "name": "Christopher Jr. Galgo",
+      "publications": 13,
+      "reason": "known-failure",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ],
+      "knownHardDuplicatePairs": [
+        "GA Nuhoff-Isakhanyan ~ G Isakhanyan"
+      ]
+    },
+    {
+      "scholarId": "MQYmyq8AAAAJ",
+      "name": "Cristóbal Rodríguez Montoya",
+      "publications": 16,
+      "reason": "known-failure",
+      "traits": [
+        "non-ascii-name",
+        "owner-variant-in-bylines"
+      ],
+      "knownHardDuplicatePairs": [
+        "DF Rodríguez ~ D Frias-Rodriguez"
+      ]
+    },
+    {
+      "scholarId": "RpnPbawAAAAJ",
+      "name": "Dr. Nicolás Gambetta",
+      "publications": 38,
+      "reason": "known-failure",
+      "traits": [
+        "unicode-dash-authors",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ],
+      "knownHardDuplicatePairs": [
+        "MA García-Benau ~ MA García Benau"
+      ]
+    },
+    {
+      "scholarId": "shvUseUAAAAJ",
+      "name": "Joan Díaz-Calafat",
+      "publications": 35,
+      "reason": "known-failure",
+      "traits": [
+        "hyphen-surname",
+        "unicode-dash-authors",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "dqylc-oAAAAJ",
+      "name": "Bruce D. McDonald, III",
+      "publications": 133,
+      "reason": "long-name",
+      "traits": [
+        "dotted-initials",
+        "ellipsis-authors",
+        "long-name",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "yHRow5QAAAAJ",
+      "name": "Henry Surendra, MPH, PhD, FRSPH",
+      "publications": 52,
+      "reason": "long-name",
+      "traits": [
+        "ellipsis-authors",
+        "long-name"
+      ]
+    },
+    {
+      "scholarId": "sPE5wx0AAAAJ",
+      "name": "Hussain Bakhsh Magsi, PhD",
+      "publications": 15,
+      "reason": "long-name",
+      "traits": [
+        "long-name"
+      ]
+    },
+    {
+      "scholarId": "Sh1lWK8AAAAJ",
+      "name": "Sudipta Bose PhD (UNSW), MBA, BBA (HONS) in AIS, FULT (UNSW), CA, FCMA",
+      "publications": 79,
+      "reason": "long-name",
+      "traits": [
+        "long-name"
+      ]
+    },
+    {
+      "scholarId": "n1JYiwQAAAAJ",
+      "name": "Agnes Koschmider",
+      "publications": 192,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "qc6CJjYAAAAJ",
+      "name": "Albert Einstein",
+      "publications": 787,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "187v9RoAAAAJ",
+      "name": "Alexander Richter",
+      "publications": 230,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "mzZgjzQAAAAJ",
+      "name": "Bankole Ositadimma Awuzie",
+      "publications": 224,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "61DvKEIAAAAJ",
+      "name": "Chris Easthope Awai",
+      "publications": 128,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "vkX6VV4AAAAJ",
+      "name": "Cornelia Caragea",
+      "publications": 265,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "21lh8nMAAAAJ",
+      "name": "David Cropley",
+      "publications": 286,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "adnaVp0AAAAJ",
+      "name": "Dhruv Grewal",
+      "publications": 540,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "09P2NX4AAAAJ",
+      "name": "Dominik Mahr",
+      "publications": 165,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "OYOyw_gAAAAJ",
+      "name": "Dr. Erose Sthapit",
+      "publications": 149,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "JicYPdAAAAAJ",
+      "name": "Geoffrey Hinton",
+      "publications": 766,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "E3oBkwwAAAAJ",
+      "name": "Ioannis Pavlidis",
+      "publications": 195,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "xYIyKJ0AAAAJ",
+      "name": "Joan Alexander",
+      "publications": 347,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "3C6mgNUAAAAJ",
+      "name": "Kai Sassenberg",
+      "publications": 306,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "75YwWu4AAAAJ",
+      "name": "Mohamed Zaki",
+      "publications": 143,
+      "reason": "negative-control",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "vMdOAHIAAAAJ",
+      "name": "Nawi Ng",
+      "publications": 273,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "Dkra6uYAAAAJ",
+      "name": "Peter Seele",
+      "publications": 352,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "B7vSqZsAAAAJ",
+      "name": "Richard Feynman",
+      "publications": 152,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "l0VKMyEAAAAJ",
+      "name": "Yulin Fang",
+      "publications": 195,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "KnM_DK0AAAAJ",
+      "name": "Zoltan Nagy",
+      "publications": 206,
+      "reason": "negative-control",
+      "traits": [
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "T5X72hwAAAAJ",
+      "name": "André Bittermann",
+      "publications": 67,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "aty2ycAAAAAJ",
+      "name": "Carl Cederström",
+      "publications": 48,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "JCxWTyYAAAAJ",
+      "name": "David M. Woisetschläger",
+      "publications": 186,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "dotted-initials",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "QvBkWlIAAAAJ",
+      "name": "Elisabeth Brüggen",
+      "publications": 80,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "X1AcSacAAAAJ",
+      "name": "Enric Junqué de Fortuny",
+      "publications": 24,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "particle-surname",
+        "ellipsis-authors",
+        "long-name",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "YLiYwbgAAAAJ",
+      "name": "Joachim Hüffmeier",
+      "publications": 140,
+      "reason": "non-ascii-name",
+      "traits": [
+        "unicode-dash-authors",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "oOwp60UAAAAJ",
+      "name": "Rui Magalhães",
+      "publications": 83,
+      "reason": "non-ascii-name",
+      "traits": [
+        "unicode-dash-authors",
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "circGHIAAAAJ",
+      "name": "Simon Hazée",
+      "publications": 13,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "a97doIsScwwC",
+      "name": "Thomas Gültzow",
+      "publications": 63,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "r74adIwAAAAJ",
+      "name": "Tim Döring",
+      "publications": 15,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "5izLickAAAAJ",
+      "name": "Torbjörn Törnqvist",
+      "publications": 257,
+      "reason": "non-ascii-name",
+      "traits": [
+        "non-ascii-name",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "UGVOZHcAAAAJ",
+      "name": "Eelke de Vries",
+      "publications": 8,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "qamp828AAAAJ",
+      "name": "Emiel van Miltenburg",
+      "publications": 73,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "P0LCVa0AAAAJ",
+      "name": "Freya De Keyzer",
+      "publications": 34,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Zjjb6TAAAAAJ",
+      "name": "Hans De Witte",
+      "publications": 1000,
+      "reason": "particle-surname",
+      "traits": [
+        "unicode-dash-authors",
+        "particle-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "2WLDJQoAAAAJ",
+      "name": "Henrico van Roekel",
+      "publications": 19,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "THsg1_IAAAAJ",
+      "name": "Ko de Ruyter",
+      "publications": 898,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "6Zl4y4AAAAAJ",
+      "name": "Leander De Schutter",
+      "publications": 34,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "Of6j1JoAAAAJ",
+      "name": "Zeph M. C. van Berlo",
+      "publications": 45,
+      "reason": "particle-surname",
+      "traits": [
+        "particle-surname",
+        "dotted-initials",
+        "ellipsis-authors",
+        "long-name",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "s4jwRQsAAAAJ",
+      "name": "Ana Couto",
+      "publications": 109,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "jSB6BvEAAAAJ",
+      "name": "Gaby Odekerken",
+      "publications": 184,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "umNXsm4AAAAJ",
+      "name": "Helena Peres",
+      "publications": 220,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "CdvVaskAAAAJ",
+      "name": "Jacobus FA Jansen",
+      "publications": 407,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines",
+        "same-surname-different-person"
+      ]
+    },
+    {
+      "scholarId": "9YqWLuUAAAAJ",
+      "name": "Paula Enes",
+      "publications": 89,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "KWoTqRsAAAAJ",
+      "name": "Ryan Federo",
+      "publications": 58,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    },
+    {
+      "scholarId": "FUmCeWYAAAAJ",
+      "name": "Zhonghua Gou",
+      "publications": 261,
+      "reason": "unicode-dash-authors",
+      "traits": [
+        "unicode-dash-authors",
+        "ellipsis-authors",
+        "owner-variant-in-bylines"
+      ]
+    }
+  ]
+}
