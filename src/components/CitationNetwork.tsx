@@ -8,6 +8,7 @@ import { scaleSequential } from 'd3-scale';
 import { interpolateRdYlGn, interpolateViridis } from 'd3-scale-chromatic';
 import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
 import type { Publication } from '../types/scholar';
+import { coAuthorsOf, inferMainAuthor, isSameResearcher } from '../utils/authorIdentity';
 import { extractLastName } from '../utils/names';
 
 interface Node {
@@ -34,6 +35,9 @@ interface Link {
 
 interface CitationNetworkProps {
   publications: Publication[];
+  /** Profile owner's display name. Without it the owner is inferred from the
+   *  author lists, which misses their less frequent name variants. */
+  authorName?: string;
   fullScreen?: boolean;
   onCoAuthorClick?: (name: string) => void;
 }
@@ -188,7 +192,7 @@ const CLUSTER_COLORS = [
   '#2563eb', '#d97706', '#6366f1', '#dc2626', '#0891b2'
 ];
 
-export function CitationNetwork({ publications, fullScreen = false, onCoAuthorClick }: CitationNetworkProps) {
+export function CitationNetwork({ publications, authorName, fullScreen = false, onCoAuthorClick }: CitationNetworkProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<D3Simulation<Node, Link> | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('publications');
@@ -219,17 +223,12 @@ export function CitationNetwork({ publications, fullScreen = false, onCoAuthorCl
 
     const showCitations = viewMode === 'citations';
 
-    // Find the main author
-    const authorFrequency = new Map<string, number>();
-    publications.forEach(pub => {
-      pub.authors.forEach(author => {
-        authorFrequency.set(author, (authorFrequency.get(author) || 0) + 1);
-      });
-    });
-    const sortedAuthors = Array.from(authorFrequency.entries())
-      .sort((a, b) => b[1] - a[1]);
-    if (sortedAuthors.length === 0) return;
-    const mainAuthor = sortedAuthors[0][0];
+    // The profile owner. Their name varies between papers (maiden names,
+    // umlauts, extra initials), so identity comparisons go through
+    // isSameResearcher rather than string equality — otherwise a variant of
+    // the owner shows up as their own most frequent collaborator.
+    const mainAuthor = authorName?.trim() || inferMainAuthor(publications);
+    if (!mainAuthor) return;
 
     // Process data - track years for temporal feature
     const nodes: Node[] = [];
@@ -257,7 +256,7 @@ export function CitationNetwork({ publications, fullScreen = false, onCoAuthorCl
 
     // Process co-authors
     publications.forEach(pub => {
-      const coAuthors = pub.authors.filter(author => author !== mainAuthor);
+      const coAuthors = coAuthorsOf(pub.authors, mainAuthor);
 
       coAuthors.forEach(author => {
         if (!authorMap.has(author)) {
@@ -655,26 +654,25 @@ export function CitationNetwork({ publications, fullScreen = false, onCoAuthorCl
     return () => {
       stopSimulation();
     };
-  }, [publications, fullScreen, viewMode, connectionLimit]);
+  }, [publications, authorName, fullScreen, viewMode, connectionLimit]);
 
   // Compute network insights from publications
   const insights = useMemo(() => {
     if (!publications.length) return null;
 
-    // Find main author
-    const freq = new Map<string, number>();
-    publications.forEach(pub => pub.authors.forEach(a => freq.set(a, (freq.get(a) || 0) + 1)));
-    const mainAuth = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    const mainAuth = authorName?.trim() || inferMainAuthor(publications);
     if (!mainAuth) return null;
 
-    // Solo papers
-    const soloPapers = publications.filter(p => p.authors.length === 1 && p.authors[0] === mainAuth);
+    // Solo papers: every listed author is the owner under some spelling.
+    const soloPapers = publications.filter(
+      p => p.authors.length === 1 && isSameResearcher(p.authors[0], mainAuth)
+    );
     const collabPapers = publications.filter(p => p.authors.length > 1);
 
     // Co-author stats
     const coAuthors = new Map<string, { papers: number; citations: number; years: number[] }>();
     publications.forEach(pub => {
-      pub.authors.filter(a => a !== mainAuth).forEach(a => {
+      coAuthorsOf(pub.authors, mainAuth).forEach(a => {
         const existing = coAuthors.get(a) || { papers: 0, citations: 0, years: [] };
         existing.papers++;
         existing.citations += pub.citations;
@@ -699,7 +697,7 @@ export function CitationNetwork({ publications, fullScreen = false, onCoAuthorCl
     // New collaborators per year
     const firstCollabYear = new Map<string, number>();
     publications.sort((a, b) => a.year - b.year).forEach(pub => {
-      pub.authors.filter(a => a !== mainAuth).forEach(a => {
+      coAuthorsOf(pub.authors, mainAuth).forEach(a => {
         if (!firstCollabYear.has(a) && pub.year > 0) firstCollabYear.set(a, pub.year);
       });
     });
@@ -716,7 +714,7 @@ export function CitationNetwork({ publications, fullScreen = false, onCoAuthorCl
       oneTimeCitations,
       topOneTimer: oneTimers[0] ? { name: oneTimers[0][0], citations: oneTimers[0][1].citations } : null,
     };
-  }, [publications]);
+  }, [publications, authorName]);
 
   return (
     <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-primary-start/10 dark:border-slate-700 p-6 hover:shadow-lg transition-all ${
