@@ -92,6 +92,9 @@ const MATRIX: Record<string, Case[]> = {
     { byline: 'J van der Berg', owner: 'Jan van der Berg', same: true, note: 'two particles' },
     { byline: 'M von Grafenstein', owner: 'Max von Grafenstein', same: true, note: 'von particle' },
     { byline: 'P de Vries', owner: 'Ko de Ruyter', same: false, note: 'DIFFERENT surname, same particle' },
+    { byline: 'AI dos Santos Couto', owner: 'Ana Couto', same: true, note: 'portuguese particle + double surname' },
+    { byline: 'M da Silva Santos', owner: 'Maria Santos', same: true, note: 'da particle + double surname' },
+    { byline: 'J dos Santos Couto', owner: 'Ana Couto', same: false, note: 'DIFFERENT person, same surnames' },
   ],
 
   'CJK & romanisation': [
@@ -111,6 +114,15 @@ const MATRIX: Record<string, Case[]> = {
   'truncation markers': [
     { byline: '...', owner: 'Miriam Pein-Hackelbusch', same: false, note: 'ellipsis is not a person' },
     { byline: '…', owner: 'Miriam Pein-Hackelbusch', same: false, note: 'unicode ellipsis' },
+  ],
+
+  'misspelt name variants': [
+    { byline: 'J Japhat Haruna', owner: 'Jonah Japhet Haruna', same: true, note: 'one-letter typo in middle name' },
+    { byline: 'Jonah Japhat Haruna', owner: 'Jonah Japhet Haruna', same: true, note: 'typo, both spelled out' },
+    { byline: 'J Jonathan Haruna', owner: 'Jonah Japhet Haruna', same: false, note: 'DIFFERENT middle name' },
+    { byline: 'Jon Smith', owner: 'Jan Smith', same: false, note: 'short names one edit apart are DIFFERENT people' },
+    { byline: 'Eric Meyer', owner: 'Erik Meyer', same: false, note: 'four letters is below the typo floor' },
+    { byline: 'Kristina Petrov', owner: 'Kristine Petrov', same: true, note: 'long given name, one edit' },
   ],
 
   'unrelated people (global negative controls)': [
