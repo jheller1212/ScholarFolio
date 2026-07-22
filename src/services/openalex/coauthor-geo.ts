@@ -1,6 +1,7 @@
 import type { Publication, CoAuthorGeoData } from '../../types/scholar';
 import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
-import { canonicalNameKey, isRealAuthorName, surnamesCompatible } from '../../utils/names';
+import { canonicalNameKey } from '../../utils/names';
+import { isRealAuthorName, isSameResearcher } from '../../utils/authorIdentity';
 
 interface WorkAuthorship {
   author: { id: string; display_name: string };
@@ -73,16 +74,10 @@ export async function fetchCoAuthorGeoData(
   const mainLastName = getLastName(mainAuthorKey);
   const mainNameVariants = new Set<string>();
   mainNameVariants.add(mainAuthorKey);
-  const firstInitial = (name: string) => canonicalNameKey(name).split(/\s+/)[0]?.[0] ?? '';
-  const mainInitial = firstInitial(mainAuthorKey);
   for (const [name] of mainAuthorFreq) {
-    if (name === mainAuthorKey) continue;
-    const last = getLastName(name);
-    if (last === mainLastName) {
-      mainNameVariants.add(name);
-    } else if (surnamesCompatible(last, mainLastName) && firstInitial(name) === mainInitial) {
-      // Maiden/married variant of the main author ("MK Pein" vs
-      // "M Pein-Hackelbusch"); the initial guard keeps relatives out.
+    // Shared identity check, so the map agrees with every other view about
+    // which bylines are the profile owner.
+    if (name !== mainAuthorKey && isSameResearcher(name, mainAuthorKey)) {
       mainNameVariants.add(name);
     }
   }

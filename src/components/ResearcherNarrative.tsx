@@ -3,6 +3,7 @@ import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Sea
 import { supabase } from '../lib/supabase';
 import { logCaughtError } from '../lib/errorLogger';
 import { useAuth } from '../contexts/AuthContext';
+import { coAuthorsOf } from '../utils/authorIdentity';
 import type { Author, CoAuthorGeoData, FieldNormalizedMetrics } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { findJournalRanking } from '../data/journalRankings';
@@ -886,11 +887,10 @@ export function ResearcherNarrative({ data, geoData, onSearch, pIndexResult }: R
   const coAuthorNames = useMemo(() => {
     const names = new Set<string>();
     for (const pub of data.publications) {
-      for (const author of pub.authors) {
-        const normalized = author.trim();
-        if (normalized && normalized !== data.name && normalized !== '...') {
-          names.add(normalized);
-        }
+      // Owner variants (maiden name, umlaut spellings, extra initials) must
+      // not be linkified as if they were other researchers.
+      for (const author of coAuthorsOf(pub.authors, data.name)) {
+        names.add(author.trim());
       }
     }
     return names;
