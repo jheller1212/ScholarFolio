@@ -84,10 +84,18 @@ export function parseName(cleaned: string): { given: string[]; last: string } {
   if (parts.length === 0) return { given: [], last: '' };
   if (parts.length === 1) return { given: [], last: parts[0] };
 
-  const prefixes = new Set(['van', 'von', 'de', 'del', 'della', 'di', 'du', 'le', 'la', 'el', 'al', 'bin', 'ibn', 'den', 'der', 'het', 'ter', 'ten']);
+  const prefixes = new Set(['van', 'von', 'de', 'del', 'della', 'di', 'da', 'do', 'dos', 'das', 'du', 'le', 'la', 'el', 'al', 'bin', 'ibn', 'den', 'der', 'het', 'ter', 'ten']);
+  // The surname begins at the FIRST particle, not the last: Portuguese and
+  // Spanish names put a full double surname behind one ("AI dos Santos Couto"
+  // is given "AI" + surname "dos Santos Couto"). Walking back only over
+  // consecutive particles would leave "Santos" parsed as a given name and the
+  // author unrecognisable against a profile reading "Ana Couto".
   let lastStart = parts.length - 1;
-  while (lastStart > 1 && prefixes.has(parts[lastStart - 1].toLowerCase())) {
-    lastStart--;
+  for (let i = 1; i < parts.length - 1; i++) {
+    if (prefixes.has(parts[i].toLowerCase())) {
+      lastStart = i;
+      break;
+    }
   }
 
   return {
@@ -230,7 +238,58 @@ export function isSameResearcher(byline: string, reference: string): boolean {
     return true;
   }
 
-  return compoundSurnamesMatch(a, b) && initialsCompatible(aInitials, bInitials);
+  if (compoundSurnamesMatch(a, b) && initialsCompatible(aInitials, bInitials)) return true;
+
+  return surnamesCompatible(a.last, b.last)
+    && initialsCompatible(aInitials, bInitials)
+    && givenNamesDifferByOneTypo(a.given, b.given);
+}
+
+/** Levenshtein distance, bailing out once it exceeds `max`. */
+function editDistanceWithin(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) return false;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+    }
+    if (Math.min(...curr) > max) return false;
+    prev = curr;
+  }
+  return prev[b.length] <= max;
+}
+
+/**
+ * Given names that agree except for a single misspelt token — the profile
+ * "Jonah Japhet Haruna" against a byline reading "J Japhat Haruna".
+ *
+ * Deliberately narrow: same token count, exactly one differing pair, one
+ * character apart, and both tokens at least five characters. The length floor
+ * is what keeps genuinely distinct short names apart — Jan/Jon, Erik/Eric,
+ * Marc/Mark are all one edit apart and must not merge.
+ */
+function givenNamesDifferByOneTypo(a: string[], b: string[]): boolean {
+  if (a.length !== b.length || a.length === 0) return false;
+  let differing = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = canonicalNameKey(a[i]);
+    const y = canonicalNameKey(b[i]);
+    if (x === y) continue;
+    // An initial standing in for the full name is not a typo — isSameAuthor
+    // already accepts that, and it must not consume the single allowance.
+    if (x.length <= 2 || y.length <= 2) {
+      if (x[0] === y[0]) continue;
+      return false;
+    }
+    differing++;
+    if (differing > 1) return false;
+    if (x.length < 5 || y.length < 5) return false;
+    if (!editDistanceWithin(x, y, 1)) return false;
+  }
+  return differing === 1;
 }
 
 /**

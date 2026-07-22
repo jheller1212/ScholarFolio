@@ -8,7 +8,8 @@ import { scaleSequential } from 'd3-scale';
 import { interpolateRdYlGn, interpolateViridis } from 'd3-scale-chromatic';
 import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
 import type { Publication } from '../types/scholar';
-import { coAuthorsOf, inferMainAuthor, isSameResearcher } from '../utils/authorIdentity';
+import { coAuthorsOf, inferMainAuthor } from '../utils/authorIdentity';
+import { computeCollaborationInsights } from '../utils/collaborationInsights';
 import { extractLastName } from '../utils/names';
 
 interface Node {
@@ -656,65 +657,12 @@ export function CitationNetwork({ publications, authorName, fullScreen = false, 
     };
   }, [publications, authorName, fullScreen, viewMode, connectionLimit]);
 
-  // Compute network insights from publications
-  const insights = useMemo(() => {
-    if (!publications.length) return null;
-
-    const mainAuth = authorName?.trim() || inferMainAuthor(publications);
-    if (!mainAuth) return null;
-
-    // Solo papers: every listed author is the owner under some spelling.
-    const soloPapers = publications.filter(
-      p => p.authors.length === 1 && isSameResearcher(p.authors[0], mainAuth)
-    );
-    const collabPapers = publications.filter(p => p.authors.length > 1);
-
-    // Co-author stats
-    const coAuthors = new Map<string, { papers: number; citations: number; years: number[] }>();
-    publications.forEach(pub => {
-      coAuthorsOf(pub.authors, mainAuth).forEach(a => {
-        const existing = coAuthors.get(a) || { papers: 0, citations: 0, years: [] };
-        existing.papers++;
-        existing.citations += pub.citations;
-        if (pub.year > 0) existing.years.push(pub.year);
-        coAuthors.set(a, existing);
-      });
-    });
-
-    const sorted = [...coAuthors.entries()].sort((a, b) => b[1].papers - a[1].papers);
-    const topByPapers = sorted[0];
-    const topByCitations = [...coAuthors.entries()].sort((a, b) => b[1].citations - a[1].citations)[0];
-
-    // One-time collaborators with high impact
-    const oneTimers = [...coAuthors.entries()]
-      .filter(([, d]) => d.papers === 1)
-      .sort((a, b) => b[1].citations - a[1].citations);
-    const oneTimeCitations = oneTimers.reduce((sum, [, d]) => sum + d.citations, 0);
-
-    // Avg authors per paper
-    const avgAuthors = publications.reduce((sum, p) => sum + p.authors.length, 0) / publications.length;
-
-    // New collaborators per year
-    const firstCollabYear = new Map<string, number>();
-    publications.sort((a, b) => a.year - b.year).forEach(pub => {
-      coAuthorsOf(pub.authors, mainAuth).forEach(a => {
-        if (!firstCollabYear.has(a) && pub.year > 0) firstCollabYear.set(a, pub.year);
-      });
-    });
-
-    return {
-      totalCoAuthors: coAuthors.size,
-      soloPapers: soloPapers.length,
-      collabPapers: collabPapers.length,
-      soloPercent: publications.length > 0 ? Math.round((soloPapers.length / publications.length) * 100) : 0,
-      avgAuthors: avgAuthors.toFixed(1),
-      topByPapers: topByPapers ? { name: topByPapers[0], papers: topByPapers[1].papers, citations: topByPapers[1].citations } : null,
-      topByCitations: topByCitations ? { name: topByCitations[0], papers: topByCitations[1].papers, citations: topByCitations[1].citations } : null,
-      oneTimeCollaborators: oneTimers.length,
-      oneTimeCitations,
-      topOneTimer: oneTimers[0] ? { name: oneTimers[0][0], citations: oneTimers[0][1].citations } : null,
-    };
-  }, [publications, authorName]);
+  // Collaboration Insights — computed by a shared pure function so the
+  // name-matching audit asserts on the very numbers this panel renders.
+  const insights = useMemo(
+    () => computeCollaborationInsights(publications, authorName),
+    [publications, authorName]
+  );
 
   return (
     <div className={`bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-primary-start/10 dark:border-slate-700 p-6 hover:shadow-lg transition-all ${

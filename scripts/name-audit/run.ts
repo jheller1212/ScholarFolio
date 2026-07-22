@@ -19,6 +19,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { calculateCoAuthorMetrics } from '../../src/services/metrics/collaboration/co-author-metrics';
+import { coAuthorsOf } from '../../src/utils/authorIdentity';
+import {
+  computeCollaborationInsights,
+  networkCoAuthorNodes,
+} from '../../src/utils/collaborationInsights';
 import {
   canonicalNameKey,
   extractLastName,
@@ -160,22 +165,57 @@ async function main() {
     const knownSelf = new Set(entry.knownHardSelfListed ?? []);
     const knownDup = new Set(entry.knownHardDuplicatePairs ?? []);
 
-    // A. the profile owner must never rank as their own collaborator
-    for (const name of coAuthors) {
-      if (likelySamePerson(name, profile.name)) {
-        findings.push({
-          profile: profile.name,
-          kind: 'self-listed',
-          detail: name,
-          known: knownSelf.has(name),
-        });
-      }
-    }
+    // Every surface in the app that turns an author list into co-authors.
+    // Each is checked separately: the reported bug was a tab whose own
+    // implementation still showed the owner after the narrative was fixed.
+    const insights = computeCollaborationInsights(pubs as never, profile.name);
+    const surfaces: Array<{ surface: string; names: string[] }> = [
+      // Impact Metrics card, Narrative, PDF export and CV export all read these
+      { surface: 'metrics/narrative (top co-authors)', names: coAuthors },
+      { surface: 'metrics/narrative (top co-author)', names: metrics.topCoAuthor ? [metrics.topCoAuthor] : [] },
+      // Co-author Network tab — Collaboration Insights panel
+      {
+        surface: 'network (collaboration insights)',
+        names: [insights?.topByPapers?.name, insights?.topByCitations?.name, insights?.topOneTimer?.name]
+          .filter((n): n is string => Boolean(n)),
+      },
+      // Co-author Network tab — graph nodes
+      { surface: 'network (graph nodes)', names: networkCoAuthorNodes(pubs as never, profile.name) },
+      // Narrative author linkification
+      {
+        surface: 'narrative (linkified authors)',
+        names: [...new Set(pubs.flatMap(p => coAuthorsOf(p.authors, profile.name)))],
+      },
+      // World Map: the local half of the geo service picks the same co-authors
+      // before enriching them with OpenAlex institutions.
+      {
+        surface: 'world map (co-author set)',
+        names: [...new Set(pubs.flatMap(p => coAuthorsOf(p.authors, profile.name)))],
+      },
+    ];
 
-    // B. truncation markers are not people
-    for (const name of coAuthors) {
-      if (TRUNCATION.test(name)) {
-        findings.push({ profile: profile.name, kind: 'truncation-marker', detail: name, known: false });
+    for (const { surface, names } of surfaces) {
+      // A. the profile owner must never rank as their own collaborator
+      for (const name of names) {
+        if (likelySamePerson(name, profile.name)) {
+          findings.push({
+            profile: profile.name,
+            kind: 'self-listed',
+            detail: `${name}  [${surface}]`,
+            known: knownSelf.has(name),
+          });
+        }
+      }
+      // B. truncation markers are not people
+      for (const name of names) {
+        if (TRUNCATION.test(name)) {
+          findings.push({
+            profile: profile.name,
+            kind: 'truncation-marker',
+            detail: `${name}  [${surface}]`,
+            known: false,
+          });
+        }
       }
     }
 

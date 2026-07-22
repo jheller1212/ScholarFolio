@@ -22,10 +22,11 @@ rather than passing it.
 
 Classes covered: hyphenated/compound surnames (including Unicode hyphens),
 maiden↔married names, German umlauts and ß, Nordic characters (ø å æ),
-Spanish/Portuguese double surnames, multiple given names and initials blocks,
-surname particles (van/de/von), CJK names and romanisation, apostrophes,
-truncation markers, plus real-world pairs of distinct people who share a
-surname.
+Spanish/Portuguese double surnames, surname particles (van/de/von, and the
+Portuguese dos/das/da form where the particle introduces a full double
+surname), multiple given names and initials blocks, misspelt name variants,
+CJK names and romanisation, apostrophes, truncation markers, plus real-world
+pairs of distinct people who share a surname.
 
 Cases marked `xfail` are **known, accepted limitations**, asserted to still
 fail. If a change fixes one, the run reports "unexpectedly fixed" and the case
@@ -48,8 +49,26 @@ npx tsx scripts/name-audit/run.ts --verbose  # per profile
 npx tsx scripts/name-audit/run.ts --json     # machine-readable
 ```
 
-Replays the live pipeline over the 100 cached profiles in `profiles.json` and
-checks four invariants:
+Replays the live pipeline over the 100 cached profiles in `profiles.json`.
+
+Crucially it checks **every surface that turns an author list into co-authors**,
+not just one. The bug that prompted this was a tab still showing a user her own
+maiden name after the narrative had been fixed, so each is asserted separately:
+
+| surface | what renders it |
+|---|---|
+| `metrics/narrative (top co-authors)` | Impact Metrics card, narrative text, PDF export, CV export |
+| `metrics/narrative (top co-author)` | the "most frequent collaborator" line |
+| `network (collaboration insights)` | Collaboration Insights panel on the Co-author Network tab |
+| `network (graph nodes)` | the co-author graph itself |
+| `narrative (linkified authors)` | clickable author names in the narrative |
+| `world map (co-author set)` | co-authors plotted on the World Map |
+
+The Collaboration Insights figures come from the same exported function the tab
+renders (`utils/collaborationInsights.ts`), not a copy — a check written against
+a reimplementation would not have caught the original bug.
+
+Four invariants per surface:
 
 - **self-listed** — the owner must never rank as their own collaborator
 - **truncation-marker** — Scholar's `...` is not a person
