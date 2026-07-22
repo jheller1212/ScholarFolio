@@ -1,6 +1,7 @@
 import { timeoutSignal } from '../../utils/api';
 import { RateLimiter } from '../scholar/rate-limiter';
 import { logCaughtError } from '../../lib/errorLogger';
+import { canonicalNameKey, extractLastName, foldNamePunctuation, surnamesCompatible } from '../../utils/names';
 
 const API_URL = 'https://api.openalex.org';
 const EMAIL = 'info@scholarfolio.org';
@@ -87,12 +88,32 @@ export function findOpenAlexAuthor(
   return promise;
 }
 
+/** Overlap between two institution strings, 0–1. Substring either way scores
+ *  1; otherwise the share of the shorter name's significant words that appear
+ *  in the other ("OWL University of Applied Sciences" vs "Ostwestfalen-Lippe
+ *  University of Applied Sciences and Arts"). */
+function institutionOverlap(a: string, b: string): number {
+  const x = canonicalNameKey(a);
+  const y = canonicalNameKey(b);
+  if (!x || !y) return 0;
+  if (x.includes(y) || y.includes(x)) return 1;
+  const stop = new Set(['university', 'of', 'the', 'and', 'for', 'de', 'college', 'institute', 'school', 'center', 'centre', 'department']);
+  const words = (s: string) => new Set(s.split(/[^a-z0-9]+/).filter(w => w.length > 2 && !stop.has(w)));
+  const wx = words(x), wy = words(y);
+  if (wx.size === 0 || wy.size === 0) return 0;
+  const [small, large] = wx.size <= wy.size ? [wx, wy] : [wy, wx];
+  let hits = 0;
+  for (const w of small) if (large.has(w)) hits++;
+  return hits / small.size;
+}
+
 /**
- * Uncached author resolution:
- * 1. Searches by name (per_page=10)
- * 2. Filters by display_name match
- * 3. Refines by affiliation match
- * 4. Fetches ORCID from full author record
+ * Uncached author resolution. OpenAlex frequently holds several records for
+ * one researcher — a rich one carrying the ORCID and most works, plus sparse
+ * duplicates with a handful. Picking the wrong one silently produces wrong
+ * metrics (a 1-work duplicate reported "0% open access" for an author with 26
+ * OA papers), so candidates are scored rather than taken in relevance order:
+ * name match, affiliation overlap, ORCID presence, and works count.
  */
 async function resolveOpenAlexAuthor(
   name: string,
@@ -103,6 +124,7 @@ async function resolveOpenAlexAuthor(
       id: string;
       display_name: string;
       orcid?: string;
+      works_count?: number;
       last_known_institutions?: Array<{
         id: string;
         display_name: string;
@@ -110,7 +132,7 @@ async function resolveOpenAlexAuthor(
       }>;
       affiliations?: Array<{ institution?: { display_name?: string } }>;
     }> }>(
-      `${API_URL}/authors?search=${encodeURIComponent(name)}&per_page=10&select=id,display_name,orcid,last_known_institutions,affiliations&mailto=${EMAIL}`
+      `${API_URL}/authors?search=${encodeURIComponent(name)}&per_page=10&select=id,display_name,orcid,works_count,last_known_institutions,affiliations&mailto=${EMAIL}`
     );
 
     const results = searchData?.results;
@@ -118,27 +140,43 @@ async function resolveOpenAlexAuthor(
       return null;
     }
 
-    // Filter to results whose display_name matches the search name
-    const nameLower = name.toLowerCase().trim();
-    const nameMatches = results.filter(r =>
-      r.display_name.toLowerCase().trim() === nameLower
+    // Surname must be compatible, else it's a different person entirely —
+    // better no OpenAlex data than another researcher's.
+    const searchedLast = extractLastName(foldNamePunctuation(name));
+    const plausible = results.filter(r =>
+      surnamesCompatible(extractLastName(foldNamePunctuation(r.display_name)), searchedLast)
     );
-    const candidates = nameMatches.length > 0 ? nameMatches : results;
+    if (!plausible.length) return null;
 
-    // Try affiliation match among candidates
-    let best = candidates[0];
-    if (candidates.length > 1 && affiliation) {
-      const affLower = affiliation.toLowerCase();
-      for (const candidate of candidates) {
-        const lastInst = candidate.last_known_institutions?.[0]?.display_name?.toLowerCase() || '';
-        const allInsts = (candidate.affiliations || []).map(
-          (a: { institution?: { display_name?: string } }) => a.institution?.display_name?.toLowerCase() || ''
-        );
-        if ((lastInst && affLower.includes(lastInst)) ||
-            allInsts.some((inst: string) => inst && affLower.includes(inst))) {
-          best = candidate;
-          break;
-        }
+    // canonicalNameKey folds the Unicode hyphen OpenAlex uses ("Pein‐
+    // Hackelbusch"), which an exact string compare misses.
+    const nameKey = canonicalNameKey(name);
+    const affLower = affiliation || '';
+
+    const score = (c: typeof plausible[number]): number => {
+      let s = 0;
+      if (canonicalNameKey(c.display_name) === nameKey) s += 100;
+      if (affLower) {
+        const insts = [
+          c.last_known_institutions?.[0]?.display_name || '',
+          ...(c.affiliations || []).map(a => a.institution?.display_name || ''),
+        ].filter(Boolean);
+        const best = insts.reduce((m, i) => Math.max(m, institutionOverlap(affLower, i)), 0);
+        s += best * 50;
+      }
+      if (c.orcid) s += 20;
+      // Prefer the fuller record; capped so works count can't outweigh identity.
+      s += Math.min(c.works_count || 0, 200) / 10;
+      return s;
+    };
+
+    let best = plausible[0];
+    let bestScore = score(best);
+    for (const candidate of plausible.slice(1)) {
+      const s = score(candidate);
+      if (s > bestScore) {
+        best = candidate;
+        bestScore = s;
       }
     }
 
