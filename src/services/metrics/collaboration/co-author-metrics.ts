@@ -1,4 +1,5 @@
 import type { Publication } from '../../../types/scholar';
+import { canonicalNameKey, foldNamePunctuation, isRealAuthorName, surnamesCompatible } from '../../../utils/names';
 
 interface CoAuthorStats {
   totalCoAuthors: number;
@@ -15,14 +16,11 @@ interface CoAuthorStats {
   topCoAuthors: Array<{ name: string; papers: number }>;
 }
 
-/** Strip diacritics, lowercase, remove punctuation except hyphens */
+/** Strip diacritics, fold Unicode punctuation, lowercase, remove punctuation
+ *  except hyphens. Folding matters: the same author appears as both
+ *  "Pein\u2010Hackelbusch" (U+2010) and "Pein-Hackelbusch" (ASCII) in Scholar data. */
 function normalizeName(name: string): string {
-  return name
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[.,;:'"()]/g, '')
-    .replace(/\s+/g, ' ');
+  return canonicalNameKey(name);
 }
 
 /** Parse a name into { given: string[], last: string }
@@ -43,7 +41,7 @@ function parseName(normalized: string): { given: string[]; last: string } {
   // Detect multi-word last name prefixes (van, de, von, el, al, di, du, le, la, etc.)
   const prefixes = new Set(['van', 'von', 'de', 'del', 'della', 'di', 'du', 'le', 'la', 'el', 'al', 'bin', 'ibn', 'den', 'der', 'het', 'ter', 'ten']);
   let lastStart = parts.length - 1;
-  while (lastStart > 1 && prefixes.has(parts[lastStart - 1])) {
+  while (lastStart > 1 && prefixes.has(parts[lastStart - 1].toLowerCase())) {
     lastStart--;
   }
 
@@ -51,6 +49,41 @@ function parseName(normalized: string): { given: string[]; last: string } {
     given: parts.slice(0, lastStart),
     last: parts.slice(lastStart).join(' '),
   };
+}
+
+/** Same cleaning as normalizeName but keeps casing, so initials blocks stay
+ *  detectable ("RFJ" vs "Ann"). */
+function cleanKeepCase(name: string): string {
+  return foldNamePunctuation(name)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[.,;:'"()]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A compact block of initials: "R", "RFJ", "HHHW" — all caps, ≤5 letters —
+ *  or a ≤2-char token, which is an initials form regardless of casing. */
+function isInitialsBlock(token: string): boolean {
+  if (!token) return false;
+  return /^[A-Z]{1,5}$/.test(token) || token.length <= 2;
+}
+
+/** Expand given names into their initials sequence:
+ *  "Richard F.J." → [r,f,j];  "RFJ" → [r,f,j];  "Marnik" → [m].
+ *  Hyphenated given names contribute one initial per component, matching how
+ *  bylines render them ("Zhi-Qin" → [z,q], "Jean-Luc" → [j,l]). */
+function initialsSequence(given: string[]): string[] {
+  const out: string[] = [];
+  for (const token of given) {
+    for (const part of token.split('-').filter(Boolean)) {
+      if (isInitialsBlock(part)) {
+        for (const ch of part) out.push(ch.toLowerCase());
+      } else {
+        out.push(part[0].toLowerCase());
+      }
+    }
+  }
+  return out;
 }
 
 /** Check if two given-name parts are compatible.
@@ -146,11 +179,28 @@ function isProfileOwner(coAuthor: string, owner: string): boolean {
 
   const a = parseName(normalizeName(coAuthor));
   const b = parseName(normalizeName(owner));
-  if (!a.last || a.last !== b.last) return false;
-  if (a.given.length === 0 || b.given.length === 0) return false;
+  if (!a.last || a.given.length === 0 || b.given.length === 0) return false;
+  // Surnames may differ by a maiden/married component ("MK Pein" vs
+  // "M Pein-Hackelbusch"): authors keep publishing under both, and without
+  // this they rank as their own most frequent collaborator.
+  if (!surnamesCompatible(a.last, b.last)) return false;
 
-  const coAuthorIsInitialsOnly = a.given.every(part => part.length <= 2);
-  return coAuthorIsInitialsOnly && a.given[0][0] === b.given[0][0];
+  // Case-preserved parse: only the original casing distinguishes an initials
+  // block ("RFJ") from a short given name ("Ann").
+  const aOrig = parseName(cleanKeepCase(coAuthor));
+  const bOrig = parseName(cleanKeepCase(owner));
+  if (!aOrig.given.every(isInitialsBlock)) return false;
+
+  // The byline often carries more initials than the profile name
+  // ("Marnik Dekimpe" → "MGM Dekimpe", "Richard F.J. Haans" → "RFJ Haans").
+  // Treat them as the same person when one initials sequence is a prefix of
+  // the other — a different first initial still means a different person.
+  const aInitials = initialsSequence(aOrig.given);
+  const bInitials = initialsSequence(bOrig.given);
+  if (aInitials.length === 0 || bInitials.length === 0) return false;
+  const shorter = aInitials.length <= bInitials.length ? aInitials : bInitials;
+  const longer = aInitials.length <= bInitials.length ? bInitials : aInitials;
+  return shorter.every((ch, i) => ch === longer[i]);
 }
 
 // Venues that indicate non-journal output, used only for Google Scholar profiles
@@ -205,7 +255,10 @@ export function calculateCoAuthorMetrics(publications: Publication[], authorName
     totalAuthors += pub.authors.length;
 
     pub.authors.forEach(author => {
-      if (!isProfileOwner(author, cleanAuthorName)) {
+      // Truncation markers ("..." on long author lists) still count toward
+      // totalAuthors above — they stand for real hidden authors — but must
+      // never become a *named* collaborator.
+      if (isRealAuthorName(author) && !isProfileOwner(author, cleanAuthorName)) {
         const existingData = coAuthorCounts.get(author) || {
           count: 0,
           citations: 0,

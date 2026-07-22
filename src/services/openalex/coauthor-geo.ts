@@ -1,5 +1,6 @@
 import type { Publication, CoAuthorGeoData } from '../../types/scholar';
 import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
+import { canonicalNameKey, isRealAuthorName, surnamesCompatible } from '../../utils/names';
 
 interface WorkAuthorship {
   author: { id: string; display_name: string };
@@ -54,15 +55,15 @@ export async function fetchCoAuthorGeoData(
   }
 
   // Step 3: Build co-author map with their most recent institution
-  const normalize = (name: string) => name.toLowerCase().trim();
+  const normalize = (name: string) => canonicalNameKey(name);
   const getLastName = (name: string) => {
-    const parts = name.split(/\s+/);
-    return normalize(parts[parts.length - 1]);
+    const parts = canonicalNameKey(name).split(/\s+/);
+    return parts[parts.length - 1] || '';
   };
 
   const mainAuthorFreq = new Map<string, number>();
   for (const pub of publications) {
-    for (const a of (pub.authors || []).filter(n => n && n.trim())) {
+    for (const a of (pub.authors || []).filter(isRealAuthorName)) {
       mainAuthorFreq.set(a, (mainAuthorFreq.get(a) || 0) + 1);
     }
   }
@@ -72,8 +73,16 @@ export async function fetchCoAuthorGeoData(
   const mainLastName = getLastName(mainAuthorKey);
   const mainNameVariants = new Set<string>();
   mainNameVariants.add(mainAuthorKey);
+  const firstInitial = (name: string) => canonicalNameKey(name).split(/\s+/)[0]?.[0] ?? '';
+  const mainInitial = firstInitial(mainAuthorKey);
   for (const [name] of mainAuthorFreq) {
-    if (getLastName(name) === mainLastName && name !== mainAuthorKey) {
+    if (name === mainAuthorKey) continue;
+    const last = getLastName(name);
+    if (last === mainLastName) {
+      mainNameVariants.add(name);
+    } else if (surnamesCompatible(last, mainLastName) && firstInitial(name) === mainInitial) {
+      // Maiden/married variant of the main author ("MK Pein" vs
+      // "M Pein-Hackelbusch"); the initial guard keeps relatives out.
       mainNameVariants.add(name);
     }
   }
@@ -81,7 +90,7 @@ export async function fetchCoAuthorGeoData(
   // Count shared papers/citations from ScholarFolio data
   const coAuthorStats = new Map<string, { papers: number; citations: number }>();
   for (const pub of publications) {
-    for (const a of (pub.authors || []).filter(a => a && a.trim() && !mainNameVariants.has(a))) {
+    for (const a of (pub.authors || []).filter(a => isRealAuthorName(a) && !mainNameVariants.has(a))) {
       const existing = coAuthorStats.get(a) ?? { papers: 0, citations: 0 };
       coAuthorStats.set(a, { papers: existing.papers + 1, citations: existing.citations + pub.citations });
     }

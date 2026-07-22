@@ -1,4 +1,91 @@
 /**
+ * Fold the Unicode punctuation that differs between our data sources into its
+ * ASCII equivalent. OpenAlex stores "Pein‐Hackelbusch" with U+2010 HYPHEN and
+ * Google Scholar emits both that and ASCII "-" for the same author, which made
+ * exact-string name comparisons miss (author lookups resolved to the wrong
+ * record; authors appeared as their own co-authors).
+ */
+export function foldNamePunctuation(name: string): string {
+  return name
+    // hyphen/dash family → ASCII hyphen
+    .replace(/[‐‑‒–—―−﹘﹣－]/g, '-')
+    // apostrophe family → ASCII apostrophe (O’Brien vs O'Brien)
+    .replace(/[‘’‚‛ʼ′]/g, "'")
+    // soft hyphen and zero-width characters carry no meaning in a name
+    .replace(/[­​‌‍﻿]/g, '')
+    // exotic spaces → plain space
+    .replace(/[    ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Whether an author-list entry is a real person rather than a truncation
+ * marker. Google Scholar abbreviates long author lists with a trailing "..."
+ * (and occasionally "et al."), which otherwise gets counted as a prolific
+ * collaborator and can win the top-co-author slot outright.
+ */
+export function isRealAuthorName(name: string): boolean {
+  const s = foldNamePunctuation(name || '').trim();
+  if (!s) return false;
+  if (/^[.…\s]+$/.test(s)) return false;            // "...", "…", ". . ."
+  if (/^et\.?\s*al\.?$/i.test(s)) return false;          // "et al", "et al."
+  if (/^and\s+others$/i.test(s)) return false;
+  return /\p{L}/u.test(s);                                // must contain a letter
+}
+
+/**
+ * Comparison key for author names: punctuation-folded, diacritic-stripped,
+ * lowercased, with formatting punctuation removed. Hyphens are kept so
+ * compound surnames stay distinguishable.
+ */
+export function canonicalNameKey(name: string): string {
+  return foldNamePunctuation(name)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[.,;:'"()]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Split a surname into its meaningful components: "pein-hackelbusch" →
+ * ["pein", "hackelbusch"]. Used to recognise maiden/married name pairs, where
+ * one surname is a component of the other.
+ */
+export function surnameComponents(lastName: string): string[] {
+  return canonicalNameKey(lastName)
+    .split(/[-\s]+/)
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Whether two surnames plausibly belong to the same person: identical, or one
+ * is a component of the other's compound form ("Pein" vs "Pein-Hackelbusch",
+ * the common maiden→married pattern). Requires the shared component to be
+ * ≥3 characters so initials and particles ("de", "van") can't bridge two
+ * unrelated surnames. Callers must additionally check given names.
+ */
+export function surnamesCompatible(lastA: string, lastB: string): boolean {
+  const a = canonicalNameKey(lastA);
+  const b = canonicalNameKey(lastB);
+  if (!a || !b) return false;
+  if (a === b) return true;
+
+  const partsA = surnameComponents(a);
+  const partsB = surnameComponents(b);
+  if (partsA.length === 0 || partsB.length === 0) return false;
+  // Only bridge when one side is a single surname contained in the other's
+  // compound form — never merge two different compounds.
+  const single = partsA.length === 1 ? partsA[0] : partsB.length === 1 ? partsB[0] : null;
+  if (!single || single.length < 3) return false;
+  const compound = partsA.length === 1 ? partsB : partsA;
+  if (compound.length < 2) return false;
+  return compound.includes(single);
+}
+
+/**
  * Extracts the last name from a full name, handling compound last names
  * with common prefixes (van, von, de, del, della, di, da, dos, das, du, den, der).
  *
@@ -84,16 +171,18 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
   const nameFreq = new Map<string, number>();
   for (const pub of publications) {
     for (const a of pub.authors) {
-      if (a && a.trim()) nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
+      if (isRealAuthorName(a)) nameFreq.set(a, (nameFreq.get(a) || 0) + 1);
     }
   }
 
   // Build a fuzzy key for each name: "baselastname|firstinitial" (lowercased, prefix-stripped)
   function fuzzyKey(name: string): string {
-    const trimmed = name.trim();
+    // Fold Unicode punctuation first so "Pein‐Hackelbusch" (U+2010) and
+    // "Pein-Hackelbusch" (ASCII) land in the same group.
+    const trimmed = foldNamePunctuation(name);
     if (!trimmed) return '';
     const lastName = extractLastName(trimmed);
-    const baseLast = stripLastNamePrefix(lastName).toLowerCase().replace(/[.,]/g, '');
+    const baseLast = canonicalNameKey(stripLastNamePrefix(lastName));
     const firstPart = trimmed.split(/\s+/)[0];
     const firstInitial = firstPart ? firstPart[0].toLowerCase() : '';
     return `${baseLast}|${firstInitial}`;
@@ -123,7 +212,7 @@ export function normalizeAuthorNames(publications: { authors: string[] }[]): typ
 
     // Safety check: all variants must have same base last name (prefix-stripped, case-insensitive)
     const baseLastNames = new Set(variants.map(v =>
-      stripLastNamePrefix(extractLastName(v)).toLowerCase().replace(/[.,]/g, '')
+      canonicalNameKey(stripLastNamePrefix(extractLastName(foldNamePunctuation(v))))
     ));
     if (baseLastNames.size > 1) continue;
 
