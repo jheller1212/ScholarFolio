@@ -84,66 +84,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Query total credits already granted to this user from feedback
-    const { data: sumData, error: sumError } = await supabase
-      .from('feedback')
-      .select('credits_granted')
-      .eq('user_id', userId);
-
-    if (sumError) {
-      console.error('Error querying feedback credits:', sumError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to process feedback' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const totalCreditsGranted = (sumData ?? []).reduce(
-      (sum: number, row: { credits_granted: number }) => sum + (row.credits_granted ?? 0),
-      0
-    );
-
-    const isFirstSubmission = (sumData ?? []).length === 0;
-
-    // Calculate credits to grant
-    let creditsToGrant: number;
-    if (totalCreditsGranted >= FEEDBACK_CREDIT_CAP) {
-      creditsToGrant = 0;
-    } else {
-      const earned = isFirstSubmission ? FIRST_SUBMISSION_CREDITS : SUBSEQUENT_CREDITS;
-      creditsToGrant = Math.min(earned, FEEDBACK_CREDIT_CAP - totalCreditsGranted);
-    }
-
-    // Insert feedback record
-    const { error: insertError } = await supabase.from('feedback').insert({
-      user_id: userId,
-      rating: rating ?? null,
-      comment: comment ?? null,
-      credits_granted: creditsToGrant,
-      profile_viewed: profileViewed ?? null,
-      source,
+    // Save the feedback and grant credits in ONE transaction. Doing the cap
+    // check here — read the running total, then insert, then credit — let two
+    // simultaneous submissions both read the same total and both pay out.
+    const { data: grantedRaw, error: rpcError } = await supabase.rpc('submit_feedback_with_credits', {
+      p_user_id: userId,
+      p_rating: rating ?? null,
+      p_comment: comment ?? null,
+      p_profile_viewed: profileViewed ?? null,
+      p_source: source,
+      p_first_credits: FIRST_SUBMISSION_CREDITS,
+      p_subsequent_credits: SUBSEQUENT_CREDITS,
+      p_cap: FEEDBACK_CREDIT_CAP,
     });
 
-    if (insertError) {
-      console.error('Error inserting feedback:', insertError);
+    if (rpcError) {
+      console.error('Error saving feedback:', rpcError);
       return new Response(
         JSON.stringify({ error: 'Failed to save feedback' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Grant credits if applicable
-    if (creditsToGrant > 0) {
-      const { error: rpcError } = await supabase.rpc('increment_credits', {
-        p_user_id: userId,
-        p_amount: creditsToGrant,
-      });
-
-      if (rpcError) {
-        console.error('Error granting credits:', rpcError);
-        // Feedback is already saved — log the error but don't fail the response
-      }
-    }
+    const creditsToGrant: number = typeof grantedRaw === 'number' ? grantedRaw : 0;
 
     const message = creditsToGrant > 0
       ? `Thank you for your feedback! You've earned ${creditsToGrant} credit${creditsToGrant !== 1 ? 's' : ''}.`
