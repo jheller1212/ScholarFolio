@@ -38,3 +38,4 @@ supabase/.temp/
 *.sw?
 # Local Netlify folder
 .netlify
+*.tsbuildinfo
