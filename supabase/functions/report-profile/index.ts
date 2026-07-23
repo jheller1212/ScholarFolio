@@ -82,60 +82,35 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
-    // Decide the grant before inserting, so the report row records what was given.
-    let creditsToGrant = 0;
-    let capReached = false;
-    if (userId) {
-      const { data: priorRows, error: priorError } = await supabase
-        .from('profile_reports')
-        .select('credits_granted')
-        .eq('user_id', userId);
-      if (priorError) {
-        console.error('report-profile: prior credits lookup failed:', priorError);
-      } else {
-        const alreadyGranted = (priorRows ?? []).reduce(
-          (sum: number, row: { credits_granted: number | null }) => sum + (row.credits_granted ?? 0),
-          0
-        );
-        creditsToGrant = Math.max(0, Math.min(REPORT_CREDITS, REPORT_CREDIT_CAP - alreadyGranted));
-        capReached = creditsToGrant === 0;
-      }
-    }
-
-    const { error: insertError } = await supabase.from('profile_reports').insert({
-      author_id: authorId ?? null,
-      author_name: authorName ?? null,
-      reporter_email: reporterEmail?.trim() || null,
-      message: message.trim(),
-      page_url: pageUrl ?? null,
-      user_id: userId,
-      credits_granted: creditsToGrant,
+    // Save the report and grant the credits in ONE database transaction. The
+    // cap check has to happen under a row lock: when it was done here — read
+    // the running total, then insert, then credit — two requests fired at once
+    // both read "nothing granted yet" and both paid out, so the ceiling could
+    // be walked past at will.
+    const { data: granted, error: rpcError } = await supabase.rpc('submit_profile_report', {
+      p_message: message,
+      p_author_id: authorId ?? null,
+      p_author_name: authorName ?? null,
+      p_reporter_email: reporterEmail ?? null,
+      p_page_url: pageUrl ?? null,
+      p_user_id: userId,
+      p_credits: REPORT_CREDITS,
+      p_cap: REPORT_CREDIT_CAP,
     });
 
-    if (insertError) {
-      console.error('report-profile: insert failed:', insertError);
+    if (rpcError) {
+      console.error('report-profile: submit failed:', rpcError);
       return json({ error: 'Could not save your report. Please try again.' }, 500, req);
     }
 
-    if (creditsToGrant > 0 && userId) {
-      const { error: creditError } = await supabase.rpc('increment_credits', {
-        p_user_id: userId,
-        p_amount: creditsToGrant,
-      });
-      if (creditError) {
-        // The report is saved and matters more than the credits; report the
-        // grant honestly as zero rather than claiming credits that didn't land.
-        console.error('report-profile: credit grant failed:', creditError);
-        await supabase.from('profile_reports')
-          .update({ credits_granted: 0 })
-          .eq('user_id', userId)
-          .eq('message', message.trim());
-        return json({ ok: true, creditsGranted: 0, signedIn: true, capReached: false }, 200, req);
-      }
-    }
-
+    const creditsGranted = typeof granted === 'number' ? granted : 0;
     return json(
-      { ok: true, creditsGranted: creditsToGrant, signedIn: Boolean(userId), capReached },
+      {
+        ok: true,
+        creditsGranted,
+        signedIn: Boolean(userId),
+        capReached: Boolean(userId) && creditsGranted === 0,
+      },
       200,
       req
     );
