@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, UserPlus, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare, Bug, Send, Mail, Loader2, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Users, CreditCard, Search, TrendingUp, Eye, Flag, ExternalLink, AlertTriangle, MessageSquare, Bug, Send, Mail, Loader2, X } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';

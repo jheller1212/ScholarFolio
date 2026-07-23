@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { FileText, TrendingUp, Users, BookOpen, Award, Flag, Loader2, Check, Search } from 'lucide-react';
+import { FileText, Flag, Loader2, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { logCaughtError } from '../lib/errorLogger';
 import { useAuth } from '../contexts/AuthContext';

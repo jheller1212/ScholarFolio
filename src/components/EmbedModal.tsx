@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Check, Code } from 'lucide-react';
 
 interface EmbedModalProps {

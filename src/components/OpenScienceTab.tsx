@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Unlock, ExternalLink } from 'lucide-react';
 import { MetricsCard } from './MetricsCard';
 import type { Author, OaStatus } from '../types/scholar';

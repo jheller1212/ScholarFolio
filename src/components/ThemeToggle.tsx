@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 
 type Theme = 'light' | 'dark' | 'system';

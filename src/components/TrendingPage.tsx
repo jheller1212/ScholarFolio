@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, TrendingUp, Eye, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
 import { fetchTrendingProfiles, fetchTotalViewCount, type TrendingProfile } from '../services/profile-views';

@@ -58,8 +58,6 @@ type TabId = typeof tabs[number]['id'];
 export function ProfileView({
   data,
   profileUrl,
-  loading,
-  error,
   onSearch,
   onReset,
   socialLinks,
@@ -72,7 +70,6 @@ export function ProfileView({
   const [imgError, setImgError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -339,7 +336,7 @@ export function ProfileView({
                             <Link className="h-3 w-3" /> Copy link
                           </button>
                           <button onClick={() => {
-                            const text = `Check out ${data.name}'s research profile on ScholarFolio`;
+                            // share-offsite takes only a URL; the card text comes from our OG tags
                             window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400');
                             setShowShareMenu(false);
                           }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">

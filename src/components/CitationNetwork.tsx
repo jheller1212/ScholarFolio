@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { select, selectAll } from 'd3-selection';
+import { select } from 'd3-selection';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
 import type { Simulation as D3Simulation, SimulationNodeDatum as D3SimulationNode } from 'd3-force';
 import { drag, type D3DragEvent } from 'd3-drag';
 import { zoom as d3Zoom, zoomIdentity } from 'd3-zoom';
 import { scaleSequential } from 'd3-scale';
 import { interpolateRdYlGn, interpolateViridis } from 'd3-scale-chromatic';
-import { Network, Share2, BookOpen, Presentation as Citation, Users, Info, Clock, GitBranch, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
+import { Network, BookOpen, Presentation as Citation, Users, Info, Clock, Waypoints, TrendingUp, UserCheck, Sparkles } from 'lucide-react';
 import type { Publication } from '../types/scholar';
 import { coAuthorsOf, inferMainAuthor } from '../utils/authorIdentity';
 import { computeCollaborationInsights } from '../utils/collaborationInsights';

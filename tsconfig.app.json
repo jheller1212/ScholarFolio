@@ -18,7 +18,11 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* describe/it/expect in src/services/metrics/__tests__, chrome.* in the
+       browser-extension entry points (src/background.ts, src/content.tsx) */
+    "types": ["vitest/globals", "chrome"]
   },
   "include": ["src"]
 }

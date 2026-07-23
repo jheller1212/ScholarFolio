@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowUpDown, BookOpen, Presentation as Citation, Calendar, Award, Star, TrendingUp, Unlock, Lock } from 'lucide-react';
 import type { Publication, JournalRanking, OpenAccessStats, OaStatus, S2PublicationData } from '../types/scholar';
 

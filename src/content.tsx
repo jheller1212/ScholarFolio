@@ -1,4 +1,3 @@
-import { createRoot } from 'react-dom/client';
 import './index.css';
 
 async function scrapePublicationDetails(url: string) {

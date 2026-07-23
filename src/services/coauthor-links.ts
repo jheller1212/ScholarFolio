@@ -1,8 +1,13 @@
 import { supabase } from '../lib/supabase';
 import { oaFetchJson, OA_API_URL, OA_EMAIL } from './openalex/author-lookup';
+import { canonicalNameKey } from '../utils/names';
 
+/** Cache key for a co-author name. Uses the shared canonical form so the same
+ *  researcher spelled "Müller", "Mueller" or with a Unicode hyphen resolves to
+ *  one cache entry — a local lowercase-and-strip-dots version folded none of
+ *  that and quietly split one person across several rows. */
 function normalizeName(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[.,]/g, '');
+  return canonicalNameKey(name);
 }
 
 export interface CoAuthorLink {

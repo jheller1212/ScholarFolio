@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Zap, X, Shield, Clock, Check, Sparkles, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthButton } from './AuthButton';
