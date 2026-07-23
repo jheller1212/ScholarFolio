@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle, Search, Network, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, BadgeCheck, Globe, Gauge, TrendingUp, Unlock, Award } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, Search, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, Globe, Gauge, TrendingUp, Unlock } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { ThemeToggle } from './ThemeToggle';

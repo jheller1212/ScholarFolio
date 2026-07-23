@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Linkedin, Github, ExternalLink } from 'lucide-react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
@@ -14,7 +14,6 @@ import { ChangelogPage } from './components/ChangelogPage';
 import { TrendingPage } from './components/TrendingPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { AuthButton } from './components/AuthButton';
 import { CreditPacks } from './components/CreditPacks';
 import { SignUpWall } from './components/SignUpWall';
 import { ProfileSkeleton } from './components/ProfileSkeleton';

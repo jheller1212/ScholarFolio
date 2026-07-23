@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Search, Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { OA_API_URL, OA_EMAIL, oaRateLimiter, oaFetchJson } from '../services/openalex/author-lookup';
 import { logCaughtError } from '../lib/errorLogger';

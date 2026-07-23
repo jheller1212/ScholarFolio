@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface MetricAnalysis {

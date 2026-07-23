@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getEmailPreferences, saveEmailPreferences } from '../lib/emailPreferences';

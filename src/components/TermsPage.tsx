@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
 

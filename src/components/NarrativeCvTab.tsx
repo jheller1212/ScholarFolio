@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Download, Info, Loader2 } from 'lucide-react';
 import { logCaughtError } from '../lib/errorLogger';
 // docx (~650KB) is dynamically imported on export click

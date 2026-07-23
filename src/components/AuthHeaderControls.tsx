@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download, Mail } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';

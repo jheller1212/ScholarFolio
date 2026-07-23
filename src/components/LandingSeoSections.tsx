@@ -1,4 +1,3 @@
-import React from 'react';
 
 // Indexable landing content: what the product is, in the words people
 // actually search with, plus an FAQ emitting FAQPage structured data.

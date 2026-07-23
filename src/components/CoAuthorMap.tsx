@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { select } from 'd3-selection';
+import 'd3-transition'; // registers selection.transition(), used for zoom animations
 import { zoom as d3Zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { geoNaturalEarth1, geoPath, geoCentroid, geoInterpolate, type GeoPermissibleObjects, type GeoProjection } from 'd3-geo';
 import * as topojson from 'topojson-client';

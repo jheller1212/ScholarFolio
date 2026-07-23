@@ -71,7 +71,6 @@ export async function fetchCoAuthorGeoData(
   const mainAuthorKey = [...mainAuthorFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? authorName;
 
   // Build a set of name variants that likely refer to the main author
-  const mainLastName = getLastName(mainAuthorKey);
   const mainNameVariants = new Set<string>();
   mainNameVariants.add(mainAuthorKey);
   for (const [name] of mainAuthorFreq) {
