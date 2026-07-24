@@ -26,9 +26,14 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">1. Data Controller</h2>
+            <p className="mb-3">
+              Scholar Folio is an independent personal project built and operated by Jonas Heller
+              (Maastricht, the Netherlands) as a private individual. It is <strong>not affiliated with,
+              endorsed by, or operated on behalf of</strong> Maastricht University or any other institution.
+            </p>
             <p>
-              Scholar Folio is operated by Jonas Heller, Assistant Professor at Maastricht University, the Netherlands.
-              For questions about this policy or your data, contact:{' '}
+              For the purposes of the GDPR, Jonas Heller is the data controller. For any question about
+              this policy or your data, or to exercise your rights, contact:{' '}
               <a href="mailto:info@scholarfolio.org" className="text-[#2d7d7d] hover:underline">info@scholarfolio.org</a>.
             </p>
           </section>
