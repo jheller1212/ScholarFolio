@@ -7,9 +7,35 @@
  * Batch endpoint: up to 500 papers per request
  */
 
-const S2_API = 'https://api.semanticscholar.org/graph/v1';
 const BATCH_SIZE = 500;
 const FIELDS = 'title,citationCount,influentialCitationCount,tldr,externalIds';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+/**
+ * Call the Semantic Scholar Graph API through the `scholar` edge function so
+ * the visitor's IP never reaches S2 (GDPR: no undisclosed client-side transfer
+ * to a US third party). `path` is relative to the S2 host, e.g.
+ * "/graph/v1/paper/search?query=...". Pass `body` for the POST batch endpoint.
+ * Returns null on any failure — callers already treat S2 as best-effort.
+ */
+export async function s2Fetch<T>(path: string, body?: unknown): Promise<T | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/scholar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ action: 's2', s2Path: path, s2Body: body }),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
 
 export interface S2PaperData {
   paperId: string;
@@ -52,17 +78,11 @@ function normalizeTitle(title: string): string {
  * Search S2 for a paper by title and return the best match
  */
 async function searchPaperByTitle(title: string): Promise<S2PaperData | null> {
-  try {
-    const res = await fetch(
-      `${S2_API}/paper/search?query=${encodeURIComponent(title)}&limit=1&fields=${FIELDS}`
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.data?.length) return null;
-    return data.data[0];
-  } catch {
-    return null;
-  }
+  const data = await s2Fetch<{ data?: S2PaperData[] }>(
+    `/graph/v1/paper/search?query=${encodeURIComponent(title)}&limit=1&fields=${FIELDS}`
+  );
+  if (!data?.data?.length) return null;
+  return data.data[0];
 }
 
 /**
@@ -75,24 +95,15 @@ async function batchFetchByDois(dois: string[]): Promise<(S2PaperData | null)[]>
 
   for (let i = 0; i < dois.length; i += BATCH_SIZE) {
     const batch = dois.slice(i, i + BATCH_SIZE);
-    try {
-      const res = await fetch(
-        `${S2_API}/paper/batch?fields=${FIELDS}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: batch.map(d => `DOI:${d}`) }),
-        }
-      );
-      if (!res.ok) {
-        results.push(...batch.map(() => null));
-        continue;
-      }
-      const data: (S2PaperData | null)[] = await res.json();
-      results.push(...data);
-    } catch {
+    const data = await s2Fetch<(S2PaperData | null)[]>(
+      `/graph/v1/paper/batch?fields=${FIELDS}`,
+      { ids: batch.map(d => `DOI:${d}`) }
+    );
+    if (!Array.isArray(data)) {
       results.push(...batch.map(() => null));
+      continue;
     }
+    results.push(...data);
   }
 
   return results;

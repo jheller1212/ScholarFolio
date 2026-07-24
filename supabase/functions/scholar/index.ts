@@ -988,6 +988,81 @@ async function handleOpenAlexProxy(
   return { status: 200, body: json, cache: 'MISS' };
 }
 
+// --- Semantic Scholar proxy ---
+// S2 enrichment used to run in the browser, which sent every visitor's IP to
+// a US API (undisclosed third-party transfer). Routing it through the edge
+// function means only the server's IP reaches S2. SSRF-guarded and allowlisted
+// so it can't become an open proxy. GET responses are cached; POST batch is
+// forwarded as-is. Never throws.
+const S2_BASE = 'https://api.semanticscholar.org';
+const S2_ALLOWED_PREFIXES = ['/graph/v1/paper/search', '/graph/v1/paper/batch', '/graph/v1/author/search'];
+const S2_CACHE_TTL_SECONDS = 86400; // 24h
+
+async function handleS2Proxy(
+  s2Path: unknown,
+  s2Body: unknown
+): Promise<{ status: number; body: any }> {
+  if (typeof s2Path !== 'string' || !s2Path.startsWith('/') || s2Path.length > 4000) {
+    return { status: 400, body: { error: 'Invalid Semantic Scholar path' } };
+  }
+  const pathname = s2Path.split('?')[0];
+  if (!S2_ALLOWED_PREFIXES.some((p) => pathname === p)) {
+    return { status: 400, body: { error: 'Semantic Scholar endpoint not allowed' } };
+  }
+
+  let target: URL;
+  try {
+    target = new URL(S2_BASE + s2Path);
+  } catch {
+    return { status: 400, body: { error: 'Malformed Semantic Scholar path' } };
+  }
+  // Hard SSRF guard — the host must remain Semantic Scholar regardless of input.
+  if (target.hostname !== 'api.semanticscholar.org') {
+    return { status: 400, body: { error: 'Invalid Semantic Scholar host' } };
+  }
+
+  const isPost = s2Body !== undefined && s2Body !== null;
+  const cacheKey = isPost ? null : `s2:${target.pathname}?${target.searchParams.toString()}`;
+
+  if (cacheKey) {
+    try {
+      const { data: cached } = await supabase
+        .from('scholar_cache').select('data').eq('url', cacheKey)
+        .gt('expires_at', new Date().toISOString()).maybeSingle();
+      if (cached?.data) return { status: 200, body: cached.data };
+    } catch (_) { /* cache miss non-fatal */ }
+  }
+
+  let resp: Response;
+  try {
+    resp = await fetch(target.toString(), {
+      method: isPost ? 'POST' : 'GET',
+      headers: isPost ? { 'Content-Type': 'application/json' } : undefined,
+      body: isPost ? JSON.stringify(s2Body) : undefined,
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (e) {
+    console.error('[S2 proxy] fetch failed:', e instanceof Error ? e.message : String(e));
+    return { status: 502, body: { error: 'Semantic Scholar request failed' } };
+  }
+  if (!resp.ok) {
+    return { status: resp.status, body: { error: `Semantic Scholar HTTP ${resp.status}` } };
+  }
+  let json: any;
+  try {
+    json = await resp.json();
+  } catch {
+    return { status: 502, body: { error: 'Semantic Scholar returned invalid JSON' } };
+  }
+  if (cacheKey) {
+    try {
+      const expiresAt = new Date(Date.now() + S2_CACHE_TTL_SECONDS * 1000).toISOString();
+      await supabase.from('scholar_cache').upsert({ url: cacheKey, data: json, expires_at: expiresAt });
+    } catch (_) { /* non-fatal */ }
+  }
+  return { status: 200, body: json };
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -1041,6 +1116,21 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           ...(proxied.cache ? { 'X-OA-Cache': proxied.cache } : {}),
         },
+      });
+    }
+
+    // --- Semantic Scholar proxy (server-side so visitor IPs never reach S2) ---
+    if (action === 's2') {
+      if (oaProxyRateLimited(clientIp)) {
+        return new Response(
+          JSON.stringify({ error: 'Too many requests. Please slow down.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const proxied = await handleS2Proxy(requestData.s2Path, requestData.s2Body);
+      return new Response(JSON.stringify(proxied.body), {
+        status: proxied.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
