@@ -67,6 +67,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Netlify</strong> (US) — web hosting and CDN.</li>
               <li><strong>SerpAPI</strong> (US) — Google Scholar data retrieval.</li>
               <li><strong>OpenAlex</strong> — open academic API used for open access data, field-normalized metrics, co-author geography, and p-index computation. Only public author/work identifiers are queried.</li>
+              <li><strong>Semantic Scholar</strong> (US) — academic API used to enrich publications with influential-citation counts and summaries. Only public paper titles and DOIs are queried; requests are made from our servers, not your browser.</li>
               <li><strong>ORCID</strong> — public API used to retrieve education, employment, and grant records when an ORCID identifier is available. No personal data is sent beyond the public ORCID iD.</li>
               <li><strong>NIH iCite</strong> — public API used to retrieve Relative Citation Ratios for PubMed-indexed papers. Only PubMed identifiers are queried.</li>
             </ul>

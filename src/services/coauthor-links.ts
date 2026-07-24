@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { oaFetchJson, OA_API_URL, OA_EMAIL } from './openalex/author-lookup';
 import { canonicalNameKey } from '../utils/names';
+import { s2Fetch } from './semanticscholar';
 
 /** Cache key for a co-author name. Uses the shared canonical form so the same
  *  researcher spelled "Müller", "Mueller" or with a Unicode hyphen resolves to
@@ -118,19 +119,15 @@ async function enrichCoAuthorLink(
     }
   }
 
-  // Fetch S2 author ID by searching for the author's name
+  // Fetch S2 author ID by searching for the author's name (via the edge
+  // function proxy — keeps the visitor's IP off Semantic Scholar's servers).
   if (fetchS2) {
-    try {
-      const res = await fetch(
-        `https://api.semanticscholar.org/graph/v1/author/search?query=${encodeURIComponent(displayName)}&limit=1`
-      );
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data?.[0]?.authorId) {
-          updates.s2_author_id = json.data[0].authorId;
-        }
-      }
-    } catch { /* best effort */ }
+    const json = await s2Fetch<{ data?: Array<{ authorId?: string }> }>(
+      `/graph/v1/author/search?query=${encodeURIComponent(displayName)}&limit=1`
+    );
+    if (json?.data?.[0]?.authorId) {
+      updates.s2_author_id = json.data[0].authorId;
+    }
   }
 
   if (Object.keys(updates).length > 0) {
