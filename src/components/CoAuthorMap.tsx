@@ -215,7 +215,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
     // Load world TopoJSON (cached after first fetch)
     const worldPromise = cachedWorldTopology
       ? Promise.resolve(cachedWorldTopology)
-      : fetch('https://unpkg.com/world-atlas@2/countries-110m.json', { signal: timeoutSignal(15000) })
+      : fetch('/countries-110m.json', { signal: timeoutSignal(15000) })
           .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
           .then((data: WorldTopology) => { cachedWorldTopology = data; return data; });
 
