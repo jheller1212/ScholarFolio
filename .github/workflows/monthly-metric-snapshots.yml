@@ -1,0 +1,26 @@
+name: Monthly metric snapshots
+
+# Captures each verified profile's OpenAlex metrics once a month, so the
+# citation digest has a history to diff against. pg_net isn't installed, so we
+# trigger the edge function from GitHub's scheduler instead of pg_cron.
+#
+# Requires repo secret SUPABASE_SERVICE_ROLE_KEY (Supabase dashboard →
+# Project Settings → API → service_role key). SUPABASE_PROJECT_REF already
+# exists for the edge-function deploy workflow.
+
+on:
+  schedule:
+    - cron: '0 4 1 * *'   # 04:00 UTC on the 1st of each month
+  workflow_dispatch: {}    # allow manual runs
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger snapshot-metrics
+        run: |
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
+            -X POST "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/snapshot-metrics" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}")
+          echo "HTTP $code"; cat /tmp/out.json
+          test "$code" = "200"
