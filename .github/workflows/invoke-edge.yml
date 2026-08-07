@@ -1,0 +1,40 @@
+name: Invoke edge function
+
+# Ops utility: invoke a service-role-gated edge function. Fetches the
+# service_role key inside the runner via SUPABASE_ACCESS_TOKEN (never stored),
+# so functions like send-claim-nudge / snapshot-metrics can be triggered
+# manually for testing. Dispatch-only; only repo collaborators can run it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fn:
+        description: 'Edge function name (e.g. send-claim-nudge)'
+        required: true
+      payload:
+        description: 'JSON body'
+        required: true
+        default: '{}'
+
+jobs:
+  invoke:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Fetch service key and invoke
+        run: |
+          KEY=$(supabase projects api-keys --project-ref "$REF" --output json | jq -r '.[] | select(.name=="service_role") | .api_key')
+          if [ -z "$KEY" ] || [ "$KEY" = "null" ]; then echo "could not read service_role key"; exit 1; fi
+          echo "::add-mask::$KEY"
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST \
+            "https://$REF.supabase.co/functions/v1/${{ github.event.inputs.fn }}" \
+            -H "Authorization: Bearer $KEY" \
+            -H "Content-Type: application/json" \
+            --data '${{ github.event.inputs.payload }}')
+          echo "HTTP $code"; cat /tmp/out.json; echo
+          test "$code" = "200"

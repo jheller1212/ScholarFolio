@@ -4,23 +4,31 @@ name: Monthly metric snapshots
 # citation digest has a history to diff against. pg_net isn't installed, so we
 # trigger the edge function from GitHub's scheduler instead of pg_cron.
 #
-# Requires repo secret SUPABASE_SERVICE_ROLE_KEY (Supabase dashboard →
-# Project Settings → API → service_role key). SUPABASE_PROJECT_REF already
-# exists for the edge-function deploy workflow.
+# Fetches the service_role key inside the runner via SUPABASE_ACCESS_TOKEN
+# (never stored) — no separate secret needed.
 
 on:
   schedule:
     - cron: '0 4 1 * *'   # 04:00 UTC on the 1st of each month
-  workflow_dispatch: {}    # allow manual runs
+  workflow_dispatch: {}
 
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
-      - name: Trigger snapshot-metrics
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Fetch service key and run snapshot
         run: |
-          code=$(curl -s -o /tmp/out.json -w '%{http_code}' \
-            -X POST "https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/snapshot-metrics" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}")
-          echo "HTTP $code"; cat /tmp/out.json
+          KEY=$(supabase projects api-keys --project-ref "$REF" --output json | jq -r '.[] | select(.name=="service_role") | .api_key')
+          if [ -z "$KEY" ] || [ "$KEY" = "null" ]; then echo "could not read service_role key"; exit 1; fi
+          echo "::add-mask::$KEY"
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST \
+            "https://$REF.supabase.co/functions/v1/snapshot-metrics" \
+            -H "Authorization: Bearer $KEY")
+          echo "HTTP $code"; cat /tmp/out.json; echo
           test "$code" = "200"
