@@ -17,6 +17,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.39.3";
  */
 
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", SERVICE_KEY);
 
@@ -103,7 +104,7 @@ async function sendOne(t: Target, kind: string): Promise<{ ok: boolean; id?: str
 
 Deno.serve(async (req) => {
   const bearer = (req.headers.get("Authorization") || "").replace("Bearer ", "");
-  if (!SERVICE_KEY || bearer !== SERVICE_KEY) {
+  if (!CRON_SECRET || bearer !== CRON_SECRET) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
   }
   if (!RESEND_API_KEY) {
