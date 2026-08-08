@@ -3,9 +3,6 @@ name: Monthly metric snapshots
 # Captures each verified profile's OpenAlex metrics once a month, so the
 # citation digest has a history to diff against. pg_net isn't installed, so we
 # trigger the edge function from GitHub's scheduler instead of pg_cron.
-#
-# Reads the service_role key inside the runner from the Supabase Management API
-# (via SUPABASE_ACCESS_TOKEN, never stored) — no separate secret needed.
 
 on:
   schedule:
@@ -16,18 +13,13 @@ jobs:
   snapshot:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
     steps:
-      - name: Fetch service key and run snapshot
+      - name: Run snapshot
         run: |
-          KEY=$(curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$REF/api-keys?reveal=true" \
-            | jq -r '.[] | select(.name=="service_role") | .api_key')
-          if [ -z "$KEY" ] || [ "$KEY" = "null" ]; then echo "could not read service_role key"; exit 1; fi
-          echo "::add-mask::$KEY"
           code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST \
             "https://$REF.supabase.co/functions/v1/snapshot-metrics" \
-            -H "Authorization: Bearer $KEY")
+            -H "Authorization: Bearer $CRON_SECRET")
           echo "HTTP $code"; cat /tmp/out.json; echo
           test "$code" = "200"
