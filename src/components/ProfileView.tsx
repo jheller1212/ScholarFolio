@@ -23,6 +23,7 @@ import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
+import { canonicalOpenAlexId } from '../services/openalex/profile';
 import { scholarService } from '../services/scholar';
 import { extractLastName } from '../utils/names';
 import { useFeedback } from '../hooks/useFeedback';
@@ -127,7 +128,11 @@ export function ProfileView({
   const scholarId = isOpenAlexProfile ? '' : rawUserId;
   // Identity for claiming/correcting — works for both Scholar (bare id) and
   // OpenAlex ("openalex:<id>"). ORCID verification makes claiming safe for both.
-  const claimAuthorId = isOpenAlexProfile ? rawUserId : scholarId;
+  // A profile opened at /scholar/openalex:<id> has no ?user= param and its
+  // profileUrl is the bare token, so rawUserId is empty there: read the token
+  // from profileUrl too, or claiming and sharing silently do nothing.
+  const openAlexId = isOpenAlexProfile ? canonicalOpenAlexId(rawUserId || profileUrl || '') : '';
+  const claimAuthorId = isOpenAlexProfile ? openAlexId : scholarId;
 
   // Check if this profile has been claimed
   useEffect(() => {
@@ -170,7 +175,7 @@ export function ProfileView({
     // (openalex:<id>) so link-preview crawlers get a URL that resolves.
     const url = claimedSlug
       ? `https://scholarfolio.org/${claimedSlug}`
-      : `https://scholarfolio.org/scholar/${encodeURIComponent(scholarId || rawUserId)}`;
+      : `https://scholarfolio.org/scholar/${encodeURIComponent(scholarId || openAlexId)}`;
 
     document.title = title;
 
@@ -191,7 +196,7 @@ export function ProfileView({
     return () => {
       document.title = 'Scholar Folio — Your research, at a glance';
     };
-  }, [data, claimedSlug, scholarId, rawUserId]);
+  }, [data, claimedSlug, scholarId, openAlexId]);
 
   const handleClaimed = (slug: string) => {
     setClaimedSlug(slug);
