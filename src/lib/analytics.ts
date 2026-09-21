@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { randomId } from './randomId';
 
 const SESSION_KEY = 'sf_attribution';
 
@@ -49,7 +50,7 @@ function getAttribution(): Attribution | null {
 function getSessionId(): string {
   let sid = sessionStorage.getItem('sf_session_id');
   if (!sid) {
-    sid = crypto.randomUUID();
+    sid = randomId();
     sessionStorage.setItem('sf_session_id', sid);
   }
   return sid;

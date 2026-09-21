@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { LogIn, User, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { randomId } from '../lib/randomId';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
 
 export function AuthButton() {
@@ -187,7 +188,7 @@ export function AuthButton() {
                 }
                 if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup');
                 else clearPendingEmailConsent();
-                const state = crypto.randomUUID();
+                const state = randomId();
                 sessionStorage.setItem('orcid_oauth_state', state);
                 const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
                 window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
