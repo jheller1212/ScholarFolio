@@ -2,7 +2,7 @@ import type { JournalRanking, OpenAccessStats, OaStatus } from '../../types/scho
 import { findOpenAlexAuthor, oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
 import { fetchAuthorEnrichmentWorks } from './works';
 
-export { searchOpenAlexAuthors, fetchOpenAlexProfile, resolveOpenAlexFallback, OPENALEX_ID_PREFIX, toOpenAlexShortId } from './profile';
+export { searchOpenAlexAuthors, fetchOpenAlexProfile, resolveOpenAlexFallback, canonicalOpenAlexId, OPENALEX_ID_PREFIX, toOpenAlexShortId } from './profile';
 
 export class OpenAlexService {
   /**

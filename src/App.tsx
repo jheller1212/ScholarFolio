@@ -23,7 +23,7 @@ import { supabase } from './lib/supabase';
 import { ADMIN_EMAIL } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
-import { openAlexService, fetchOpenAlexProfile, resolveOpenAlexFallback, OPENALEX_ID_PREFIX } from './services/openalex';
+import { openAlexService, fetchOpenAlexProfile, resolveOpenAlexFallback, canonicalOpenAlexId, OPENALEX_ID_PREFIX } from './services/openalex';
 import { fetchProfileOverrides, applyProfileOverrides } from './services/corrections';
 import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
@@ -359,7 +359,9 @@ function AppContent() {
       let profileData: Awaited<ReturnType<typeof scholarService.fetchProfile>>;
       let userId: string | null;
       if (isOpenAlex) {
-        userId = url; // keep the "openalex:<id>" token for sharing + analytics
+        // Keep the "openalex:<id>" token for sharing + analytics — the canonical
+        // one, so a correction applies whichever of a person's records was opened.
+        userId = canonicalOpenAlexId(url);
         profileData = await fetchOpenAlexProfile(url);
       } else {
         const validated = scholarService.validateProfileUrl(url);
