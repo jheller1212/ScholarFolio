@@ -23,6 +23,13 @@ export function toOpenAlexShortId(identifier: string): string {
     .trim();
 }
 
+/** The `openalex:<id>` token of a person's canonical record. Anything stored
+ *  against a profile (corrections, analytics) is keyed on this, so it holds
+ *  whichever of a split author's records the visitor opened. */
+export function canonicalOpenAlexId(identifier: string): string {
+  return OPENALEX_ID_PREFIX + openAlexRecordsFor(toOpenAlexShortId(identifier))[0];
+}
+
 interface OaAuthorRecord {
   id: string;
   display_name: string;

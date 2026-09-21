@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { fetchOpenAlexProfile } from '../profile';
+import { fetchOpenAlexProfile, canonicalOpenAlexId } from '../profile';
 import { openAlexRecordsFor } from '../author-aliases';
 import { oaFetchJson } from '../author-lookup';
 
@@ -54,6 +54,13 @@ describe('split OpenAlex author records', () => {
 
   it('leaves an author with no known duplicates alone', () => {
     expect(openAlexRecordsFor('A1')).toEqual(['A1']);
+    expect(canonicalOpenAlexId('openalex:A1')).toBe('openalex:A1');
+  });
+
+  // A correction saved against one record must apply when the other is opened.
+  it('keys both records of one person on the same id', () => {
+    expect(canonicalOpenAlexId(`openalex:${VARIANT}`)).toBe(`openalex:${CANONICAL}`);
+    expect(canonicalOpenAlexId(`openalex:${CANONICAL}`)).toBe(`openalex:${CANONICAL}`);
   });
 
   // The reported case: the visitor opened the two-work record and saw a
