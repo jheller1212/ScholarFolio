@@ -2,6 +2,7 @@ import type { Author, Publication } from '../../types/scholar';
 import { buildAuthorResult, type AuthorSearchResult } from '../scholar/index';
 import { oaFetchJson, OA_API_URL, OA_EMAIL } from './author-lookup';
 import { extractLastName, surnamesCompatible } from '../../utils/names';
+import { openAlexRecordsFor } from './author-aliases';
 
 /**
  * OpenAlex fallback profile source.
@@ -104,13 +105,18 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
   if (!/^A\d+$/.test(shortId)) {
     throw new Error('Invalid OpenAlex author id');
   }
-  const fullId = `https://openalex.org/${shortId}`;
+  // One person can be split across several OpenAlex records; load them all so
+  // whichever id the visitor arrived with shows the same, complete profile.
+  const recordIds = openAlexRecordsFor(shortId);
+  const authorFilter = recordIds.map(id => `https://openalex.org/${id}`).join('|');
 
-  const author = await oaFetchJson<OaAuthorRecord>(
-    `${OA_API_URL}/authors/${shortId}?select=${SELECT_AUTHOR}&mailto=${OA_EMAIL}`,
-    15000
-  );
-  if (!author) {
+  const records = (await Promise.all(
+    recordIds.map(id => oaFetchJson<OaAuthorRecord>(
+      `${OA_API_URL}/authors/${id}?select=${SELECT_AUTHOR}&mailto=${OA_EMAIL}`,
+      15000
+    ))
+  )).filter((r): r is OaAuthorRecord => r !== null);
+  if (records.length === 0) {
     throw new Error('OpenAlex author not found');
   }
 
@@ -120,7 +126,7 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
   let cursor = '*';
   while (works.length < MAX_WORKS && cursor) {
     const page = await oaFetchJson<{ results: OaWork[]; meta?: { next_cursor?: string } }>(
-      `${OA_API_URL}/works?filter=authorships.author.id:${fullId}` +
+      `${OA_API_URL}/works?filter=authorships.author.id:${authorFilter}` +
       `&select=${SELECT_WORK}&sort=cited_by_count:desc&per_page=200&cursor=${encodeURIComponent(cursor)}&mailto=${OA_EMAIL}`,
       15000
     );
@@ -128,6 +134,8 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
     works.push(...batch);
     cursor = batch.length > 0 ? (page?.meta?.next_cursor ?? '') : '';
   }
+
+  const author = records.length === 1 ? records[0] : mergeAuthorRecords(records, works);
 
   const publications: Publication[] = works
     .filter(w => (w.title || w.display_name) && !NON_PUBLICATION_TYPES.has(w.type ?? ''))
@@ -160,6 +168,34 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
     metrics: { citationsPerYear, citationGraphSource: 'cited_by_graph' },
     cacheStatus: 'miss',
   });
+}
+
+/**
+ * Fold several records of one person into a single author record. Name and
+ * topics come from the canonical (first) record. Citation counts add up because
+ * the records hold disjoint works; h-index can't be added, so it is recomputed
+ * from the combined works list.
+ */
+export function mergeAuthorRecords(records: OaAuthorRecord[], works: OaWork[]): OaAuthorRecord {
+  const byYear = new Map<number, number>();
+  for (const r of records) {
+    for (const c of r.counts_by_year ?? []) {
+      byYear.set(c.year, (byYear.get(c.year) ?? 0) + c.cited_by_count);
+    }
+  }
+
+  const citations = works.map(w => w.cited_by_count ?? 0).sort((a, b) => b - a);
+  const hIndex = citations.filter((c, i) => c >= i + 1).length;
+
+  return {
+    ...records[0],
+    works_count: records.reduce((n, r) => n + (r.works_count ?? 0), 0),
+    cited_by_count: records.reduce((n, r) => n + (r.cited_by_count ?? 0), 0),
+    summary_stats: { h_index: hIndex, i10_index: citations.filter(c => c >= 10).length },
+    last_known_institutions: records.flatMap(r => r.last_known_institutions ?? []),
+    affiliations: records.flatMap(r => r.affiliations ?? []),
+    counts_by_year: [...byYear].map(([year, cited_by_count]) => ({ year, cited_by_count })),
+  };
 }
 
 function affiliationOf(a: OaAuthorRecord): string {
