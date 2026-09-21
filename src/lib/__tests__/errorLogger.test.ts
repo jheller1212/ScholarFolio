@@ -28,6 +28,11 @@ describe('logError', () => {
     expect(insert).not.toHaveBeenCalled();
   });
 
+  test('drops rejections thrown by a wallet browser extension', () => {
+    logError({ category: 'unhandled', message: 'Failed to connect to MetaMask' });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   test('drops aborted requests', () => {
     logError({ category: 'profile', message: 'The operation was aborted' });
     expect(insert).not.toHaveBeenCalled();
