@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin, GraduationCap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { randomId } from '../lib/randomId';
 import { logError } from '../lib/errorLogger';
 import { saveEmailPreferences } from '../lib/emailPreferences';
 
@@ -46,7 +47,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   // Start the ORCID sign-in flow (same as the auth modal) so an account without
   // a linked ORCID can connect one, then return to claim.
   const connectOrcid = () => {
-    const state = crypto.randomUUID();
+    const state = randomId();
     sessionStorage.setItem('orcid_oauth_state', state);
     const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
     window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
