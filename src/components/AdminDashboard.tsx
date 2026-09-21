@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
+import { OVERDUE_DAYS, daysWaiting, triageOrder } from '../utils/reportTriage';
 
 type Period = 'day' | 'week' | 'month' | 'all';
 type ChartPeriod = 'week' | 'month' | 'all';
@@ -631,15 +632,25 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
               <Flag className="h-4 w-4 text-red-500" />
               Profile Error Reports ({reports.length})
+              {reports.some(r => !r.resolved) && (
+                <span className="text-xs font-medium text-red-700 bg-red-50 rounded-full px-2 py-0.5">
+                  {reports.filter(r => !r.resolved).length} open
+                </span>
+              )}
             </h3>
             <div className="space-y-3">
-              {reports.map(report => (
+              {triageOrder(reports).map(report => (
                 <div key={report.id} className={`border rounded-xl p-4 ${report.resolved ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900 font-medium">
                         {report.author_name || report.author_id}
                         {report.resolved && <span className="ml-2 text-xs text-emerald-600 font-normal">resolved</span>}
+                        {!report.resolved && (
+                          <span className={`ml-2 text-xs font-normal ${daysWaiting(report) > OVERDUE_DAYS ? 'text-red-600' : 'text-amber-600'}`}>
+                            waiting {daysWaiting(report)} {daysWaiting(report) === 1 ? 'day' : 'days'}
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">{report.message}</p>
                       {report.resolved_note && (
