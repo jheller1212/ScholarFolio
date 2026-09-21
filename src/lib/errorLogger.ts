@@ -54,8 +54,10 @@ function isAbortNoise(message: string): boolean {
 // Browser-generated messages that say nothing about our code:
 //  - the benign ResizeObserver delivery warning browsers emit during layout;
 //  - "Script error.", all cross-origin errors are collapsed into this with no
-//    stack, so it can never be acted on.
-const BROWSER_NOISE = /^(ResizeObserver loop|Script error\.?$)/i;
+//    stack, so it can never be acted on;
+//  - crypto-wallet extensions (MetaMask) inject a script into every page and
+//    reject when no wallet is set up. We have no wallet code.
+const BROWSER_NOISE = /^(ResizeObserver loop|Script error\.?$|Failed to connect to MetaMask)/i;
 
 /** Reduce a context object to something JSON-serializable. A caller that passes
  *  a DOM node or React element (easy to do by accident in an event handler)
