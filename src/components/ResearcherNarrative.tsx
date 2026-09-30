@@ -26,13 +26,15 @@ function getCareerSpan(publications: Author['publications']): { firstYear: numbe
   if (years.length === 0) return { firstYear: 0, lastYear: 0, years: 0 };
 
   // Remove statistical outliers on the early end (misattributed old publications).
-  // Use IQR-based fence: if the earliest year(s) are far below Q1 - 1.5*IQR, drop them.
+  // Use IQR-based fence, but never tighter than 10 years below Q1: researchers whose
+  // output clusters in a few recent years would otherwise lose a genuine early paper
+  // (e.g. Q1=2023, Q3=2025 gives a fence at 2020 and drops a real 2019 first publication).
   if (years.length >= 5) {
     const sorted = [...years].sort((a, b) => a - b);
     const q1 = sorted[Math.floor(sorted.length * 0.25)];
     const q3 = sorted[Math.floor(sorted.length * 0.75)];
     const iqr = q3 - q1;
-    const lowerFence = q1 - 1.5 * iqr;
+    const lowerFence = q1 - Math.max(1.5 * iqr, 10);
     years = years.filter(y => y >= lowerFence);
   }
 
