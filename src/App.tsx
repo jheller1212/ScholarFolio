@@ -73,7 +73,7 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
     <footer className="bg-[#1e293b] text-white py-10 px-6">
       <div className="max-w-5xl mx-auto text-center">
         <p className="text-sm text-white/80 mb-4">
-          Scholar Folio — Built for researchers, not institutions.
+          Scholar Folio — Free and open source, built for researchers.
         </p>
         <div className="flex flex-wrap justify-center gap-6 mb-4">
           <a
