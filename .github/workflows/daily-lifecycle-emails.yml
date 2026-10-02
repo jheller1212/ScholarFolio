@@ -1,0 +1,38 @@
+name: Daily lifecycle emails
+
+# One-time nudges sent by send-claim-nudge: a claim reminder 3 days after
+# signup (if no profile was claimed) and a "finish your profile" email 3 days
+# after claiming. Each goes out once per account and only within 14 days, so a
+# daily run picks up new accounts without ever mass-mailing old ones.
+#
+# Manual runs default to a dry run (lists recipients, masked; sends nothing).
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (list recipients, send nothing)'
+        type: boolean
+        default: true
+
+jobs:
+  nudges:
+    runs-on: ubuntu-latest
+    env:
+      REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - name: Send lifecycle nudges
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then payload='{"dryRun":true}'; else payload='{"live":true}'; fi
+          echo "Payload: $payload"
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST \
+            "https://$REF.supabase.co/functions/v1/send-claim-nudge" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --data "$payload")
+          echo "HTTP $code"; cat /tmp/out.json; echo
+          test "$code" = "200"
