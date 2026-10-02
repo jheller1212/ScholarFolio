@@ -42,9 +42,9 @@ const formats: Array<{
     id: 'msca',
     name: 'MSCA Postdoctoral Fellowship CV',
     subtitle: 'Marie Skłodowska-Curie Actions',
-    description: 'Part B2 researcher CV for MSCA Postdoctoral Fellowship applications. Focuses on research experience, publications, international mobility, and transferable skills. No strict page limit but should be concise.',
+    description: 'Part B2 researcher CV for MSCA Postdoctoral Fellowship applications. Covers professional experience, education, publications and other outputs, supervision and awards. Part B-2 has no page limit; the CV has an indicative length of 5 pages.',
     grants: 'MSCA Postdoctoral Fellowships (European & Global)',
-    metrics: 'Citation counts allowed; focus on quality over quantity',
+    metrics: 'Describe each output\'s significance, not its journal impact factor',
     color: 'border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30',
   },
 ];
