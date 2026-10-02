@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Loader2, Check } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Loader2 } from 'lucide-react';
 import { logCaughtError } from '../lib/errorLogger';
 import { useAuth } from '../contexts/AuthContext';
+import { submitProfileReport } from '../services/reports';
+import { ReportThanks } from './report/ReportThanks';
 
 interface NarrativeReportPanelProps {
   authorName: string;
@@ -11,14 +12,14 @@ interface NarrativeReportPanelProps {
 
 /** Inline "something is wrong with this profile" form shown under the narrative. */
 export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPanelProps) {
-  const { refreshCredits } = useAuth();
+  const { user } = useAuth();
   const [reportMsg, setReportMsg] = useState('');
-  const [reportEmail, setReportEmail] = useState('');
-  const [reportStatus, setReportStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  // Signed-in reporters see their account address prefilled — visible and
+  // editable, so whether we write back stays their choice.
+  const [reportEmail, setReportEmail] = useState(user?.email ?? '');
+  const [sending, setSending] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [reportResult, setReportResult] = useState<
-    { creditsGranted: number; signedIn: boolean; emailLeft: boolean } | null
-  >(null);
+  const [result, setResult] = useState<{ reportId: string | null; willNotify: boolean } | null>(null);
 
   const scholarId = new URLSearchParams(window.location.search).get('user')
     || window.location.pathname.replace(/^\//, '').replace(/\/$/, '')
@@ -26,85 +27,28 @@ export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPan
 
   const handleReport = async () => {
     if (!reportMsg.trim()) return;
-    setReportStatus('sending');
+    setSending(true);
     setReportError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/report-profile`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-          },
-          body: JSON.stringify({
-            authorId: scholarId,
-            authorName,
-            reporterEmail: reportEmail.trim() || null,
-            message: reportMsg.trim(),
-            pageUrl: window.location.href,
-          }),
-        }
-      );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Could not send your report.');
-      setReportResult({
-        creditsGranted: body.creditsGranted ?? 0,
-        signedIn: Boolean(body.signedIn),
-        emailLeft: Boolean(reportEmail.trim()),
-      });
-      // Credits land server-side; refresh the header so the new balance shows.
-      if (body.creditsGranted > 0) refreshCredits();
-      setReportStatus('sent');
+      setResult(await submitProfileReport({
+        authorId: scholarId,
+        authorName,
+        reporterEmail: reportEmail.trim() || null,
+        message: reportMsg.trim(),
+        pageUrl: window.location.href,
+      }));
     } catch (err) {
-      logCaughtError(err, 'profile', 'ResearcherNarrative', 'submit-report');
+      logCaughtError(err, 'profile', 'NarrativeReportPanel', 'submit-report');
       setReportError(err instanceof Error ? err.message : 'Could not send your report.');
-      setReportStatus('idle');
+    } finally {
+      setSending(false);
     }
   };
 
-  const closeReport = onClose; // unmounting resets the form state
-
   return (
     <div className="mb-4 bg-gray-50 dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
-      {reportStatus === 'sent' && reportResult ? (
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-              <p>
-                <strong className="text-gray-900 dark:text-gray-100">Sorry about that — and thank you.</strong>{' '}
-                Wrong data on your own profile is genuinely annoying, and reports like
-                yours are how we find these problems.
-              </p>
-              {reportResult.creditsGranted > 0 ? (
-                <p className="text-emerald-700 dark:text-emerald-400 font-medium">
-                  We've added {reportResult.creditsGranted} free credits to your account right away.
-                </p>
-              ) : reportResult.signedIn ? (
-                <p className="text-gray-500 dark:text-gray-400">
-                  You've already received the maximum thank-you credits — the report still helps just as much.
-                </p>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">
-                  Create a free account and future reports earn you 3 credits each.
-                </p>
-              )}
-              <p>
-                {reportResult.emailLeft
-                  ? "We'll follow up by email once we've looked into it."
-                  : 'We review every report. Next time you can leave an email if you\'d like a reply.'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={closeReport}
-            className="ml-6 px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg transition-colors"
-          >
-            Close
-          </button>
-        </div>
+      {result ? (
+        <ReportThanks reportId={result.reportId} willNotify={result.willNotify} onClose={onClose} />
       ) : (
         <>
           <p className="text-xs text-gray-600 dark:text-gray-300 mb-1.5">
@@ -121,14 +65,19 @@ export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPan
             onChange={e => setReportMsg(e.target.value)}
             placeholder="Describe the error — e.g. 'my top co-author is my own maiden name' or 'most of my papers are open access but it shows 0%'"
             rows={3}
+            aria-label="Describe the error"
             className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none resize-none mb-2"
             maxLength={1000}
           />
+          <label htmlFor="report-email" className="block text-[11px] font-medium text-gray-600 dark:text-gray-300 mb-1">
+            Your email <span className="font-normal text-gray-500 dark:text-gray-400">(optional, so we can tell you when it's fixed)</span>
+          </label>
           <input
+            id="report-email"
             type="email"
             value={reportEmail}
             onChange={e => setReportEmail(e.target.value)}
-            placeholder="Your email (optional — so we can tell you when it's fixed)"
+            placeholder="you@university.edu"
             className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none mb-2"
           />
           {reportError && (
@@ -139,15 +88,15 @@ export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPan
           <div className="flex items-center gap-2">
             <button
               onClick={handleReport}
-              disabled={!reportMsg.trim() || reportStatus === 'sending'}
+              disabled={!reportMsg.trim() || sending}
               className="px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg disabled:opacity-50 transition-colors"
             >
-              {reportStatus === 'sending' ? (
+              {sending ? (
                 <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Sending...</span>
               ) : 'Submit report'}
             </button>
             <button
-              onClick={closeReport}
+              onClick={onClose}
               className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               Cancel
