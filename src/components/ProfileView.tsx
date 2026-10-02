@@ -317,7 +317,7 @@ export function ProfileView({
 
           {/* Researcher Narrative */}
           <div className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-700">
-            <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} pIndexResult={pIndexResult} />
+            <ResearcherNarrative data={data} geoData={prefetchedGeo} onSearch={onSearch} pIndexResult={pIndexResult} scholarId={scholarId} isOpenAlexProfile={isOpenAlexProfile} />
           </div>
         </div>
 

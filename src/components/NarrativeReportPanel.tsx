@@ -108,8 +108,7 @@ export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPan
       ) : (
         <>
           <p className="text-xs text-gray-600 dark:text-gray-300 mb-1.5">
-            Spotted something wrong? Tell us and we'll fix it —{' '}
-            <strong className="text-amber-700 dark:text-amber-400">you'll get 3 credits straight away</strong> as thanks.
+            Spotted something wrong? Tell us what it should say and we'll look into it. Numbers come from Google Scholar and OpenAlex, so some differences start there.
           </p>
           <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
             Most common problems: a co-author who is actually you under another

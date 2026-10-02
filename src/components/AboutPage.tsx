@@ -30,6 +30,15 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
   const [report, setReport] = useState<TransparencyReport | null>(null);
   const [reportFailed, setReportFailed] = useState(false);
 
+  // The SPA renders after the browser's own anchor jump, so deep links like
+  // /about#data-sources (from the profile narrative) need an explicit scroll.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView();
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     supabase.rpc('transparency_report')
@@ -112,7 +121,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             </p>
           </section>
 
-          <section>
+          <section id="data-sources" className="scroll-mt-24">
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Where the data comes from</h2>
             <p className="mb-3">
               Profile data comes from Google Scholar, accessed through an API called SerpAPI. Everything else
