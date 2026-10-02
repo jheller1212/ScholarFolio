@@ -16,7 +16,8 @@ interface AuthState {
   dismissPasswordReset: () => void;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  /** needsConfirmation: account created but no session until the emailed link is clicked. */
+  signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshCredits: () => Promise<void>;
@@ -121,16 +122,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       const msg = error.message.toLowerCase();
       if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('duplicate') || msg.includes('unique constraint')) {
-        return { error: 'This email is already registered. If you signed up with Google, please use "Continue with Google" to sign in.' };
+        return { error: 'This email is already registered. If you signed up with Google, please use "Continue with Google" to sign in.', needsConfirmation: false };
       }
-      return { error: error.message };
+      return { error: error.message, needsConfirmation: false };
     }
     trackEvent('signup', { provider: 'email' });
-    return { error: null };
+    return { error: null, needsConfirmation: !data.session };
   };
 
   const signInWithGoogle = async () => {

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { randomId } from '../lib/randomId';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
+import { AuthLegalNotice } from './AuthLegalNotice';
 
 export function AuthButton() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
@@ -16,7 +17,6 @@ export function AuthButton() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [emailOptIn, setEmailOptIn] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
@@ -29,13 +29,8 @@ export function AuthButton() {
     setSubmitting(true);
 
     try {
-      if (isSignUp && !agreedToTerms) {
-        setError('Please agree to the Terms of Use to continue.');
-        setSubmitting(false);
-        return;
-      }
       if (isSignUp) {
-        const { error } = await signUp(email, password);
+        const { error, needsConfirmation } = await signUp(email, password);
         if (error) {
           setError(error);
         } else {
@@ -45,8 +40,14 @@ export function AuthButton() {
           // account on shared browsers.
           if (emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup', email);
           else clearPendingEmailConsent();
-          setShowModal(false);
-          resetForm();
+          // No session until the emailed link is clicked; closing silently
+          // left people wondering whether sign-up worked.
+          if (needsConfirmation) {
+            setConfirmSent(true);
+          } else {
+            setShowModal(false);
+            resetForm();
+          }
         }
       } else {
         // A sign-in must never inherit consent parked by someone else's
@@ -72,7 +73,6 @@ export function AuthButton() {
     setConfirmSent(false);
     setResetSent(false);
     setShowPassword(false);
-    setAgreedToTerms(false);
     setEmailOptIn(false);
   };
 
@@ -116,29 +116,6 @@ export function AuthButton() {
               </button>
             </div>
 
-            {/* Terms agreement for sign-up */}
-            {isSignUp && (
-              <label className="flex items-start gap-2 text-xs text-gray-600 mb-1">
-                <input
-                  type="checkbox"
-                  checked={agreedToTerms}
-                  onChange={e => setAgreedToTerms(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
-                />
-                <span>
-                  I agree to the{' '}
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">
-                    Terms of Use
-                  </a>
-                  {' '}and{' '}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">
-                    Privacy Policy
-                  </a>.
-                  Scholar Folio is not intended for ranking or evaluating researchers.
-                </span>
-              </label>
-            )}
-
             {/* Optional email consent — must stay unticked by default (GDPR) */}
             {isSignUp && (
               <label className="flex items-start gap-2 text-xs text-gray-600 mb-3">
@@ -157,10 +134,6 @@ export function AuthButton() {
             {/* Google sign-in */}
             <button
               onClick={async () => {
-                if (isSignUp && !agreedToTerms) {
-                  setError('Please agree to the Terms of Use to continue.');
-                  return;
-                }
                 // Consent must survive the OAuth redirect; flushed on return
                 // (the flush verifies the account is newly created).
                 if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup');
@@ -182,10 +155,6 @@ export function AuthButton() {
             {/* ORCID sign-in */}
             <button
               onClick={() => {
-                if (isSignUp && !agreedToTerms) {
-                  setError('Please agree to the Terms of Use to continue.');
-                  return;
-                }
                 if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup');
                 else clearPendingEmailConsent();
                 const state = randomId();
@@ -324,6 +293,11 @@ export function AuthButton() {
                 </p>
               </form>
             )}
+
+            <AuthLegalNotice className="mt-4 text-center" />
+            <p className="mt-1 text-[11px] text-center text-gray-400">
+              Scholar Folio is not intended for ranking or evaluating researchers.
+            </p>
           </div>
         </div>,
         document.body
