@@ -120,7 +120,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
               comes from OpenAlex, which is an open bibliometric database run by a nonprofit.
             </p>
             <p>
-              Nothing is stored permanently. There is a 7-day cache to avoid hammering the APIs, and that is it.
+              Nothing is stored permanently. There is a 14-day cache to avoid hammering the APIs, and that is it.
               No researcher data is sold, shared, or monetized. Ever.
             </p>
           </section>
