@@ -271,7 +271,7 @@ function AppContent() {
   useEffect(() => {
     const DEFAULT_TITLE = 'Scholar Folio — Your research, at a glance';
     const PAGE_TITLES: Partial<Record<Page, string>> = {
-      about: 'About & Pricing — ScholarFolio',
+      about: 'About & Funding — ScholarFolio',
       institutions: 'For Institutions — ScholarFolio',
       trending: 'Trending Researchers — ScholarFolio',
       changelog: 'Changelog — ScholarFolio',

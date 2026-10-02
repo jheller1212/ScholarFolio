@@ -155,41 +155,55 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             </p>
           </section>
 
-          {/* Section 2: Pricing */}
+          {/* Section 2: Funding */}
           <hr className="border-gray-200" />
 
           <section>
-            <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Pricing</h2>
+            <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">How it is funded</h2>
 
             <p className="mb-4">
-              You get 2 free searches without signing up, and 5 more when you create an account (which is also free).
-              For signed-in users, viewing a profile that was already searched by someone else in the last 7 days
-              costs nothing: the cached version loads without using a credit.
+              Scholar Folio is free and open source (MIT licence), and it stays that way: no subscriptions, no ads,
+              no paywalled features, and no data monetization. What does cost money is fetching fresh data. Every new
+              Google Scholar lookup goes through an API that charges per request, plus hosting and a domain.
             </p>
 
-            <p className="mb-4">After that, there are two supporter packs:</p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="bg-white rounded-xl border border-gray-100 shadow-card p-5">
-                <p className="font-semibold text-[#1e293b] mb-1">Supporter</p>
-                <p className="text-2xl font-bold text-[#2d7d7d]">&euro;5</p>
-                <p className="text-sm text-[#64748b] mt-1">25 profile refreshes</p>
-              </div>
-              <div className="bg-white rounded-xl border border-gray-100 shadow-card p-5">
-                <p className="font-semibold text-[#1e293b] mb-1">Open Science Supporter</p>
-                <p className="text-2xl font-bold text-[#2d7d7d]">&euro;10</p>
-                <p className="text-sm text-[#64748b] mt-1">75 profile refreshes</p>
-              </div>
-            </div>
+            <p className="mb-3">Those costs are covered in three ways:</p>
+            <ul className="list-disc pl-5 space-y-2 mb-4">
+              <li>
+                <strong>Institutional sustaining members.</strong> Departments, graduate schools, libraries and research
+                offices contribute annually so the tool stays open for everyone, the way arXiv and OpenAlex are supported.
+                Members get recognition and services, never exclusive features.
+                {onNavigateInstitutions && (
+                  <>
+                    {' '}
+                    <a
+                      href="/institutions"
+                      onClick={(e) => { e.preventDefault(); onNavigateInstitutions(); }}
+                      className="text-[#2d7d7d] hover:underline"
+                    >
+                      Information for institutions
+                    </a>.
+                  </>
+                )}
+              </li>
+              <li>
+                <strong>Research grants</strong> for open research infrastructure and responsible research assessment.
+              </li>
+              <li>
+                <strong>Voluntary support</strong> from individual researchers. If Scholar Folio is useful to you, you can
+                chip in &euro;5 or &euro;10. As a thank-you you get extra fresh lookups, but supporting is optional and
+                nothing on the site depends on it.
+              </li>
+            </ul>
 
             <p className="mb-3">
-              The reason it is not entirely free: every fresh profile lookup calls an external API that charges per request.
-              The packs exist to cover that cost. There are no subscriptions, no ads, and no data monetization.
+              To keep API costs predictable there is a fair-use limit on <em>fresh</em> lookups: you get 2 without
+              signing up, and more with a free account. With an account, profiles someone looked up recently load
+              from the cache and never count against it. Direct profile links and claimed profile URLs never count
+              for anyone.
             </p>
             <p>
-              You can also earn free credits by giving feedback. Report a bug or suggest a feature, and you
-              get credits added to your account. If you run out completely, you get one free credit each month
-              just for being signed up.
+              You can also earn extra lookups by giving feedback or reporting an error in a profile.
             </p>
           </section>
 
@@ -199,27 +213,14 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Transparency</h2>
 
             <p className="mb-4">
-              I want to be upfront about the money side of this. Scholar Folio is not a business. It is an academic
-              side project that costs money to run. Here is where that money goes.
+              I want to be upfront about the money side of this. Scholar Folio is not a business. It is an open
+              academic project that costs money to run. Here is what has come in and where it goes.
             </p>
 
             <p className="mb-6">
               If there is ever a surplus after covering API and hosting costs, it gets donated to open science
               initiatives. That commitment is here from day one, even though the amounts are currently tiny.
             </p>
-
-            {onNavigateInstitutions && (
-              <p className="mb-6">
-                Departments, graduate schools, libraries and research offices can help keep it free for everyone as{' '}
-                <a
-                  href="/institutions"
-                  onClick={(e) => { e.preventDefault(); onNavigateInstitutions(); }}
-                  className="text-[#2d7d7d] hover:underline"
-                >
-                  sustaining members
-                </a>.
-              </p>
-            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">
@@ -231,10 +232,10 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="px-4 py-3 border-b border-gray-100">Total Revenue</td>
+                    <td className="px-4 py-3 border-b border-gray-100">Voluntary support received</td>
                     <td className="px-4 py-3 border-b border-gray-100">
                       {report ? (
-                        <>&euro;{(report.revenue_cents / 100).toFixed(2)} <span className="text-[#64748b]">({report.purchase_count} credit-pack purchase{report.purchase_count !== 1 ? 's' : ''})</span></>
+                        <>&euro;{(report.revenue_cents / 100).toFixed(2)} <span className="text-[#64748b]">({report.purchase_count} voluntary contribution{report.purchase_count !== 1 ? 's' : ''})</span></>
                       ) : reportFailed ? (
                         <span className="text-[#64748b] italic">Temporarily unavailable</span>
                       ) : (
