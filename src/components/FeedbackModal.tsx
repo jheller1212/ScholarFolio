@@ -6,21 +6,19 @@ import { logCaughtError } from '../lib/errorLogger';
 interface FeedbackModalProps {
   mode: 'prompt' | 'button';
   onClose: () => void;
+  // submit-feedback still grants a few lookups as a silent thank-you; the caller
+  // gets the count so it can refresh the balance. It is no longer advertised:
+  // the ask is "help an open project", not "earn credits".
   onSuccess: (creditsGranted: number) => void;
   profileViewed: string | null;
-  isFirstFeedback: boolean;
 }
 
-export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirstFeedback }: FeedbackModalProps) {
-  const [rating, setRating] = useState<number>(0);
-  const [hoverRating, setHoverRating] = useState<number>(0);
+export function FeedbackModal({ mode, onClose, onSuccess, profileViewed }: FeedbackModalProps) {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
-
-  const creditsAmount = isFirstFeedback ? 5 : 2;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -35,8 +33,8 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
   };
 
   const handleSubmit = async () => {
-    if (mode === 'button' && rating === 0) {
-      setError('Please select a star rating.');
+    if (!comment.trim()) {
+      setError('Please write a few words first.');
       return;
     }
 
@@ -61,8 +59,8 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            rating: mode === 'button' ? rating : null,
-            comment: comment.trim() || null,
+            rating: null,
+            comment: comment.trim(),
             profileViewed,
             source: mode,
           }),
@@ -74,10 +72,10 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
         throw new Error(body?.error || 'Submission failed. Please try again.');
       }
 
-      const data = await res.json();
-      const granted: number = data?.credits_granted ?? creditsAmount;
+      const data = await res.json().catch(() => ({}));
+      const granted: number = typeof data?.credits_granted === 'number' ? data.credits_granted : 0;
 
-      setSuccessMessage(`Thanks! You earned ${granted} credits.`);
+      setSuccessMessage('Thank you! Every answer is read.');
       setTimeout(() => {
         onSuccess(granted);
       }, 2000);
@@ -87,15 +85,6 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
       setSubmitting(false);
     }
   };
-
-  const headerTitle = mode === 'prompt' ? 'Help us improve' : 'Share Feedback';
-  const buttonLabel = successMessage
-    ? successMessage
-    : submitting
-    ? ''
-    : mode === 'prompt'
-    ? `Share feedback — earn ${creditsAmount} credits`
-    : `Submit — earn ${creditsAmount} credits`;
 
   return (
     <div
@@ -119,57 +108,24 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
           >
             <X className="h-5 w-5" />
           </button>
-          <h2 id="feedback-modal-title" className="text-lg font-bold pr-8">{headerTitle}</h2>
-          {mode === 'prompt' && (
-            <p className="text-sm text-white/80 mt-1">
-              Report a bug or request a feature — earn {creditsAmount} credits.
-            </p>
-          )}
+          <h2 id="feedback-modal-title" className="text-lg font-bold pr-8">One quick question</h2>
+          <p className="text-sm text-white/80 mt-1">
+            ScholarFolio is a free, open-source research project. Your answer goes straight to the people who build it.
+          </p>
         </div>
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          {/* Star rating — button mode only */}
-          {mode === 'button' && (
-            <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                How would you rate Scholar Folio?
-              </p>
-              <div
-                className="flex gap-1"
-                onMouseLeave={() => setHoverRating(0)}
-                role="radiogroup"
-                aria-label="Star rating"
-              >
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    role="radio"
-                    aria-checked={rating === star}
-                    aria-label={`${star} star${star !== 1 ? 's' : ''}`}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    className="text-3xl leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2d7d7d] rounded"
-                    style={{ color: star <= (hoverRating || rating) ? '#f59e0b' : '#d1d5db' }}
-                  >
-                    &#9733;
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Textarea */}
           <div>
             <label htmlFor="feedback-comment" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {mode === 'prompt' ? 'What can we improve?' : 'What can we improve? (optional)'}
+              What is one thing ScholarFolio should do better?
             </label>
             <textarea
               id="feedback-comment"
               value={comment}
               onChange={e => setComment(e.target.value)}
-              placeholder="Found a bug? Missing a feature? Let us know what's broken or what you'd like to see."
+              placeholder="A bug, a wrong number, a missing feature, anything."
               rows={3}
               className="w-full px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none transition-colors resize-none"
               maxLength={1000}
@@ -186,18 +142,18 @@ export function FeedbackModal({ mode, onClose, onSuccess, profileViewed, isFirst
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={submitting || !!successMessage}
+            disabled={submitting || !!successMessage || !comment.trim()}
             className="w-full py-2.5 text-sm font-semibold rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] shadow-md shadow-[#2d7d7d]/20 hover:shadow-lg hover:shadow-[#2d7d7d]/30 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {submitting ? (
               <span className="inline-flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Submitting...
+                Sending...
               </span>
             ) : successMessage ? (
               successMessage
             ) : (
-              buttonLabel
+              'Send'
             )}
           </button>
         </div>
