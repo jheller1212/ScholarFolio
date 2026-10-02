@@ -1,12 +1,16 @@
-import { createClient } from "npm:@supabase/supabase-js@2.39.3";
+import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
 
 /**
- * Profile error reports, with an immediate thank-you credit grant.
+ * Profile error reports.
  *
  * Reports are the main way data-quality bugs reach us, so the flow stays open
- * to anonymous visitors — the report is what matters, the account is not.
- * Signed-in reporters get credits right away; anonymous ones can't be credited,
- * and the client tells them so rather than promising something we can't give.
+ * to anonymous visitors. There is no credit reward any more (ScholarFolio is
+ * not a credits business); the thank-you is fixing it and telling the reporter
+ * — which is why the email field matters: resolve-report emails "fixed" to it.
+ *
+ * Actions (POST body):
+ *   { message, authorId?, authorName?, reporterEmail?, pageUrl? } → file a report, returns { reportId }
+ *   { action: "feedback", reportId, rating: 1|2|3 }               → one-question "how easy was this?"
  *
  * Deploy with: supabase functions deploy report-profile --no-verify-jwt
  */
@@ -37,16 +41,19 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-/** Credits granted per accepted report. */
-const REPORT_CREDITS = 3;
-/** Lifetime ceiling per account, so reporting can't be farmed for credits. */
-const REPORT_CREDIT_CAP = 12;
+// Deliberately loose: we only need something mail can be delivered to.
+const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function json(body: unknown, status: number, req: Request): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   });
+}
+
+function clip(v: unknown, max: number): string | null {
+  return typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null;
 }
 
 Deno.serve(async (req) => {
@@ -59,19 +66,34 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { authorId, authorName, message, reporterEmail, pageUrl } = body as {
-      authorId?: string; authorName?: string; message?: string;
-      reporterEmail?: string; pageUrl?: string;
-    };
 
+    // One-question follow-up. The report id is an unguessable uuid handed only
+    // to the submitter, and the answer can be set once, so this needs no auth.
+    if (body.action === 'feedback') {
+      const rating = Number(body.rating);
+      if (typeof body.reportId !== 'string' || !UUID_RE.test(body.reportId) || ![1, 2, 3].includes(rating)) {
+        return json({ error: 'Invalid feedback' }, 400, req);
+      }
+      const { error } = await supabase.from('profile_reports')
+        .update({ reporter_feedback: rating })
+        .eq('id', body.reportId).is('reporter_feedback', null);
+      if (error) return json({ error: 'Could not save feedback' }, 500, req);
+      return json({ ok: true }, 200, req);
+    }
+
+    const { message, reporterEmail } = body as { message?: unknown; reporterEmail?: unknown };
     if (typeof message !== 'string' || !message.trim()) {
       return json({ error: 'A description of the problem is required.' }, 400, req);
     }
     if (message.length > 2000) {
       return json({ error: 'Description must be at most 2000 characters.' }, 400, req);
     }
-    if (reporterEmail && (typeof reporterEmail !== 'string' || reporterEmail.length > 320)) {
-      return json({ error: 'Invalid email address.' }, 400, req);
+    let email: string | null = null;
+    if (reporterEmail !== undefined && reporterEmail !== null && reporterEmail !== '') {
+      if (typeof reporterEmail !== 'string' || reporterEmail.length > 320 || !EMAIL_RE.test(reporterEmail.trim())) {
+        return json({ error: 'That email address looks incomplete.' }, 400, req);
+      }
+      email = reporterEmail.trim();
     }
 
     // Optional auth: a missing or stale token still files the report.
@@ -82,38 +104,21 @@ Deno.serve(async (req) => {
       userId = user?.id ?? null;
     }
 
-    // Save the report and grant the credits in ONE database transaction. The
-    // cap check has to happen under a row lock: when it was done here — read
-    // the running total, then insert, then credit — two requests fired at once
-    // both read "nothing granted yet" and both paid out, so the ceiling could
-    // be walked past at will.
-    const { data: granted, error: rpcError } = await supabase.rpc('submit_profile_report', {
-      p_message: message,
-      p_author_id: authorId ?? null,
-      p_author_name: authorName ?? null,
-      p_reporter_email: reporterEmail ?? null,
-      p_page_url: pageUrl ?? null,
-      p_user_id: userId,
-      p_credits: REPORT_CREDITS,
-      p_cap: REPORT_CREDIT_CAP,
-    });
+    const { data, error } = await supabase.from('profile_reports').insert({
+      message: message.trim(),
+      author_id: clip(body.authorId, 200) ?? 'unknown',
+      author_name: clip(body.authorName, 300),
+      reporter_email: email,
+      page_url: clip(body.pageUrl, 1000),
+      user_id: userId,
+      credits_granted: 0,
+    }).select('id').single();
 
-    if (rpcError) {
-      console.error('report-profile: submit failed:', rpcError);
+    if (error || !data) {
+      console.error('report-profile: insert failed:', error);
       return json({ error: 'Could not save your report. Please try again.' }, 500, req);
     }
-
-    const creditsGranted = typeof granted === 'number' ? granted : 0;
-    return json(
-      {
-        ok: true,
-        creditsGranted,
-        signedIn: Boolean(userId),
-        capReached: Boolean(userId) && creditsGranted === 0,
-      },
-      200,
-      req
-    );
+    return json({ ok: true, reportId: data.id, signedIn: Boolean(userId), willNotify: Boolean(email) }, 200, req);
   } catch (err) {
     console.error('report-profile error:', err);
     return json({ error: 'Server error' }, 500, req);

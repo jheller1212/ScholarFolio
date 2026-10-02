@@ -4,8 +4,8 @@ import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
-import { OVERDUE_DAYS, daysWaiting, triageOrder } from '../utils/reportTriage';
 import { MergeRequestsPanel } from './admin/MergeRequestsPanel';
+import { ProfileReportsPanel, type ProfileReport } from './admin/ProfileReportsPanel';
 
 type Period = 'day' | 'week' | 'month' | 'all';
 type ChartPeriod = 'week' | 'month' | 'all';
@@ -53,12 +53,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<Period>('week');
-  const [reports, setReports] = useState<Array<{ id: string; author_id: string; author_name: string | null; reporter_email: string | null; message: string; page_url: string | null; created_at: string; resolved: boolean; resolved_note: string | null }>>([]);
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
-  const [resolveNote, setResolveNote] = useState('');
-  const [correctionField, setCorrectionField] = useState<'' | 'affiliation' | 'display_name'>('');
-  const [correctionValue, setCorrectionValue] = useState('');
-  const [applyingCorrection, setApplyingCorrection] = useState(false);
+  const [reports, setReports] = useState<ProfileReport[]>([]);
   const [clientErrors, setClientErrors] = useState<Array<{
     id: number; created_at: string; category: string; message: string;
     stack: string | null; component: string | null; action: string | null;
@@ -630,144 +625,16 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
         <MergeRequestsPanel />
 
         {/* Error Reports */}
-        {reports.length > 0 && (
-          <div className="mt-8 bg-white rounded-2xl border border-gray-100 shadow-card p-5">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
-              <Flag className="h-4 w-4 text-red-500" />
-              Profile Error Reports ({reports.length})
-              {reports.some(r => !r.resolved) && (
-                <span className="text-xs font-medium text-red-700 bg-red-50 rounded-full px-2 py-0.5">
-                  {reports.filter(r => !r.resolved).length} open
-                </span>
-              )}
-            </h3>
-            <div className="space-y-3">
-              {triageOrder(reports).map(report => (
-                <div key={report.id} className={`border rounded-xl p-4 ${report.resolved ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 font-medium">
-                        {report.author_name || report.author_id}
-                        {report.resolved && <span className="ml-2 text-xs text-emerald-600 font-normal">resolved</span>}
-                        {!report.resolved && (
-                          <span className={`ml-2 text-xs font-normal ${daysWaiting(report) > OVERDUE_DAYS ? 'text-red-600' : 'text-amber-600'}`}>
-                            waiting {daysWaiting(report)} {daysWaiting(report) === 1 ? 'day' : 'days'}
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">{report.message}</p>
-                      {report.resolved_note && (
-                        <p className="text-xs text-emerald-700 mt-1 italic">Fix: {report.resolved_note}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                        <span>{new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                        {report.reporter_email && <span>{report.reporter_email}</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {report.reporter_email && (
-                        <button
-                          onClick={() => {
-                            setReplyingTo({ type: 'report', email: report.reporter_email!, context: report.message });
-                            setReplySubject(`Re: Profile report — ${report.author_name || report.author_id}`);
-                            setReplyBody('');
-                            setEmailResult(null);
-                          }}
-                          className="text-xs text-[#2d7d7d] hover:text-[#1f5c5c] flex items-center gap-1"
-                          title="Reply via email"
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {report.page_url && (
-                        <a href={report.page_url} target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:text-[#1f5c5c]" title="View profile">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-                      {!report.resolved && (
-                        <button
-                          onClick={() => { setResolvingId(resolvingId === report.id ? null : report.id); setResolveNote(''); setCorrectionField(''); setCorrectionValue(''); }}
-                          className="text-xs text-gray-500 hover:text-emerald-600 transition-colors"
-                        >
-                          Resolve
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {resolvingId === report.id && (
-                    <div className="mt-3 flex flex-col gap-2">
-                      <input
-                        type="text"
-                        value={resolveNote}
-                        onChange={e => setResolveNote(e.target.value)}
-                        placeholder="What was fixed? (optional)"
-                        className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
-                      />
-                      {/* Optional: apply a verified correction that overrides the source data on the live profile */}
-                      <div className="flex gap-2">
-                        <select
-                          value={correctionField}
-                          onChange={e => setCorrectionField(e.target.value as '' | 'affiliation' | 'display_name')}
-                          className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none bg-white"
-                        >
-                          <option value="">No correction — just resolve</option>
-                          <option value="affiliation">Correct affiliation</option>
-                          <option value="display_name">Correct display name</option>
-                        </select>
-                        {correctionField && (
-                          <input
-                            type="text"
-                            value={correctionValue}
-                            onChange={e => setCorrectionValue(e.target.value)}
-                            placeholder={correctionField === 'affiliation' ? 'Corrected affiliation' : 'Corrected name'}
-                            className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-[#2d7d7d] focus:ring-1 focus:ring-[#2d7d7d] outline-none"
-                          />
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-gray-400">
-                          {correctionField
-                            ? 'Correction applies to the live profile for all viewers; reversible later.'
-                            : ''}
-                        </span>
-                        <button
-                          disabled={applyingCorrection || (!!correctionField && !correctionValue.trim())}
-                          onClick={async () => {
-                            setApplyingCorrection(true);
-                            try {
-                              if (correctionField && correctionValue.trim()) {
-                                const { error: ovErr } = await supabase.from('profile_overrides').insert({
-                                  author_id: report.author_id,
-                                  field: correctionField,
-                                  value: correctionValue.trim(),
-                                  note: resolveNote || null,
-                                  source_report_id: report.id,
-                                  verified_via: 'admin',
-                                });
-                                if (ovErr) { alert(`Could not apply correction: ${ovErr.message}`); setApplyingCorrection(false); return; }
-                              }
-                              await supabase.from('profile_reports').update({ resolved: true, resolved_note: resolveNote || null }).eq('id', report.id);
-                              setReports(prev => prev.map(r => r.id === report.id ? { ...r, resolved: true, resolved_note: resolveNote || null } : r));
-                              setResolvingId(null);
-                              setResolveNote('');
-                              setCorrectionField('');
-                              setCorrectionValue('');
-                            } finally {
-                              setApplyingCorrection(false);
-                            }
-                          }}
-                          className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                        >
-                          {applyingCorrection ? 'Saving…' : correctionField ? 'Apply & resolve' : 'Done'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <ProfileReportsPanel
+          reports={reports}
+          onReportsChange={setReports}
+          onReply={report => {
+            setReplyingTo({ type: 'report', email: report.reporter_email ?? '', context: report.message });
+            setReplySubject(`Re: Profile report — ${report.author_name || report.author_id}`);
+            setReplyBody('');
+            setEmailResult(null);
+          }}
+        />
 
         {/* User Feedback */}
         {rawData && rawData.feedback.length > 0 && (
