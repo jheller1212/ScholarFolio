@@ -1,7 +1,12 @@
 import type { Context } from '@netlify/edge-functions';
-import { buildHead, injectHead, slugToName } from './head.ts';
+import { buildBody, injectBody } from './body.ts';
+import type { CoauthorLink } from './body.ts';
+import { candidateProfiles, frequentCoauthorKeys, listsAuthor } from './coauthors.ts';
+import { buildHead, canonicalUrl, injectHead, slugToName } from './head.ts';
 import { resolveProfileTarget } from './routes.ts';
-import { fetchClaimByAuthor, fetchClaimBySlug, fetchScholarData } from './supabase.ts';
+import {
+  fetchAuthorStrings, fetchClaimByAuthor, fetchClaimBySlug, fetchProfileIndex, fetchScholarData,
+} from './supabase.ts';
 import type { Claim, ScholarData } from './supabase.ts';
 
 // Social preview bots AND search engines get a real title, canonical, meta
@@ -25,9 +30,28 @@ const CRAWLER_AGENTS = [
   'baiduspider',
 ];
 
-function isCrawler(userAgent: string): boolean {
+// Search engines also get the text summary + co-author links; link-preview
+// bots only read <head>, so they skip the extra lookups and stay fast.
+const SEARCH_AGENTS = ['googlebot', 'bingbot', 'duckduckbot', 'applebot', 'yandex', 'baiduspider'];
+
+const MAX_COAUTHOR_CHECKS = 8;
+
+function matchesAny(userAgent: string, agents: string[]): boolean {
   const ua = userAgent.toLowerCase();
-  return CRAWLER_AGENTS.some((bot) => ua.includes(bot));
+  return agents.some((bot) => ua.includes(bot));
+}
+
+async function findCoauthorLinks(data: ScholarData, authorId: string): Promise<CoauthorLink[]> {
+  if (!data.name || !data.publications?.length) return [];
+  const keys = frequentCoauthorKeys(data.publications, data.name);
+  if (!keys.length) return [];
+  const candidates = candidateProfiles(keys, await fetchProfileIndex(), authorId).slice(0, MAX_COAUTHOR_CHECKS);
+  const confirmed = await Promise.all(
+    candidates.map(async (c) => (listsAuthor(await fetchAuthorStrings(c.id), data.name ?? '') ? c : null)),
+  );
+  return confirmed
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .map((c) => ({ name: c.name, url: canonicalUrl(c.id, c.slug) }));
 }
 
 interface Resolved { authorId: string; claim: Claim | null; data: ScholarData | null }
@@ -45,7 +69,8 @@ async function resolve(url: URL): Promise<Resolved | null> {
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
-  if (!isCrawler(req.headers.get('user-agent') || '')) return context.next();
+  const userAgent = req.headers.get('user-agent') || '';
+  if (!matchesAny(userAgent, CRAWLER_AGENTS)) return context.next();
 
   const resolved = await resolve(new URL(req.url));
   if (!resolved) return context.next();
@@ -68,6 +93,8 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   const { authorId, claim, data } = resolved;
+  const isSearch = matchesAny(userAgent, SEARCH_AGENTS);
+  const coauthors = isSearch && data ? await findCoauthorLinks(data, authorId).catch(() => []) : [];
   const { tags, title } = buildHead({
     data: data || {},
     authorId,
@@ -75,9 +102,11 @@ export default async function handler(req: Request, context: Context): Promise<R
     // Not cached yet: a claimed vanity link still deserves the owner's name
     // (stored display name, else the name-derived slug).
     fallbackName: claim ? claim.displayName?.trim() || slugToName(claim.slug) : null,
+    colleagues: coauthors.map((c) => c.url),
   });
+  const body = isSearch && data ? buildBody(data, authorId, coauthors) : '';
 
-  return new Response(injectHead(html, tags, title), {
+  return new Response(injectBody(injectHead(html, tags, title), body), {
     status: originalResponse.status,
     headers: {
       ...Object.fromEntries(originalResponse.headers.entries()),

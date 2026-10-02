@@ -4,12 +4,30 @@ const SUPABASE_URL = 'https://mixaxkywkojoclgbjjur.supabase.co';
 // Publishable key — safe to embed, same as client-side
 const SUPABASE_ANON_KEY = 'sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5';
 
+export interface Publication {
+  title?: string;
+  year?: number | string;
+  venue?: string;
+  authors?: string[];
+  citations?: number;
+}
+
 export interface ScholarData {
   name?: string;
   affiliation?: string;
   totalCitations?: number;
   hIndex?: number;
   imageUrl?: string;
+  metrics?: { i10Index?: number };
+  topics?: Array<{ name?: string }>;
+  publications?: Publication[];
+}
+
+// A cached Google Scholar profile, for linking co-authors to their pages.
+export interface IndexedProfile {
+  id: string;
+  name: string;
+  slug: string | null;
 }
 
 export interface Claim {
@@ -74,6 +92,45 @@ export function fetchClaimBySlug(slug: string): Promise<Claim | null> {
       `claimed_profiles?slug=eq.${encodeURIComponent(slug)}&select=author_id,slug,display_name&limit=1`,
     );
     return toClaim(rows?.[0]);
+  });
+}
+
+const SCHOLAR_PREFIX = 'https://scholar.google.com/citations?user=';
+
+// Every cached Scholar profile's name (+ slug when claimed). Small (one row per
+// cached profile, name only) and shared by all crawls via the memo.
+export function fetchProfileIndex(): Promise<IndexedProfile[]> {
+  return cached('profile-index', async () => {
+    const [rows, claims] = await Promise.all([
+      rest<{ url: string; name: string | null }>(
+        `scholar_cache?select=url,name:data->>name&url=like.${encodeURIComponent(`${SCHOLAR_PREFIX}*`)}&limit=5000`,
+      ),
+      rest<{ author_id: string; slug: string }>('claimed_profiles?select=author_id,slug'),
+    ]);
+    const slugs = new Map((claims ?? []).map((c) => [c.author_id, c.slug]));
+    const out: IndexedProfile[] = [];
+    for (const row of rows ?? []) {
+      if (!row.name) continue;
+      let id: string;
+      try {
+        id = decodeURIComponent(row.url.slice(SCHOLAR_PREFIX.length));
+      } catch {
+        continue;
+      }
+      out.push({ id, name: row.name, slug: slugs.get(id) ?? null });
+    }
+    return out;
+  });
+}
+
+// Author strings across one cached profile's publications, used to confirm a
+// co-author match from the other side before linking.
+export function fetchAuthorStrings(id: string): Promise<string[]> {
+  return cached(`authors:${id}`, async () => {
+    const rows = await rest<{ pubs: Publication[] | null }>(
+      `scholar_cache?url=eq.${encodeURIComponent(scholarCacheKey(id))}&select=pubs:data->publications&limit=1`,
+    );
+    return (rows?.[0]?.pubs ?? []).flatMap((p) => p.authors ?? []);
   });
 }
 
