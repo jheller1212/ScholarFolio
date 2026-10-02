@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Google Scholar and OpenAlex citation counts differ</title>
+<meta name="description" content="Google Scholar and OpenAlex count citations in different ways, so your numbers will not match. What each one counts, why they diverge, and which to cite in a grant application.">
+<link rel="canonical" href="https://scholarfolio.org/guides/google-scholar-vs-openalex-citation-counts/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+<meta name="theme-color" content="#1e293b">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="ScholarFolio">
+<meta property="og:title" content="Why Google Scholar and OpenAlex citation counts differ">
+<meta property="og:description" content="Google Scholar and OpenAlex count citations in different ways, so your numbers will not match. What each one counts, why they diverge, and which to cite in a grant application.">
+<meta property="og:url" content="https://scholarfolio.org/guides/google-scholar-vs-openalex-citation-counts/">
+<meta property="og:image" content="https://scholarfolio.org/og-default.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Why Google Scholar and OpenAlex citation counts differ">
+<meta name="twitter:description" content="Google Scholar and OpenAlex count citations in different ways, so your numbers will not match. What each one counts, why they diverge, and which to cite in a grant application.">
+<script>try{var t=localStorage.getItem('sf_theme');if(t==='dark'||((t==='system'||!t)&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
+<style>@font-face{font-family:'DM Sans';font-weight:400;font-display:swap;src:url('/fonts/dm-sans-400-latin.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-weight:600;font-display:swap;src:url('/fonts/dm-sans-600-latin.woff2') format('woff2')}
+@font-face{font-family:'Playfair Display';font-weight:700;font-display:swap;src:url('/fonts/playfair-display-700-latin.woff2') format('woff2')}
+:root{--bg:#f8fafc;--card:#fff;--text:#1e293b;--muted:#475569;--soft:#64748b;--line:#e2e8f0;--teal:#2d7d7d;--teal-dark:#246666;--teal-bg:#eef7f7;--warn-bg:#fffbeb;--warn-line:#fcd34d}
+html.dark{--bg:#030712;--card:#0f172a;--text:#f1f5f9;--muted:#cbd5e1;--soft:#94a3b8;--line:#1e293b;--teal:#3d9494;--teal-dark:#2d7d7d;--teal-bg:#0b2626;--warn-bg:#1c1606;--warn-line:#854d0e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 17px/1.7 'DM Sans',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+a:hover{color:var(--teal-dark)}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.site{border-bottom:1px solid var(--line);background:var(--card)}
+header.site .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{font:700 22px/1 'Playfair Display',Georgia,serif;text-decoration:none;color:var(--text)}
+.brand span{color:var(--teal)}
+header.site nav a{font-size:15px;margin-left:18px;text-decoration:none}
+.crumbs{font-size:14px;color:var(--soft);margin:28px 0 8px}
+.crumbs a{color:var(--soft)}
+h1{font:700 clamp(30px,5vw,42px)/1.15 'Playfair Display',Georgia,serif;margin:0 0 16px}
+h2{font:700 26px/1.25 'Playfair Display',Georgia,serif;margin:44px 0 12px}
+h3{font-size:18px;margin:26px 0 6px}
+.lede{font-size:19px;color:var(--muted)}
+.meta{font-size:14px;color:var(--soft)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:24px 0}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;vertical-align:top;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{width:34%;color:var(--soft);font-weight:600}
+.table-scroll{overflow-x:auto}
+ol.steps{counter-reset:s;list-style:none;padding:0}
+ol.steps>li{counter-increment:s;position:relative;padding:0 0 18px 48px}
+ol.steps>li::before{content:counter(s);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--teal);color:#fff;font-weight:600;display:flex;align-items:center;justify-content:center}
+ol.steps strong{display:block}
+.cta{background:var(--teal-bg);border:1px solid var(--teal);border-radius:16px;padding:24px;margin:32px 0;text-align:center}
+.cta p{margin:0 0 14px;color:var(--muted)}
+.btn{display:inline-block;background:var(--teal);color:#fff!important;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:10px}
+.btn:hover{background:var(--teal-dark)}
+.note{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:12px;padding:14px 18px;font-size:15px}
+details{border-bottom:1px solid var(--line);padding:14px 0}
+summary{cursor:pointer;font-weight:600}
+details p{margin:10px 0 0;color:var(--muted)}
+.sources li{font-size:15px;margin-bottom:6px;word-break:break-word}
+ul.guides{list-style:none;padding:0}
+ul.guides li{margin:0 0 14px}
+ul.guides a{font-weight:600}
+ul.guides span{display:block;font-size:15px;color:var(--muted)}
+footer.site{margin-top:56px;border-top:1px solid var(--line);padding:28px 0 40px;font-size:14px;color:var(--soft)}
+footer.site a{color:var(--soft)}</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why is my Google Scholar citation count different from OpenAlex?","acceptedAnswer":{"@type":"Answer","text":"They index different sets of documents and link citations differently. Google Scholar counts citations from scholarly documents it finds on the web, including preprints, theses and technical reports. OpenAlex counts references it can match to works already in its database, using reference lists from sources such as Crossref and PubMed or from open-access PDFs."}},{"@type":"Question","name":"Is Google Scholar or OpenAlex more accurate?","acceptedAnswer":{"@type":"Answer","text":"Neither is complete. Google Scholar flags some counts as automatic estimates that may include citations that do not match the article, and OpenAlex drops references it cannot match to a work in its database. Checking your profile in both is the best way to spot errors."}},{"@type":"Question","name":"Why did my citation count drop after merging duplicates on Google Scholar?","acceptedAnswer":{"@type":"Answer","text":"After a merge, the count is the number of papers citing the merged article. A paper that cited both versions is counted once instead of twice, so the total can be slightly lower than the sum of the two."}},{"@type":"Question","name":"Why are some of my papers missing from my OpenAlex profile?","acceptedAnswer":{"@type":"Answer","text":"OpenAlex builds author profiles by algorithmically disambiguating author names, which can split one person over several profiles or merge different people. Correcting which works belong to the profile fixes both."}},{"@type":"Question","name":"Can I use citation counts in a narrative CV?","acceptedAnswer":{"@type":"Answer","text":"It depends on the funder. NWO, for example, does not allow total citations across your work but does allow a citation count as an indicator for a single key output, and asks you to name the open database it came from."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Guides","item":"https://scholarfolio.org/guides/"},{"@type":"ListItem","position":2,"name":"Why Google Scholar and OpenAlex citation counts differ","item":"https://scholarfolio.org/guides/google-scholar-vs-openalex-citation-counts/"}]}</script>
+</head>
+<body>
+<header class="site"><div class="wrap"><a class="brand" href="/">Scholar<span>Folio</span></a><nav><a href="/guides/">Guides</a><a href="/">Open the app</a></nav></div></header>
+<main class="wrap">
+<p class="crumbs"><a href="/guides/">Guides</a> › Explainer</p>
+<h1>Why Google Scholar and OpenAlex citation counts differ</h1>
+<p class="lede">If you compare your citation count on <strong>Google Scholar</strong> with the one in <strong>OpenAlex</strong>, they will almost never match. Neither is wrong: they are built from different collections of documents, with different methods for linking a reference to a paper and different ways of deciding which papers are yours.</p>
+<p class="meta">Last checked against Google Scholar and OpenAlex documentation on <time datetime="2026-10-02">2 October 2026</time>.</p>
+<div class="card table-scroll"><table><tr><th scope="row">Google Scholar counts</th><td>Citations from documents its robots find on the web: journal and conference papers, technical reports, drafts, dissertations, preprints, post-prints and abstracts</td></tr><tr><th scope="row">OpenAlex counts</th><td>Matched references from works already in OpenAlex, taken from sources such as Crossref and PubMed and, for open-access works, from the PDF</td></tr><tr><th scope="row">Your author profile</th><td>Google Scholar: the article list you maintain · OpenAlex: profiles built by algorithmic disambiguation, which you can correct</td></tr><tr><th scope="row">Metrics shown</th><td>Google Scholar: citations, h-index and i10-index, each in an All and a Recent version · OpenAlex: per-work and per-author citation counts, per-year counts for about the last ten years</td></tr></table></div>
+<div class="cta">
+<p>ScholarFolio shows your headline metrics from Google Scholar and uses OpenAlex for topics, open access, co-authors and the narrative CV draft, so you can see both sides of your record in one place.</p>
+<a class="btn" href="/?tab=cv&amp;utm_source=guide&amp;utm_medium=organic&amp;utm_campaign=google-scholar-vs-openalex-citation-counts">Generate a draft from your Google Scholar profile — free</a>
+</div>
+<h2>How Google Scholar counts citations</h2>
+<p>Google Scholar indexes scholarly documents from across the web: its inclusion guidelines list journal papers, conference papers, technical reports and their drafts, dissertations, preprints, post-prints and abstracts. Your profile's citation metrics are computed and updated automatically as Google Scholar finds new citations to your work.</p>
+<p>A few details explain many surprises:</p>
+<ul>
+<li>A “Cited by” count marked with an asterisk “includes citations that might not match this article”; Google describes it as an automatic estimate.</li>
+<li>Duplicate versions of the same paper split its citations until you merge them in your profile. After a merge the count can be lower than the sum, because a paper that cited both versions is counted once.</li>
+<li>Citations go missing when the citing article is not accessible to Google's robots or is formatted in a way its algorithms cannot parse. Google says fixes made by publishers usually take 6 to 9 months to show up.</li>
+</ul>
+<h2>How OpenAlex counts citations</h2>
+<p>In OpenAlex, a work's <code>cited_by_count</code> is the number of works that cite it, counted as successful reference matches. OpenAlex takes each work's reference list from its source record (Crossref, PubMed and similar), or from the PDF when the work is open access, and matches each reference to a work already in OpenAlex: by DOI first, which is highly reliable, and otherwise by other bibliographic metadata, which is less reliable.</p>
+<p>That process explains why OpenAlex can miss citations: references to works that are not in OpenAlex are dropped, many Crossref records contain no references at all, and references without a DOI can fail to match. Per-year citation counts only cover roughly the last ten years.</p>
+<p>Author profiles are built by <em>disambiguation</em>: an algorithm decides which author names on which works belong to the same person. OpenAlex documents two failure modes, <strong>splitting</strong> (one person's works spread over several profiles) and <strong>merging</strong> (different people's works in one profile). Both are fixed by correcting which works belong to a profile. Only about one profile in ten carries an ORCID iD.</p>
+<h2>Which number should you use in a grant application?</h2>
+<p>Often neither. Several funders do not allow author-level metrics such as total citations or the h-index at all (see the <a href="/guides/nwo-veni-vidi-vici-narrative-cv/">NWO</a> and <a href="/guides/snsf-cv-format/">SNSF</a> guides). Where a per-output citation count is allowed, NWO's 2026 forms ask you to name the open database the number came from. OpenAlex publishes its complete database as a free public download, so anyone can check a number you take from it.</p>
+<p>Whatever you use, say where the number comes from and when you looked it up, and do not mix sources within one list.</p>
+<h2 id="steps">How to check and fix your numbers</h2>
+<ol class="steps"><li><strong>Clean up your Google Scholar profile</strong><p>Remove papers that are not yours and merge duplicate versions of the same paper so their citations are counted together.</p></li>
+<li><strong>Find your OpenAlex author profile</strong><p>Search for yourself and check for split profiles (your papers spread over several entries) or merged ones (someone else’s papers in yours).</p></li>
+<li><strong>Correct OpenAlex where needed</strong><p>OpenAlex fixes profiles by correcting which works belong to them; its help pages explain how, and how ORCID iDs are attached to profiles.</p></li>
+<li><strong>Compare individual papers, not totals</strong><p>Large gaps on one paper usually point to a missing DOI, a duplicate record, or citing documents that only one index covers.</p></li></ol>
+<div class="cta">
+<p>ScholarFolio shows your headline metrics from Google Scholar and uses OpenAlex for topics, open access, co-authors and the narrative CV draft, so you can see both sides of your record in one place.</p>
+<a class="btn" href="/?tab=cv&amp;utm_source=guide&amp;utm_medium=organic&amp;utm_campaign=google-scholar-vs-openalex-citation-counts">Generate a draft from your Google Scholar profile — free</a>
+</div>
+<h2 id="faq">Frequently asked questions</h2>
+<details><summary>Why is my Google Scholar citation count different from OpenAlex?</summary><p>They index different sets of documents and link citations differently. Google Scholar counts citations from scholarly documents it finds on the web, including preprints, theses and technical reports. OpenAlex counts references it can match to works already in its database, using reference lists from sources such as Crossref and PubMed or from open-access PDFs.</p></details>
+<details><summary>Is Google Scholar or OpenAlex more accurate?</summary><p>Neither is complete. Google Scholar flags some counts as automatic estimates that may include citations that do not match the article, and OpenAlex drops references it cannot match to a work in its database. Checking your profile in both is the best way to spot errors.</p></details>
+<details><summary>Why did my citation count drop after merging duplicates on Google Scholar?</summary><p>After a merge, the count is the number of papers citing the merged article. A paper that cited both versions is counted once instead of twice, so the total can be slightly lower than the sum of the two.</p></details>
+<details><summary>Why are some of my papers missing from my OpenAlex profile?</summary><p>OpenAlex builds author profiles by algorithmically disambiguating author names, which can split one person over several profiles or merge different people. Correcting which works belong to the profile fixes both.</p></details>
+<details><summary>Can I use citation counts in a narrative CV?</summary><p>It depends on the funder. NWO, for example, does not allow total citations across your work but does allow a citation count as an indicator for a single key output, and asks you to name the open database it came from.</p></details>
+<h2 id="sources">Official sources</h2>
+<p class="meta">Last checked: <time datetime="2026-10-02">2 October 2026</time>. Funders update their forms every round; if anything here differs from the current call text, the call text wins.</p>
+<ul class="sources"><li><a href="https://scholar.google.com/intl/en/scholar/citations.html" rel="nofollow noopener">Google Scholar — Citations help</a></li><li><a href="https://scholar.google.com/intl/en/scholar/inclusion.html" rel="nofollow noopener">Google Scholar — Inclusion guidelines</a></li><li><a href="https://help.openalex.org/data/works/citations/" rel="nofollow noopener">OpenAlex — Citations</a></li><li><a href="https://help.openalex.org/data/works/attributes/" rel="nofollow noopener">OpenAlex — Work attributes</a></li><li><a href="https://help.openalex.org/data/authors/" rel="nofollow noopener">OpenAlex — Authors</a></li><li><a href="https://help.openalex.org/data/authors/disambiguation/" rel="nofollow noopener">OpenAlex — Author disambiguation</a></li><li><a href="https://help.openalex.org/access/snapshot/" rel="nofollow noopener">OpenAlex — Snapshot (full database download)</a></li><li><a href="https://www.nwo.nl/sites/nwo/files/media-files/Vidi-2026-Pre-proposal-form.docx" rel="nofollow noopener">NWO — Vidi 2026 pre-proposal form (EBCV instructions)</a></li></ul>
+<h2>More guides</h2><ul class="guides"><li><a href="/guides/how-to-write-a-narrative-cv/">How to write a narrative CV for a research grant</a></li><li><a href="/guides/nwo-veni-vidi-vici-narrative-cv/">NWO Veni, Vidi, Vici narrative CV: how to write the evidence-based CV</a></li><li><a href="/guides/erc-cv-track-record/">ERC CV and Track Record: how to write the 4-page section</a></li><li><a href="/guides/msca-postdoctoral-fellowship-cv/">MSCA Postdoctoral Fellowship CV: how to write section 4 of Part B-2</a></li></ul>
+</main>
+<footer class="site"><div class="wrap">
+<p>ScholarFolio is a free, open-source academic project. Guides summarise official funder documents; the funder's current call text always takes precedence.</p>
+<p><a href="/guides/">All guides</a> · <a href="/">ScholarFolio</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a></p>
+</div></footer>
+</body>
+</html>

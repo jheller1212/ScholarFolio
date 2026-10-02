@@ -45,7 +45,7 @@ ${guide.faqs.map(f => `<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p>
   const body = `<p class="crumbs"><a href="/guides/">Guides</a> › ${esc(guide.funder)}</p>
 <h1>${esc(guide.h1)}</h1>
 <p class="lede">${guide.lede}</p>
-<p class="meta">Last checked against official ${esc(guide.funder)} documents on <time datetime="${guide.lastChecked}">${formatDate(guide.lastChecked)}</time>.</p>
+<p class="meta">Last checked against ${esc(guide.checkedAgainst ?? `official ${guide.funder} documents`)} on <time datetime="${guide.lastChecked}">${formatDate(guide.lastChecked)}</time>.</p>
 ${facts}
 ${ctaBlock(guide)}
 ${sections}
