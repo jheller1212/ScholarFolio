@@ -30,6 +30,10 @@
     "netlify/functions/og-image/fonts/*.ttf",
   ]
 
+# The sitemap lists the static guides from their generated manifest.
+[functions.sitemap]
+  included_files = ["public/guides/manifest.json"]
+
 # Crawler OG/SEO injection for every profile URL: /, ?user=<id>,
 # /scholar/<id> and vanity slugs (/<slug>). The function itself falls through
 # immediately for humans and for paths that can't be a profile; the excluded
