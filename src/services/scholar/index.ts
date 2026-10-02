@@ -13,6 +13,9 @@ export interface AuthorSearchResult {
   authorId: string;
   citedBy: number;
   interests: string[];
+  /** Scholar name search: one paper of theirs, shown instead of affiliation /
+   *  citations (those need a paid profile call per candidate). */
+  knownFor?: string;
 }
 
 export const scholarService = {

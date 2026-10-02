@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import { DOMParser } from "npm:linkedom@0.16.8";
 import { hasMoreArticles, isLikelyTruncated, SERP_MAX_PAGES, SERP_PAGE_SIZE } from "./pagination.ts";
+import { applyProfilePreview, extractSearchCandidates, nameMatchesQuery, PREVIEW_PROFILE_LIMIT } from "./searchCandidates.ts";
 
 const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
@@ -676,33 +677,18 @@ function extractScholarUserId(url) {
   }
 }
 
-// --- Shared name matching utilities ---
-function stripDiacritics(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-function nameMatchesQuery(candidateName: string, query: string): boolean {
-  const queryParts = stripDiacritics(query.toLowerCase().trim()).split(/\s+/);
-  const candidateParts = stripDiacritics(candidateName.toLowerCase().trim()).split(/\s+/);
-
-  return queryParts.every(qp =>
-    candidateParts.some(cp =>
-      cp.includes(qp) || qp.includes(cp) ||
-      (cp.length === 1 && qp.startsWith(cp)) ||
-      (qp.length === 1 && cp.startsWith(qp))
-    )
-  );
-}
-
 // --- Author search by name via SerpAPI ---
-// google_scholar_profiles engine was discontinued; use google_scholar with author:"name"
-// to extract unique author_ids from paper results, then fetch their profiles.
+// google_scholar_profiles engine was discontinued; use google_scholar with
+// author:"name" and read the candidates off that one response. Only the top
+// PREVIEW_PROFILE_LIMIT candidates get a google_scholar_author call for
+// affiliation/citations (was up to 4 extra paid calls per search). The
+// google_scholar_profiles engine that returned all of this in one call is
+// discontinued (Scholar now requires login for profile search).
 async function searchAuthorsByNameSerpAPI(query: string) {
   if (!SERPAPI_KEY) {
     throw new Error("SERPAPI_KEY not configured");
   }
 
-  // Step 1: Search papers by this author to discover author_ids
   const serpUrl = new URL('https://serpapi.com/search.json');
   serpUrl.searchParams.set('api_key', SERPAPI_KEY);
   serpUrl.searchParams.set('engine', 'google_scholar');
@@ -722,67 +708,29 @@ async function searchAuthorsByNameSerpAPI(query: string) {
     throw new Error(`SerpAPI error: ${data.error}`);
   }
 
-  const organicResults = data.organic_results || [];
-  console.log(`[Search-SerpAPI] Got ${organicResults.length} organic results`);
+  const candidates = extractSearchCandidates(data, query);
+  console.log(`[Search-SerpAPI] ${data.organic_results?.length ?? 0} organic results -> ${candidates.length} candidates`);
 
-  // Extract unique author_ids that match the query name
-  const seenIds = new Set<string>();
-  const matchedAuthors: Array<{ author_id: string; name: string }> = [];
-
-  for (const result of organicResults) {
-    const authors = result.publication_info?.authors || [];
-    for (const author of authors) {
-      if (!author.author_id || seenIds.has(author.author_id)) continue;
-      if (nameMatchesQuery(author.name || '', query)) {
-        seenIds.add(author.author_id);
-        matchedAuthors.push({ author_id: author.author_id, name: author.name });
-      }
-    }
-  }
-
-  console.log(`[Search-SerpAPI] Matched ${matchedAuthors.length} unique authors`);
-  if (matchedAuthors.length === 0) return [];
-
-  // Step 2: Fetch full profile for each unique author_id (max 4)
-  const profiles: any[] = [];
-  for (const match of matchedAuthors.slice(0, 4)) {
+  // Preview only the top candidates (see PREVIEW_PROFILE_LIMIT); a failed
+  // preview just leaves that candidate with its paper-based "knownFor" line.
+  const previews = await Promise.all(candidates.slice(0, PREVIEW_PROFILE_LIMIT).map(async (c) => {
     try {
       const authorUrl = new URL('https://serpapi.com/search.json');
       authorUrl.searchParams.set('api_key', SERPAPI_KEY);
       authorUrl.searchParams.set('engine', 'google_scholar_author');
-      authorUrl.searchParams.set('author_id', match.author_id);
-
-      console.log(`[Search-SerpAPI] Fetching profile for ${match.name} (${match.author_id})`);
-      const profileResp = await fetch(authorUrl.toString());
-      if (!profileResp.ok) {
-        console.warn(`[Search-SerpAPI] Profile fetch failed: ${profileResp.status}`);
-        continue;
+      authorUrl.searchParams.set('author_id', c.authorId);
+      const resp = await fetch(authorUrl.toString());
+      if (!resp.ok) {
+        console.warn(`[Search-SerpAPI] Preview fetch failed for ${c.authorId}: ${resp.status}`);
+        return c;
       }
-      const profileData = await profileResp.json();
-
-      const authorInfo = profileData.author;
-      if (!authorInfo) {
-        console.warn(`[Search-SerpAPI] No author info in profile response`);
-        continue;
-      }
-
-      profiles.push({
-        name: authorInfo.name || match.name,
-        affiliation: authorInfo.affiliations || '',
-        imageUrl: authorInfo.thumbnail || '',
-        authorId: match.author_id,
-        citedBy: profileData.cited_by?.table?.[0]?.citations?.all ?? 0,
-        interests: (authorInfo.interests || []).map((i: any) => i.title || ''),
-      });
+      return applyProfilePreview(c, await resp.json());
     } catch (e) {
-      console.warn(`[Search-SerpAPI] Error fetching profile for ${match.author_id}:`, e);
+      console.warn(`[Search-SerpAPI] Preview error for ${c.authorId}:`, e);
+      return c;
     }
-  }
-
-  // Final name filter on fetched profiles (profile name may differ from paper author name)
-  const filtered = profiles.filter(p => nameMatchesQuery(p.name, query));
-  console.log(`[Search-SerpAPI] ${profiles.length} profiles fetched, ${filtered.length} after name filter`);
-  return filtered.length > 0 ? filtered : profiles;
+  }));
+  return [...previews, ...candidates.slice(PREVIEW_PROFILE_LIMIT)];
 }
 
 // --- Author search by name via direct scraping (fallback) ---

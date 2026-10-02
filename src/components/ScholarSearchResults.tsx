@@ -110,6 +110,9 @@ export function SearchResultItem({ profile, claim, onSelect }: {
               <span>{profile.affiliation}</span>
             </p>
           )}
+          {!profile.affiliation && profile.knownFor && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">{profile.knownFor}</p>
+          )}
           {(profile.citedBy > 0 || profile.interests.length > 0) && (
             <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500 break-words">
               {profile.citedBy > 0 && <span>Cited by {profile.citedBy.toLocaleString()}</span>}
