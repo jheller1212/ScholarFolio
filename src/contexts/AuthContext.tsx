@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const isNewAccount = now - createdAt < 30000;
             const provider = session.user.app_metadata?.provider;
             // ORCID magic-link sign-ins for existing users should not trigger welcome
-            const isOrcidReturning = session.user.user_metadata?.orcid_id && provider !== 'orcid';
+            const isOrcidReturning = session.user.app_metadata?.orcid_id && provider !== 'orcid';
             if (isNewAccount) {
               trackEvent('signup', { provider: provider || 'email' });
               if ((provider === 'google' || session.user.user_metadata?.provider === 'orcid') && !isOrcidReturning) {
