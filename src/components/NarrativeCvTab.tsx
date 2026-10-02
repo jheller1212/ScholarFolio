@@ -33,9 +33,9 @@ const formats: Array<{
     id: 'erc',
     name: 'ERC CV & Track Record',
     subtitle: 'European Research Council',
-    description: 'Structured CV (4-page target) with 6 sections covering personal info, education, positions, achievements, publications, and a narrative track record. Journal Impact Factors are discouraged, but citation counts are acceptable as evidence.',
+    description: 'CV and Track Record of up to 4 pages in the three sections the ERC has used since the 2025 calls: personal details, research achievements and peer recognition (up to ten research outputs), and additional information such as career breaks.',
     grants: 'Starting Grant, Consolidator Grant, Advanced Grant',
-    metrics: 'No JIF; citation counts allowed',
+    metrics: 'Explain each output\'s significance and your role',
     color: 'border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30',
   },
   {
