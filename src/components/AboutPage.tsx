@@ -204,7 +204,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
               links and claimed profile URLs never count for anyone.
             </p>
             <p>
-              You can also earn extra lookups by giving feedback or reporting an error in a profile.
+              Reporting an error in a profile earns a few extra lookups as a thank-you.
             </p>
           </section>
 
