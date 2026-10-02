@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import {
-  SITE, buttonHtml, ensureUnsubToken, escapeHtml, firstName, hasCronSecret, jsonResponse,
+  SITE, buttonHtml, ensureUnsubToken, escapeHtml, firstName, hasCronSecret, isDeliverableAddress, jsonResponse,
   layoutHtml, layoutText, maskEmail, sendEmail,
 } from "../_shared/mailer.ts";
 import { NUDGE_WINDOW_DAYS, hasOptedOut, inNudgeWindow, type Prefs } from "./targeting.ts";
@@ -111,7 +111,7 @@ async function collectTargets(windowDays: number): Promise<Array<{ kind: Kind; t
 
   const out: Array<{ kind: Kind; target: Target }> = [];
   for (const u of users) {
-    if (!u.email || hasOptedOut(prefs.get(u.id))) continue;
+    if (!isDeliverableAddress(u.email) || hasOptedOut(prefs.get(u.id))) continue;
     const claim = claims.get(u.id) as
       { slug: string; display_name: string | null; verified: boolean; created_at: string } | undefined;
     const meta = u.user_metadata ?? {};
