@@ -7,6 +7,7 @@ interface AboutPageProps {
   onBack: () => void;
   socialLinks?: React.ReactNode;
   authControls?: React.ReactNode;
+  onNavigateInstitutions?: () => void;
 }
 
 /** Aggregate-only figures from the `transparency_report` RPC — revenue through
@@ -25,7 +26,7 @@ function quarterLabel(dateStr: string): string {
   return `Q${Math.floor(d.getUTCMonth() / 3) + 1} ${d.getUTCFullYear()}`;
 }
 
-export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps) {
+export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitutions }: AboutPageProps) {
   const [report, setReport] = useState<TransparencyReport | null>(null);
   const [reportFailed, setReportFailed] = useState(false);
 
@@ -206,6 +207,19 @@ export function AboutPage({ onBack, socialLinks, authControls }: AboutPageProps)
               If there is ever a surplus after covering API and hosting costs, it gets donated to open science
               initiatives. That commitment is here from day one, even though the amounts are currently tiny.
             </p>
+
+            {onNavigateInstitutions && (
+              <p className="mb-6">
+                Departments, graduate schools, libraries and research offices can help keep it free for everyone as{' '}
+                <a
+                  href="/institutions"
+                  onClick={(e) => { e.preventDefault(); onNavigateInstitutions(); }}
+                  className="text-[#2d7d7d] hover:underline"
+                >
+                  sustaining members
+                </a>.
+              </p>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 rounded-xl overflow-hidden">

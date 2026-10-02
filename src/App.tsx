@@ -7,6 +7,7 @@ import { ApiError } from './utils/api';
 import { ErrorModal } from './components/ErrorModal';
 import { ProfileView } from './components/ProfileView';
 import { AboutPage } from './components/AboutPage';
+import { InstitutionsPage } from './components/InstitutionsPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { TermsPage } from './components/TermsPage';
 import { PrivacyPage } from './components/PrivacyPage';
@@ -37,7 +38,7 @@ const SOCIAL_LINKS = {
   github: 'https://github.com/JonasHeller1212/ResearchFolio'
 };
 
-type Page = 'home' | 'about' | 'terms' | 'privacy' | 'admin' | 'changelog' | 'trending' | 'unsubscribe';
+type Page = 'home' | 'about' | 'institutions' | 'terms' | 'privacy' | 'admin' | 'changelog' | 'trending' | 'unsubscribe';
 
 function SocialLinks() {
   return (
@@ -87,6 +88,13 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
             className="text-sm text-[#3d9494] hover:text-white transition-colors"
           >
             About
+          </a>
+          <a
+            href="/institutions"
+            onClick={(e) => { e.preventDefault(); onNavigate('institutions'); }}
+            className="text-sm text-[#3d9494] hover:text-white transition-colors"
+          >
+            For institutions
           </a>
           <a
             href="/terms"
@@ -172,7 +180,7 @@ function AppContent() {
     // Deep-linkable content pages, reachable at both /privacy and ?page=privacy
     // so they're crawlable/indexable (and can't be shadowed by a vanity slug,
     // which is why this runs before the slug lookup below).
-    const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
+    const PAGE_ROUTES: Page[] = ['about', 'institutions', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
     const pageParam = params.get('page');
     const pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
     const routed = (pageParam && (PAGE_ROUTES as string[]).includes(pageParam))
@@ -264,6 +272,7 @@ function AppContent() {
     const DEFAULT_TITLE = 'Scholar Folio — Your research, at a glance';
     const PAGE_TITLES: Partial<Record<Page, string>> = {
       about: 'About & Pricing — ScholarFolio',
+      institutions: 'For Institutions — ScholarFolio',
       trending: 'Trending Researchers — ScholarFolio',
       changelog: 'Changelog — ScholarFolio',
       privacy: 'Privacy Policy — ScholarFolio',
@@ -282,7 +291,7 @@ function AppContent() {
   useEffect(() => {
     const onPop = () => {
       const p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '').toLowerCase();
-      const PAGE_ROUTES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
+      const PAGE_ROUTES: Page[] = ['about', 'institutions', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe'];
       setPage((PAGE_ROUTES as string[]).includes(p) ? (p as Page) : 'home');
     };
     window.addEventListener('popstate', onPop);
@@ -551,7 +560,7 @@ function AppContent() {
     setPage(newPage);
     window.scrollTo(0, 0);
     // Reflect the page in the URL so content pages are shareable + deep-linkable.
-    const PATH_PAGES: Page[] = ['about', 'terms', 'privacy', 'changelog', 'trending'];
+    const PATH_PAGES: Page[] = ['about', 'institutions', 'terms', 'privacy', 'changelog', 'trending'];
     const path = newPage === 'home' ? '/' : (PATH_PAGES.includes(newPage) ? `/${newPage}` : window.location.pathname);
     if (path !== window.location.pathname) {
       window.history.pushState({}, '', path);
@@ -573,7 +582,8 @@ function AppContent() {
       return <div className="page-enter"><AdminDashboard onBack={() => handleNavigate('home')} /></div>;
     }
     if (page === 'trending') return <div className="page-enter"><TrendingPage onBack={() => handleNavigate('home')} /></div>;
-    if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} socialLinks={<SocialLinks />} authControls={authControls} /></div>;
+    if (page === 'about') return <div className="page-enter"><AboutPage onBack={() => handleNavigate('home')} socialLinks={<SocialLinks />} authControls={authControls} onNavigateInstitutions={() => handleNavigate('institutions')} /></div>;
+    if (page === 'institutions') return <div className="page-enter"><InstitutionsPage onBack={() => handleNavigate('home')} onNavigateAbout={() => handleNavigate('about')} socialLinks={<SocialLinks />} authControls={authControls} /></div>;
     if (page === 'terms') return <div className="page-enter"><TermsPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'privacy') return <div className="page-enter"><PrivacyPage onBack={() => handleNavigate('home')} /></div>;
     if (page === 'changelog') return <div className="page-enter"><ChangelogPage onBack={() => handleNavigate('home')} /></div>;

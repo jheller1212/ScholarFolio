@@ -9,6 +9,7 @@ const handler: Handler = async () => {
   const staticPages = [
     { loc: 'https://scholarfolio.org/', changefreq: 'weekly', priority: '1.0' },
     { loc: 'https://scholarfolio.org/about', changefreq: 'monthly', priority: '0.6' },
+    { loc: 'https://scholarfolio.org/institutions', changefreq: 'monthly', priority: '0.5' },
     { loc: 'https://scholarfolio.org/trending', changefreq: 'daily', priority: '0.6' },
     { loc: 'https://scholarfolio.org/changelog', changefreq: 'weekly', priority: '0.5' },
     { loc: 'https://scholarfolio.org/privacy', changefreq: 'monthly', priority: '0.3' },
