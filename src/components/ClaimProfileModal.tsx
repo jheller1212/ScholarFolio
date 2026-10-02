@@ -42,6 +42,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   const [digestOptIn, setDigestOptIn] = useState(false);
   const [existingClaim, setExistingClaim] = useState<string | null>(null);
   const [needsOrcid, setNeedsOrcid] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Start the ORCID sign-in flow (same as the auth modal) so an account without
@@ -230,7 +231,6 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
     );
   }
 
-  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
   const profileUrl = `https://scholarfolio.org/${slug}`;
 
