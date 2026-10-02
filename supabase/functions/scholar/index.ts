@@ -42,7 +42,8 @@ function getRequestIp(req: Request): string {
   return req.headers.get('x-real-ip') || 'unknown';
 }
 
-const CACHE_DURATION = 604800; // 7 days in seconds
+// 14 days: GS headline numbers move slowly, and every refetch is a paid SerpAPI call.
+const CACHE_DURATION = 1209600; // 14 days in seconds
 const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 
 // --- OpenAlex proxy config ---

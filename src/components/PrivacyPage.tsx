@@ -46,7 +46,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Purchase data</strong> — Stripe payment session IDs, credit pack purchased, and amount. We do not store credit card numbers; Stripe handles all payment processing.</li>
               <li><strong>Technical logs</strong> — IP address, user agent, request timestamp, and the Google Scholar profile ID searched. These are used for rate limiting, abuse prevention, and debugging. Logs are automatically deleted after 30 days.</li>
               <li><strong>Local storage</strong> — We store a theme preference (<code>sf_theme</code>) and an anonymous search counter (<code>sf_searches</code>) in your browser's localStorage. These are strictly functional and contain no personal identifiers.</li>
-              <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 7 days to reduce redundant API calls.</li>
+              <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 14 days to reduce redundant API calls.</li>
               <li><strong>Usage analytics</strong> — We log anonymised usage events (e.g., page visits, searches, sign-ups) together with the referring URL and any UTM campaign parameters present in the link you followed. Each browser session is assigned a random identifier that is discarded when you close the tab. These events contain no personal identifiers and cannot be linked to you across sessions.</li>
               <li><strong>Email preferences</strong> — If you opt in to email updates (metric change notifications and/or product news), we record your choices together with the consent timestamp, where you gave it, and the exact wording you agreed to. We only send these emails with your consent; you can withdraw it at any time via the account menu or the one-click unsubscribe link included in every email.</li>
               <li><strong>Admin access</strong> — The site administrator may access account-level data (email address, credit balance) for service administration, user support, abuse prevention, and credit adjustments (e.g., granting credits for helpful feedback).</li>
@@ -84,7 +84,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Account data</strong> — retained until you delete your account.</li>
               <li><strong>Purchase records</strong> — retained for legal/tax compliance (7 years).</li>
               <li><strong>Technical logs</strong> — automatically deleted after 30 days.</li>
-              <li><strong>Cached profiles</strong> — expire after 7 days and are periodically cleaned up.</li>
+              <li><strong>Cached profiles</strong> — expire after 14 days and are periodically cleaned up.</li>
             </ul>
           </section>
 
