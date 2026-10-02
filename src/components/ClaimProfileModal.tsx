@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Link, Check, AlertCircle, Loader2, User, FileText, Copy, Mail, Linkedin, GraduationCap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { randomId } from '../lib/randomId';
+import { startOrcidSignIn } from '../lib/orcidSignIn';
+import { nameToSlug } from '../lib/profileSlug';
+import { savePendingAuthIntent, claimIntentFor } from '../lib/pendingAuthIntent';
+import { OrcidIcon } from './OrcidIcon';
 import { logError } from '../lib/errorLogger';
 import { saveEmailPreferences } from '../lib/emailPreferences';
 
@@ -11,14 +14,6 @@ interface ClaimProfileModalProps {
   authorId: string;
   authorName: string;
   onClaimed: (slug: string) => void;
-}
-
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
 }
 
 // Path segments the router owns — a vanity slug must never occupy them.
@@ -46,12 +41,11 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Start the ORCID sign-in flow (same as the auth modal) so an account without
-  // a linked ORCID can connect one, then return to claim.
+  // a linked ORCID can connect one. The callback lands on the site root, so
+  // park the claim intent to come back to this profile with the modal open.
   const connectOrcid = () => {
-    const state = randomId();
-    sessionStorage.setItem('orcid_oauth_state', state);
-    const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
-    window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
+    savePendingAuthIntent(claimIntentFor(authorId));
+    startOrcidSignIn();
   };
 
   // Check if user already claimed a profile
@@ -467,7 +461,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed }: 
                 onClick={connectOrcid}
                 className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg bg-[#A6CE39] text-white hover:brightness-95 transition-all"
               >
-                <svg className="h-4 w-4" viewBox="0 0 256 256"><path fill="#fff" d="M86.3 186.2H70.9V79.1h15.4v107.1zm22.2 0h15.4V127c0-10.9 5.1-17.4 14.9-17.4 8.3 0 12.9 5.1 12.9 15v61.6h15.4V121.1c0-17.9-10.1-28.4-26.6-28.4-11.7 0-18.7 5.1-22.2 12.6h-.3V79.1H108v107.1h.5zM86.3 65.4c-5.1 0-9.1 4-9.1 9.1s4 9.1 9.1 9.1 9.1-4 9.1-9.1-4.1-9.1-9.1-9.1z"/></svg>
+                <OrcidIcon glyphOnly />
                 Connect your ORCID iD
               </button>
             </div>

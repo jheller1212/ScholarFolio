@@ -90,7 +90,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
     return (
       <div className="flex items-center gap-2">
         {anonSearchesUsed > 0 && (
-          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+          <span className="hidden sm:inline text-[10px] text-gray-400 whitespace-nowrap">
             {Math.max(0, anonFreeLimit - anonSearchesUsed)}/{anonFreeLimit} free
           </span>
         )}

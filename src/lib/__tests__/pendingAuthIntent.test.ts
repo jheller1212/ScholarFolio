@@ -4,6 +4,7 @@ import {
   readPendingAuthIntent,
   takePendingAuthIntent,
   clearPendingAuthIntent,
+  claimIntentFor,
 } from '../pendingAuthIntent';
 
 const URL_A = 'https://scholar.google.com/citations?user=abcdefghijkl';
@@ -22,8 +23,8 @@ describe('pendingAuthIntent', () => {
   beforeEach(() => localStorage.clear());
 
   test('round-trips an intent', () => {
-    savePendingAuthIntent({ url: URL_A, nameFallback: 'Ada Lovelace', claim: true }, 1000);
-    expect(readPendingAuthIntent(2000)).toEqual({ url: URL_A, nameFallback: 'Ada Lovelace', claim: true, savedAt: 1000 });
+    savePendingAuthIntent({ url: URL_A, nameFallback: 'Ada Lovelace', claimAuthorId: 'abcdefghijkl' }, 1000);
+    expect(readPendingAuthIntent(2000)).toEqual({ url: URL_A, nameFallback: 'Ada Lovelace', claimAuthorId: 'abcdefghijkl', savedAt: 1000 });
   });
 
   test('take clears it so it only fires once', () => {
@@ -44,8 +45,8 @@ describe('pendingAuthIntent', () => {
     expect(readPendingAuthIntent(2)).toBeNull();
   });
 
-  test('drops non-boolean claim flags', () => {
-    localStorage.setItem('sf_pending_auth_intent', JSON.stringify({ url: URL_A, claim: 'yes', savedAt: 1 }));
+  test('drops a malformed claim author', () => {
+    localStorage.setItem('sf_pending_auth_intent', JSON.stringify({ url: URL_A, claimAuthorId: 7, savedAt: 1 }));
     expect(readPendingAuthIntent(2)).toEqual({ url: URL_A, savedAt: 1 });
   });
 
@@ -53,5 +54,10 @@ describe('pendingAuthIntent', () => {
     savePendingAuthIntent({ url: URL_A });
     clearPendingAuthIntent();
     expect(readPendingAuthIntent()).toBeNull();
+  });
+
+  test('claim intent reopens Scholar and OpenAlex profiles by id', () => {
+    expect(claimIntentFor('abcdefghijkl')).toEqual({ url: URL_A, claimAuthorId: 'abcdefghijkl' });
+    expect(claimIntentFor('openalex:A123')).toEqual({ url: 'openalex:A123', claimAuthorId: 'openalex:A123' });
   });
 });

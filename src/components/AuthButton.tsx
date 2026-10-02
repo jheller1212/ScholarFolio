@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { LogIn, User, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { randomId } from '../lib/randomId';
+import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
 import { AuthLegalNotice } from './AuthLegalNotice';
+import { OrcidIcon } from './OrcidIcon';
 
 export function AuthButton() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
@@ -98,7 +99,7 @@ export function AuthButton() {
         </button>
         <button
           onClick={() => openModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg transition-colors"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg transition-colors"
         >
           Sign up
         </button>
@@ -157,17 +158,11 @@ export function AuthButton() {
               onClick={() => {
                 if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup');
                 else clearPendingEmailConsent();
-                const state = randomId();
-                sessionStorage.setItem('orcid_oauth_state', state);
-                const redirectUri = encodeURIComponent(`${window.location.origin}/api/orcid-callback`);
-                window.location.href = `https://orcid.org/oauth/authorize?client_id=APP-R9QF1AQWVYVJW0V9&response_type=code&scope=/authenticate&redirect_uri=${redirectUri}&state=${state}`;
+                startOrcidSignIn();
               }}
               className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mt-2"
             >
-              <svg className="h-4 w-4" viewBox="0 0 256 256">
-                <path fill="#A6CE39" d="M256 128c0 70.7-57.3 128-128 128S0 198.7 0 128 57.3 0 128 0s128 57.3 128 128z"/>
-                <path fill="#fff" d="M86.3 186.2H70.9V79.1h15.4v107.1zm22.2 0h15.4V127c0-10.9 5.1-17.4 14.9-17.4 8.3 0 12.9 5.1 12.9 15v61.6h15.4V121.1c0-17.9-10.1-28.4-26.6-28.4-11.7 0-18.7 5.1-22.2 12.6h-.3V79.1H108v107.1h.5zM86.3 65.4c-5.1 0-9.1 4-9.1 9.1s4 9.1 9.1 9.1 9.1-4 9.1-9.1-4.1-9.1-9.1-9.1z"/>
-              </svg>
+              <OrcidIcon />
               Continue with ORCID
             </button>
 
