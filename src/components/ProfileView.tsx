@@ -453,6 +453,7 @@ export function ProfileView({
           authorId={claimAuthorId}
           authorName={data.name}
           onClaimed={handleClaimed}
+          onOpenCorrections={() => setShowCorrectModal(true)}
         />
       )}
 
