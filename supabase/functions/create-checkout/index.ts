@@ -24,8 +24,10 @@ function getCorsHeaders(req: Request) {
 }
 
 const PACKS: Record<string, { credits: number; priceInCents: number; name: string }> = {
-  starter: { credits: 25, priceInCents: 500, name: 'Supporter — helps keep ScholarFolio running' },
-  pro: { credits: 75, priceInCents: 1000, name: 'Open Science Supporter — covers Scholar data access' },
+  // Voluntary support: the amount is the point, the extra lookups a thank-you.
+  // Keep credits/prices in sync with SUPPORT_PACKS in src/lib/constants.ts.
+  starter: { credits: 25, priceInCents: 500, name: 'voluntary support (€5)' },
+  pro: { credits: 75, priceInCents: 1000, name: 'voluntary support (€10)' },
 };
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
@@ -75,7 +77,7 @@ Deno.serve(async (req) => {
           currency: 'eur',
           product_data: {
             name: `ScholarFolio ${pack.name}`,
-            description: `Support ScholarFolio and receive ${pack.credits} profile refreshes`,
+            description: `Thank you for supporting free, open-source ScholarFolio. Includes ${pack.credits} extra profile lookups as a thank-you.`,
           },
           unit_amount: pack.priceInCents,
         },
