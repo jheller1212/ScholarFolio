@@ -470,7 +470,6 @@ export function ProfileView({
         <FeedbackPromptBanner
           onOpenFeedback={() => feedback.openModal('prompt')}
           onDismiss={feedback.dismissBanner}
-          creditsAmount={feedback.hasSubmittedBefore ? 2 : 5}
         />
       )}
 
@@ -496,7 +495,6 @@ export function ProfileView({
             refreshCredits();
           }}
           profileViewed={scholarId}
-          isFirstFeedback={!feedback.hasSubmittedBefore}
         />
       )}
     </div>

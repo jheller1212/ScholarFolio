@@ -3,10 +3,9 @@ import { X } from 'lucide-react';
 interface FeedbackPromptBannerProps {
   onOpenFeedback: () => void;
   onDismiss: () => void;
-  creditsAmount: number;
 }
 
-export function FeedbackPromptBanner({ onOpenFeedback, onDismiss, creditsAmount }: FeedbackPromptBannerProps) {
+export function FeedbackPromptBanner({ onOpenFeedback, onDismiss }: FeedbackPromptBannerProps) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-fade-up">
       <div className="relative bg-white dark:bg-slate-800 border border-[#2d7d7d]/20 shadow-lg rounded-xl px-5 py-3 max-w-sm w-[calc(100vw-2rem)]">
@@ -19,13 +18,13 @@ export function FeedbackPromptBanner({ onOpenFeedback, onDismiss, creditsAmount 
         </button>
 
         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 pr-5">
-          Enjoying Scholar Folio?
+          One quick question
         </p>
         <button
           onClick={onOpenFeedback}
-          className="text-sm text-[#2d7d7d] dark:text-[#5bbdbd] hover:underline font-medium mt-0.5"
+          className="text-sm text-[#2d7d7d] dark:text-[#5bbdbd] hover:underline font-medium mt-0.5 text-left"
         >
-          Share quick feedback &rarr; earn {creditsAmount} credits
+          What should ScholarFolio do better? &rarr;
         </button>
       </div>
     </div>
