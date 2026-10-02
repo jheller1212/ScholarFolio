@@ -113,7 +113,9 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt);
     if (authErr || !user) return json({ error: "Sign in to claim a profile." }, 401);
 
-    const userOrcid = normalizeOrcid(user.user_metadata?.orcid_id);
+    // app_metadata is written only by the ORCID callback (service role); user_metadata
+    // is editable by the user and must never count as proof of an ORCID iD.
+    const userOrcid = normalizeOrcid(user.app_metadata?.orcid_id);
     if (!userOrcid) {
       return json({ verified: false, reason: "no-orcid", message: "Connect your ORCID iD to claim your profile." });
     }

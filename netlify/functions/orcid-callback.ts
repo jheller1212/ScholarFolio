@@ -116,8 +116,10 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (data.users.length < 1000) break;
   }
 
-  // Priority 1: Find user who already has this ORCID linked (returning ORCID user)
-  let matchedUser = allUsers.find((u) => u.user_metadata?.orcid_id === orcidId) ?? null;
+  // Priority 1: Find user who already has this ORCID linked (returning ORCID user).
+  // Only app_metadata counts: users can rewrite their own user_metadata from the
+  // browser, so a user_metadata ORCID proves nothing.
+  let matchedUser = allUsers.find((u) => u.app_metadata?.orcid_id === orcidId) ?? null;
 
   // Priority 2: Match by email from ORCID's public profile
   if (!matchedUser) {
@@ -135,8 +137,10 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   // Link ORCID iD to existing user if not already set
-  if (matchedUser && matchedUser.user_metadata?.orcid_id !== orcidId) {
+  if (matchedUser && matchedUser.app_metadata?.orcid_id !== orcidId) {
     await supabase.auth.admin.updateUserById(matchedUser.id, {
+      // app_metadata is the verified source; user_metadata keeps a copy for display.
+      app_metadata: { ...matchedUser.app_metadata, orcid_id: orcidId },
       user_metadata: { ...matchedUser.user_metadata, orcid_id: orcidId },
     });
   }
@@ -151,6 +155,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     const { error: createError } = await supabase.auth.admin.createUser({
       email: syntheticEmail,
       email_confirm: true,
+      app_metadata: { orcid_id: orcidId },
       user_metadata: {
         orcid_id: orcidId,
         full_name: orcidName,
