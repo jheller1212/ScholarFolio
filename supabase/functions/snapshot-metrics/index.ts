@@ -1,81 +1,134 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
+import { monthStart, parseCachedProfile, parseSerpAuthor, type GsSnapshot } from "../_shared/digest.ts";
+import { hasCronSecret, jsonResponse } from "../_shared/mailer.ts";
 
 /**
- * Monthly metric snapshot. For every ORCID-verified claimed profile it reads
- * the author's current metrics from OpenAlex (free, exact via ORCID) and writes
- * one row per calendar month into metric_snapshots. That history is what the
- * "your citations changed this month" digest diffs against.
+ * Monthly metric snapshot, one row per ORCID-verified claimed profile per
+ * calendar month in metric_snapshots. That history is what send-digest diffs.
  *
- * Verified-only for now: an ORCID resolves to exactly one OpenAlex author, so
- * the numbers are trustworthy. Emailing someone a wrong citation count would be
- * worse than sending nothing (accuracy principle).
+ * Two sources per row:
+ *  - OpenAlex (free, exact via the verified ORCID) — enrichment history.
+ *  - Google Scholar headline numbers (citations, h-index, i10 + the most-cited
+ *    works) — what the digest actually reports, since GS is the headline source.
+ *    Only digest subscribers get a fresh SerpAPI call (one request each), so
+ *    paid calls scale with opted-in owners, not with claims. Other profiles
+ *    reuse scholar_cache when it is still fresh, which costs nothing.
  *
- * Auth: the caller must present the service-role key as a bearer token, so only
- * the scheduled GitHub Action (which holds it as a secret) can trigger it.
+ * Verified-only: emailing someone a wrong citation count would be worse than
+ * sending nothing (accuracy principle).
+ *
+ * Auth: CRON_SECRET bearer, held by the scheduled GitHub Action.
  * Deploy with: supabase functions deploy snapshot-metrics --no-verify-jwt
  */
 
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
-const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", SERVICE_KEY);
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+);
+const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY") ?? "";
 const OA_MAILTO = "info@scholarfolio.org";
 
-interface ClaimedProfile { author_id: string; orcid: string | null }
+interface ClaimedProfile { user_id: string; author_id: string; orcid: string | null }
 
-function normalizeOrcid(orcid: string): string {
-  // Stored as a full URL; OpenAlex wants the bare or URL form consistently.
+function bareOrcid(orcid: string): string {
   return orcid.replace(/^https?:\/\/orcid\.org\//, "").trim();
 }
 
+async function openAlexColumns(orcid: string): Promise<Record<string, unknown> | string> {
+  const res = await fetch(
+    `https://api.openalex.org/authors/https://orcid.org/${bareOrcid(orcid)}?mailto=${OA_MAILTO}`,
+    { signal: AbortSignal.timeout(15000) },
+  );
+  if (!res.ok) return `oa:HTTP${res.status}`;
+  const a = await res.json();
+  const ss = a.summary_stats ?? {};
+  return {
+    openalex_author_id: (a.id ?? "").replace("https://openalex.org/", "") || null,
+    cited_by_count: a.cited_by_count ?? null,
+    works_count: a.works_count ?? null,
+    h_index: ss.h_index ?? null,
+    i10_index: ss.i10_index ?? null,
+    source: "openalex",
+  };
+}
+
+/** One SerpAPI request: page one of the author's articles, which also carries
+ *  GS's own citation/h-index/i10 table. */
+async function fetchScholarHeadline(scholarId: string): Promise<GsSnapshot | string> {
+  if (!SERPAPI_KEY) return "gs:no-serpapi-key";
+  const url = new URL("https://serpapi.com/search.json");
+  url.searchParams.set("engine", "google_scholar_author");
+  url.searchParams.set("author_id", scholarId);
+  url.searchParams.set("num", "100");
+  url.searchParams.set("api_key", SERPAPI_KEY);
+  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(30000) });
+  if (!res.ok) return `gs:HTTP${res.status}`;
+  return parseSerpAuthor(await res.json()) ?? "gs:unparseable";
+}
+
+async function cachedScholarHeadline(scholarId: string): Promise<GsSnapshot | null> {
+  const { data } = await supabase
+    .from("scholar_cache")
+    .select("data")
+    .eq("url", `https://scholar.google.com/citations?user=${scholarId}`)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  return data ? parseCachedProfile(data.data) : null;
+}
+
+function gsColumns(s: GsSnapshot, source: "serpapi" | "cache"): Record<string, unknown> {
+  return {
+    gs_citations: s.citations,
+    gs_h_index: s.hIndex,
+    gs_i10_index: s.i10Index,
+    gs_top_works: s.topWorks,
+    gs_source: source,
+    gs_fetched_at: new Date().toISOString(),
+  };
+}
+
 Deno.serve(async (req) => {
-  // Only a caller holding the service-role key may run this.
-  const bearer = (req.headers.get("Authorization") || "").replace("Bearer ", "");
-  if (!CRON_SECRET || bearer !== CRON_SECRET) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { "Content-Type": "application/json" },
-    });
-  }
+  if (!hasCronSecret(req)) return jsonResponse({ error: "Unauthorized" }, 401);
 
   const { data: profiles, error } = await supabase
     .from("claimed_profiles")
-    .select("author_id, orcid")
-    .eq("verified", true)
-    .not("orcid", "is", null);
-
+    .select("user_id, author_id, orcid")
+    .eq("verified", true);
   if (error) {
     console.error("snapshot-metrics: profile query failed:", error);
-    return new Response(JSON.stringify({ error: "Query failed" }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Query failed" }, 500);
   }
 
-  const month = new Date();
-  const capturedMonth = `${month.getUTCFullYear()}-${String(month.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  const { data: prefs } = await supabase.from("email_preferences").select("user_id").eq("digest_opt_in", true);
+  const subscribers = new Set((prefs ?? []).map((p: { user_id: string }) => p.user_id));
 
-  let captured = 0;
+  const capturedMonth = monthStart(new Date());
+  let captured = 0, gsFresh = 0, gsCached = 0;
   const failures: string[] = [];
 
   for (const p of (profiles ?? []) as ClaimedProfile[]) {
-    if (!p.orcid) continue;
-    const orcid = normalizeOrcid(p.orcid);
+    const row: Record<string, unknown> = { author_id: p.author_id, captured_month: capturedMonth };
     try {
-      const res = await fetch(
-        `https://api.openalex.org/authors/https://orcid.org/${orcid}?mailto=${OA_MAILTO}`,
-        { signal: AbortSignal.timeout(15000) }
-      );
-      if (!res.ok) { failures.push(`${p.author_id}:HTTP${res.status}`); continue; }
-      const a = await res.json();
-      const ss = a.summary_stats ?? {};
-      const { error: upErr } = await supabase.from("metric_snapshots").upsert({
-        author_id: p.author_id,
-        openalex_author_id: (a.id ?? "").replace("https://openalex.org/", "") || null,
-        captured_month: capturedMonth,
-        cited_by_count: a.cited_by_count ?? null,
-        works_count: a.works_count ?? null,
-        h_index: ss.h_index ?? null,
-        i10_index: ss.i10_index ?? null,
-        source: "openalex",
-      }, { onConflict: "author_id,captured_month" });
+      if (p.orcid) {
+        const oa = await openAlexColumns(p.orcid);
+        if (typeof oa === "string") failures.push(`${p.author_id}:${oa}`);
+        else Object.assign(row, oa);
+      }
+      // Claims keyed on an OpenAlex record have no Scholar profile to read.
+      if (!p.author_id.startsWith("openalex:")) {
+        if (subscribers.has(p.user_id)) {
+          const gs = await fetchScholarHeadline(p.author_id);
+          if (typeof gs === "string") failures.push(`${p.author_id}:${gs}`);
+          else { Object.assign(row, gsColumns(gs, "serpapi")); gsFresh++; }
+        } else {
+          const gs = await cachedScholarHeadline(p.author_id);
+          if (gs) { Object.assign(row, gsColumns(gs, "cache")); gsCached++; }
+        }
+      }
+      if (Object.keys(row).length === 2) continue; // nothing captured for this profile
+      const { error: upErr } = await supabase
+        .from("metric_snapshots")
+        .upsert(row, { onConflict: "author_id,captured_month" });
       if (upErr) { failures.push(`${p.author_id}:${upErr.code}`); continue; }
       captured++;
     } catch (e) {
@@ -83,8 +136,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, month: capturedMonth, captured, failures }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
-  );
+  return jsonResponse({ ok: true, month: capturedMonth, captured, gsFresh, gsCached, failures });
 });
