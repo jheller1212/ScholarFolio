@@ -68,12 +68,22 @@ export class OpenAlexService {
       // Filtered OA-status tallies (used instead of the group_by totals when a
       // publication list is supplied, so misattributed works don't count).
       let fTotal = 0, fGold = 0, fGreen = 0, fHybrid = 0, fBronze = 0, fClosed = 0;
+      // OpenAlex's own citation count over the same matched works, for the
+      // "why does this differ from Google Scholar" note on the profile.
+      // Keyed by title so OpenAlex duplicate records aren't counted twice.
+      let matchedWorks = 0, openAlexCitations = 0;
+      const citationTitles = new Set<string>();
 
       const works = await worksPromise;
       for (const work of works) {
         if (!work.title) continue;
         const normalizedTitle = work.title.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (titleFilter && !titleFilter.has(normalizedTitle)) continue; // skip misattributed works
+        if (!citationTitles.has(normalizedTitle)) {
+          citationTitles.add(normalizedTitle);
+          matchedWorks++;
+          openAlexCitations += work.cited_by_count ?? 0;
+        }
         const rawStatus = work.open_access?.oa_status;
         const status: OaStatus = rawStatus === 'diamond'
           ? 'gold'
@@ -147,6 +157,8 @@ export class OpenAlexService {
         doiMap,
         preprintCount,
         repositoryCounts,
+        matchedWorks,
+        openAlexCitations,
       };
     } catch (error) {
       console.warn('[OpenAlex] Error fetching OA stats:', error);

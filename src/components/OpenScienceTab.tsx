@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Unlock, ExternalLink } from 'lucide-react';
 import { MetricsCard } from './MetricsCard';
+import { SourceDiscrepancyNote } from './SourceDiscrepancyNote';
 import type { Author, OaStatus } from '../types/scholar';
 
 interface OpenScienceTabProps {
   data: Author;
+  isOpenAlexProfile: boolean;
 }
 
 function RepositoryBreakdown({ repositoryCounts }: { repositoryCounts: Record<string, number> }) {
@@ -129,7 +131,7 @@ function OaTrend({ publications, publicationOa }: { publications: Author['public
   );
 }
 
-export function OpenScienceTab({ data }: OpenScienceTabProps) {
+export function OpenScienceTab({ data, isOpenAlexProfile }: OpenScienceTabProps) {
   const oa = data.openAccess;
 
   if (!oa) {
@@ -169,6 +171,7 @@ export function OpenScienceTab({ data }: OpenScienceTabProps) {
           {oa.closed > 0 && <MetricsCard title="Closed Access" value={oa.closed} subtitle="Behind paywall" icon="closedAccess" />}
           {(oa.preprintCount ?? 0) > 0 && <MetricsCard title="Preprints" value={oa.preprintCount!} subtitle="Early versions available" icon="preprint" />}
         </div>
+        <SourceDiscrepancyNote data={data} isOpenAlexProfile={isOpenAlexProfile} className="mt-3" />
       </div>
 
       {/* Visual breakdown bar */}
