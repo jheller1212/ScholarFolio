@@ -1,31 +1,31 @@
 import { ArrowRight, FileText, MapPin } from 'lucide-react';
 
-// A static snapshot of the example profile the landing page links to, so first-time
-// visitors see what they get before they search. Rendered as markup rather than a
-// screenshot: no image request, fixed dimensions (no layout shift), and it follows
-// the theme. Numbers are a dated snapshot of the public Google Scholar profile;
-// the button opens the live version.
+// An illustrative profile so first-time visitors see what they get before they
+// search. Deliberately fictional: the landing page should not feature a real
+// researcher. Rendered as markup rather than a screenshot: no image request,
+// fixed dimensions (no layout shift), and it follows the theme. The button
+// opens a real live profile.
 const EXAMPLE = {
-  name: 'Jonas Heller',
-  affiliation: 'Assistant Professor in Marketing, Maastricht University',
-  interests: ['Digital & Services Marketing', 'Immersive Realities', 'AR / VR', 'Decision Making'],
-  snapshot: 'Oct 2026',
+  name: 'Dr. A. Researcher',
+  initials: 'AR',
+  affiliation: 'Department of Marketing, Your University',
+  interests: ['Consumer Behaviour', 'Digital Marketing', 'Field Experiments', 'Open Science'],
   metrics: [
-    { label: 'Citations', value: '4,396' },
-    { label: 'h-index', value: '25' },
-    { label: 'i10-index', value: '32' },
+    { label: 'Citations', value: '1,284' },
+    { label: 'h-index', value: '17' },
+    { label: 'i10-index', value: '24' },
   ],
   // Citations per year; the current year is partial and drawn lighter.
   citationsPerYear: [
-    { year: 2018, count: 11 },
-    { year: 2019, count: 50 },
-    { year: 2020, count: 135 },
-    { year: 2021, count: 262 },
-    { year: 2022, count: 518 },
-    { year: 2023, count: 743 },
-    { year: 2024, count: 827 },
-    { year: 2025, count: 1036 },
-    { year: 2026, count: 742, partial: true },
+    { year: 2018, count: 18 },
+    { year: 2019, count: 42 },
+    { year: 2020, count: 76 },
+    { year: 2021, count: 118 },
+    { year: 2022, count: 164 },
+    { year: 2023, count: 212 },
+    { year: 2024, count: 251 },
+    { year: 2025, count: 287 },
+    { year: 2026, count: 196, partial: true },
   ],
 } as const;
 
@@ -54,7 +54,7 @@ export function ExamplePortfolioCard({ onOpen }: ExamplePortfolioCardProps) {
         <div className="p-5 sm:p-6">
           <div className="flex items-start gap-3">
             <div className="h-11 w-11 flex-shrink-0 rounded-full bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 flex items-center justify-center font-serif text-base font-semibold text-[#2d7d7d]" aria-hidden="true">
-              JH
+              {EXAMPLE.initials}
             </div>
             <div className="min-w-0">
               <p className="font-serif text-lg font-semibold text-[#1e293b] dark:text-gray-100 leading-tight">{EXAMPLE.name}</p>
@@ -85,7 +85,7 @@ export function ExamplePortfolioCard({ onOpen }: ExamplePortfolioCardProps) {
 
             <div>
               <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-2">Citations per year</p>
-              <div className="flex items-end gap-1.5 h-28" role="img" aria-label="Bar chart of citations per year, rising from 11 in 2018 to 1,036 in 2025">
+              <div className="flex items-end gap-1.5 h-28" role="img" aria-label="Bar chart of citations per year, rising from 18 in 2018 to 287 in 2025">
                 {EXAMPLE.citationsPerYear.map(d => (
                   <div key={d.year} className="flex-1 flex flex-col items-center justify-end h-full">
                     <div
@@ -113,13 +113,13 @@ export function ExamplePortfolioCard({ onOpen }: ExamplePortfolioCardProps) {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-[11px] text-gray-400 dark:text-gray-500">Example profile · snapshot {EXAMPLE.snapshot}</span>
+            <span className="text-[11px] text-gray-400 dark:text-gray-500">Illustrative example, not a real researcher</span>
             <button
               type="button"
               onClick={onOpen}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-[#2d7d7d] hover:text-[#1f5c5c] dark:hover:text-[#5fb3b3] transition-colors"
             >
-              Open the live example <ArrowRight className="h-3.5 w-3.5" />
+              See a real profile <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
