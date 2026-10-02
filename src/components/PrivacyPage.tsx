@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Logo } from './Logo';
+import { MONTHLY_FREE_LOOKUPS } from '../lib/constants';
 
 interface PrivacyPageProps {
   onBack: () => void;
@@ -20,7 +21,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-4">Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: June 9, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: October 2, 2026</p>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
 
@@ -42,14 +43,14 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">2. What Data We Collect</h2>
             <p className="mb-3">We collect and process the following categories of personal data:</p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
-              <li><strong>Account data</strong> — email address and hashed password (when you sign up), or Google account email (when using Google Sign-In).</li>
-              <li><strong>Purchase data</strong> — Stripe payment session IDs, credit pack purchased, and amount. We do not store credit card numbers; Stripe handles all payment processing.</li>
+              <li><strong>Account data</strong> — email address and hashed password (when you sign up), or Google account email (when using Google Sign-In), plus a count of the fresh profile lookups you used this month (for the {MONTHLY_FREE_LOOKUPS}-per-month fair-use limit) and any extra lookups on your account.</li>
+              <li><strong>Voluntary support data</strong> — if you choose to support Scholar Folio: Stripe payment session IDs, the amount you chose, and the thank-you lookups added. We do not store credit card numbers; Stripe handles all payment processing.</li>
               <li><strong>Technical logs</strong> — IP address, user agent, request timestamp, and the Google Scholar profile ID searched. These are used for rate limiting, abuse prevention, and debugging. Logs are automatically deleted after 30 days.</li>
               <li><strong>Local storage</strong> — We store a theme preference (<code>sf_theme</code>) and an anonymous search counter (<code>sf_searches</code>) in your browser's localStorage. These are strictly functional and contain no personal identifiers.</li>
               <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 14 days to reduce redundant API calls.</li>
               <li><strong>Usage analytics</strong> — We log anonymised usage events (e.g., page visits, searches, sign-ups) together with the referring URL and any UTM campaign parameters present in the link you followed. Each browser session is assigned a random identifier that is discarded when you close the tab. These events contain no personal identifiers and cannot be linked to you across sessions.</li>
               <li><strong>Email preferences</strong> — If you opt in to email updates (metric change notifications and/or product news), we record your choices together with the consent timestamp, where you gave it, and the exact wording you agreed to. We only send these emails with your consent; you can withdraw it at any time via the account menu or the one-click unsubscribe link included in every email.</li>
-              <li><strong>Admin access</strong> — The site administrator may access account-level data (email address, credit balance) for service administration, user support, abuse prevention, and credit adjustments (e.g., granting credits for helpful feedback).</li>
+              <li><strong>Admin access</strong> — The site administrator may access account-level data (email address, lookup usage and extra-lookup balance) for service administration, user support, abuse prevention, and adding extra lookups as a thank-you (e.g., for helpful feedback or reporting a profile error).</li>
             </ul>
           </section>
 

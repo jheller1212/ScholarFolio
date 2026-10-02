@@ -7,6 +7,7 @@ import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
 import { AuthLegalNotice } from './AuthLegalNotice';
 import { OrcidIcon } from './OrcidIcon';
+import { MONTHLY_FREE_LOOKUPS } from '../lib/constants';
 
 export function AuthButton() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth();
@@ -272,7 +273,7 @@ export function AuthButton() {
 
                 {isSignUp && (
                   <p className="text-xs text-center text-gray-500">
-                    You'll receive <strong>5 additional free searches</strong> on top of your guest searches.
+                    You'll get <strong>{MONTHLY_FREE_LOOKUPS} free profile lookups every month</strong>.
                   </p>
                 )}
 

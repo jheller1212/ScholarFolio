@@ -4,11 +4,15 @@ import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
 import { trackEvent } from '../lib/analytics';
 import { flushPendingEmailConsent } from '../lib/emailPreferences';
+import { parseLookupAllowance, lookupsAvailable, type LookupAllowance } from '../lib/allowance';
 
 interface AuthState {
   user: User | null;
   session: Session | null;
+  /** Fresh lookups available now (monthly allowance left + extras). */
   credits: number | null;
+  /** Breakdown of `credits`; null when signed out or the server predates the monthly allowance. */
+  allowance: LookupAllowance | null;
   loading: boolean;
   showWelcome: boolean;
   showPasswordReset: boolean;
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
+  const [allowance, setAllowance] = useState<LookupAllowance | null>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -43,9 +48,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const fetchCredits = async (userId: string) => {
-    // Fire-and-forget: try to claim a free monthly credit (don't block credit fetch)
-    supabase.rpc('claim_monthly_credit', { p_user_id: userId }).then(() => {}).catch(() => {});
+    const { data: allowanceData, error: allowanceError } = await supabase.rpc('get_lookup_allowance');
+    const parsed = allowanceError ? null : parseLookupAllowance(allowanceData);
+    if (parsed) {
+      setAllowance(parsed);
+      setCredits(lookupsAvailable(parsed));
+      return;
+    }
 
+    // Fallback for a database without the monthly-allowance migration: the
+    // plain balance is still the number of lookups the server will allow.
+    setAllowance(null);
     const { data, error } = await supabase
       .from('user_credits')
       .select('credits_remaining')
@@ -109,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           setCredits(null);
+          setAllowance(null);
         }
       }
     );
@@ -147,10 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setCredits(null);
+    setAllowance(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, credits, loading, showWelcome, showPasswordReset, dismissWelcome, dismissPasswordReset, updatePassword, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, session, credits, allowance, loading, showWelcome, showPasswordReset, dismissWelcome, dismissPasswordReset, updatePassword, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );

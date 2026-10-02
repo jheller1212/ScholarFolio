@@ -1303,10 +1303,12 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!creditData) {
-        console.log(`[Credits] No credits row for user ${userId}, creating with default 5`);
+        // No extras for a missing row: the monthly allowance (enforced inside
+        // decrement_credits) covers new users.
+        console.log(`[Credits] No credits row for user ${userId}, creating with 0 extras`);
         await supabase
           .from('user_credits')
-          .insert({ user_id: userId, credits_remaining: 5, total_purchased: 0 });
+          .insert({ user_id: userId, credits_remaining: 0, total_purchased: 0 });
       }
 
       // Atomic decrement — returns false if no credits available
@@ -1326,7 +1328,7 @@ Deno.serve(async (req) => {
         );
       } else if (success === false) {
         return new Response(
-          JSON.stringify({ error: "No credits remaining. Please purchase more searches." }),
+          JSON.stringify({ error: "You've used this month's free profile lookups. Cached profiles stay free, and the allowance resets on the 1st of next month." }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {

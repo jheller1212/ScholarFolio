@@ -5,6 +5,7 @@ import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPr
 import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { AuthLegalNotice } from './AuthLegalNotice';
 import { OrcidIcon } from './OrcidIcon';
+import { ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS } from '../lib/constants';
 
 /**
  * How the wall was closed. The caller keeps the visitor's pending intent
@@ -118,7 +119,7 @@ export function SignUpWall({ onClose, claimSlug }: SignUpWallProps) {
               </p>
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-                You've used your free searches. Sign up to <strong>claim your research profile</strong> and get a permanent URL — plus 5 more profile lookups, free.
+                You've used your {ANON_FREE_LOOKUPS} free lookups. Sign up to <strong>claim your research profile</strong> and get a permanent URL — plus {MONTHLY_FREE_LOOKUPS} fresh profile lookups every month, free.
               </p>
             )}
 

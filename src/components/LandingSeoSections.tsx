@@ -1,3 +1,4 @@
+import { ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS, PROFILE_CACHE_DAYS } from '../lib/constants';
 
 // Indexable landing content: what the product is, in the words people
 // actually search with, plus an FAQ emitting FAQPage structured data.
@@ -9,7 +10,7 @@ const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Is ScholarFolio free?',
-    a: 'Yes — looking up researcher profiles is free: 2 free searches without an account and 5 more when you create one. Viewing recently cached profiles never costs signed-in users a credit. Heavy users can buy affordable credit packs.',
+    a: `Yes. ScholarFolio is free and open source, with no paywalled features: ${ANON_FREE_LOOKUPS} fresh profile lookups without an account, and ${MONTHLY_FREE_LOOKUPS} fresh lookups every month with a free account. Profiles looked up in the last ${PROFILE_CACHE_DAYS} days, direct profile links and claimed profile URLs are always free. If you find it useful, you can support the project voluntarily.`,
   },
   {
     q: 'How is this different from Google Scholar itself?',
