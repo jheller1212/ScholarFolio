@@ -13,7 +13,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 // SPA resolves these before the slug lookup, so a claimed slug can't shadow
 // them; skipping them here saves a Supabase round-trip per crawl.
 export const RESERVED_PATHS = new Set([
-  'about', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe', 'admin',
+  'about', 'institutions', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe', 'admin',
   'scholar', 'guides', 'api', 'badge', 'assets', 'fonts', 'sitemap', 'robots',
   'favicon', 'logo', 'og-default', 'og-image', 'netlify',
 ]);
