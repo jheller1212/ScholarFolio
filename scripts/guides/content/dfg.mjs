@@ -21,7 +21,7 @@ export default {
     ['File name', 'CV_PubList_&lt;last name&gt;'],
   ],
   cta:
-    'ScholarFolio has no DFG export, but its narrative CV drafts give you a shortlist of candidate publications marked by open-access status, plus your positions from ORCID, ready to trim into categories A and B.',
+    'ScholarFolio has no DFG export, but its narrative CV drafts give you a shortlist of candidate publications with DOIs where OpenAlex has them and open-access status, plus your positions from ORCID, ready to trim into categories A and B.',
   sections: [
     {
       h2: 'The sections of form 53.200',
