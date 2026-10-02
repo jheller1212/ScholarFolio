@@ -18,12 +18,13 @@ interface Tier {
   amount: string;
 }
 
-// Suggested amounts, not prices: membership unlocks nothing that non-members
+// Benchmarked against arXiv's lowest membership tier and the SCOSS/DOAJ
+// small/large institution levels. Suggested amounts, not prices: membership unlocks nothing that non-members
 // lack, so institutions can contribute more or less than these figures.
 const TIERS: Tier[] = [
-  { name: 'Department', examples: 'A department, research group or institute', amount: '€1,500' },
-  { name: 'Faculty / Graduate school', examples: 'A faculty, school or doctoral programme', amount: '€3,000' },
-  { name: 'University / Library', examples: 'A university library, research office or whole institution', amount: '€5,000' },
+  { name: 'Department', examples: 'A department, research group or institute', amount: '€1,000' },
+  { name: 'Faculty / Graduate school', examples: 'A faculty, school or doctoral programme', amount: '€2,000' },
+  { name: 'University / Library', examples: 'A university library, research office or whole institution', amount: '€4,000' },
 ];
 
 const BENEFITS: { title: string; body: string }[] = [
@@ -48,6 +49,14 @@ const BENEFITS: { title: string; body: string }[] = [
     body: 'An aggregate overview of how your researchers use ScholarFolio. No individual tracking, no data sold or shared.',
   },
 ];
+
+function ExtLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline inline-flex items-center gap-1">
+      {children} <ExternalLink className="h-3 w-3" />
+    </a>
+  );
+}
 
 export function InstitutionsPage({ onBack, onNavigateAbout, socialLinks, authControls }: InstitutionsPageProps) {
   return (
@@ -85,21 +94,26 @@ export function InstitutionsPage({ onBack, onNavigateAbout, socialLinks, authCon
               infrastructure such as arXiv and OpenAlex. Members do not buy access to anything. They make sure
               it stays open for everyone, including researchers at institutions that cannot contribute.
             </p>
+            <p className="mt-3 text-sm text-[#64748b]">
+              Comparable open infrastructures such as arXiv, DOAJ and OpenAlex are funded the same way.
+            </p>
           </section>
 
           <section>
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">Why it fits responsible research assessment</h2>
             <p className="mb-3">
-              Dutch universities' <strong>Recognition &amp; Rewards</strong> programme, the{' '}
-              <a href="https://sfdora.org/" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline inline-flex items-center gap-1">
-                San Francisco Declaration on Research Assessment (DORA) <ExternalLink className="h-3 w-3" />
-              </a>{' '}
-              and the{' '}
-              <a href="https://coara.eu/" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline inline-flex items-center gap-1">
-                Coalition for Advancing Research Assessment (CoARA) <ExternalLink className="h-3 w-3" />
-              </a>{' '}
+              The Dutch <ExtLink href="https://recognitionrewards.nl/about/position-paper/">Recognition &amp; Rewards</ExtLink>{' '}
+              programme, the <ExtLink href="https://sfdora.org/">San Francisco Declaration on Research Assessment (DORA)</ExtLink>{' '}
+              and the <ExtLink href="https://coara.eu/agreement/the-agreement-full-text/">CoARA agreement</ExtLink>{' '}
               all ask institutions to move away from single numbers such as the journal impact factor or a raw
               h-index, and towards qualitative, contextualised evidence.
+            </p>
+            <p className="mb-3">
+              Funders already work this way. NWO, which{' '}
+              <ExtLink href="https://www.nwo.nl/en/dora">has signed DORA</ExtLink>, uses an{' '}
+              <ExtLink href="https://www.nwo.nl/en/evidence-based-cv">evidence-based CV</ExtLink>{' '}
+              in Veni, Vidi and Vici pre-proposals, and from 2026 the ERC asks for a merged CV and track record of
+              four pages with up to ten selected outputs. Researchers need to show their work in context, briefly.
             </p>
             <p className="mb-3">
               ScholarFolio is built for that shift. It puts metrics in context (field-normalised impact, the
@@ -146,7 +160,8 @@ export function InstitutionsPage({ onBack, onNavigateAbout, socialLinks, authCon
             </div>
             <p className="text-sm text-[#64748b]">
               These are suggested contributions, not prices. Membership is invoiced annually, can be cancelled at any
-              time, and every tier receives the same benefits. If your budget does not match a tier, get in touch anyway.
+              time, and every tier receives the same benefits. Joining through a consortium (for example UNL or SURF)
+              gives 10% off. If your budget does not match a tier, get in touch anyway.
             </p>
           </section>
 
