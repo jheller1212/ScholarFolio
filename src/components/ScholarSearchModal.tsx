@@ -1,65 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, X, MapPin, GraduationCap, Loader2, Link, ArrowRight, Database } from 'lucide-react';
+import { Search, X, GraduationCap, Loader2, Database } from 'lucide-react';
 import { scholarService, type AuthorSearchResult } from '../services/scholar/index';
 import { searchOpenAlexAuthors, OPENALEX_ID_PREFIX } from '../services/openalex';
-
-function UrlFallback({ message, pastedUrl, setPastedUrl, urlError, setUrlError, onSubmit, compact }: {
-  message: string;
-  pastedUrl: string;
-  setPastedUrl: (v: string) => void;
-  urlError: string | null;
-  setUrlError: (v: string | null) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  compact?: boolean;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (compact && !expanded) {
-    return (
-      <button
-        onClick={() => setExpanded(true)}
-        className="mt-4 w-full text-center text-xs text-gray-400 hover:text-[#2d7d7d] transition-colors flex items-center justify-center gap-1.5 py-2"
-      >
-        <Link className="h-3 w-3" />
-        {message} Paste a Google Scholar URL instead
-      </button>
-    );
-  }
-
-  return (
-    <div className={compact ? 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700' : 'text-center py-6'}>
-      {!compact && (
-        <>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-4">Try a different spelling, or paste their Google Scholar URL directly</p>
-        </>
-      )}
-      <form onSubmit={onSubmit} className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={pastedUrl}
-            onChange={e => { setPastedUrl(e.target.value); setUrlError(null); }}
-            placeholder="https://scholar.google.com/citations?user=..."
-            className="w-full px-4 py-2 pl-9 text-xs text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:border-[#2d7d7d] focus:ring-2 focus:ring-[#2d7d7d]/20 transition-all"
-            autoComplete="off"
-            spellCheck="false"
-          />
-          <Link className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
-        </div>
-        <button
-          type="submit"
-          disabled={!pastedUrl.trim()}
-          className="px-3 py-2 bg-[#2d7d7d] text-white text-xs font-medium rounded-lg hover:bg-[#236363] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-        >
-          Go <ArrowRight className="h-3 w-3" />
-        </button>
-      </form>
-      {urlError && <p className="text-xs text-red-500 mt-1.5">{urlError}</p>}
-    </div>
-  );
-}
+import { fetchClaimStatuses, type ClaimStatus } from '../services/claimed-profiles';
+import { UrlFallback, SearchResultItem, NoResultsTips, OpenAlexNotice } from './ScholarSearchResults';
 
 interface ScholarSearchModalProps {
   isOpen: boolean;
@@ -77,8 +22,36 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const [source, setSource] = useState<'scholar' | 'openalex'>('scholar');
   const [pastedUrl, setPastedUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [claims, setClaims] = useState<Map<string, ClaimStatus>>(new Map());
   const inputRef = useRef<HTMLInputElement>(null);
   const hasAutoSearched = useRef(false);
+
+  // Badges arrive after the results so a slow lookup never delays the list.
+  useEffect(() => {
+    let cancelled = false;
+    setClaims(new Map());
+    if (results.length === 0) return;
+    fetchClaimStatuses(results.map(r => r.authorId)).then(map => {
+      if (!cancelled) setClaims(map);
+    });
+    return () => { cancelled = true; };
+  }, [results]);
+
+  // Explicit OpenAlex search for when Scholar returned only namesakes: the
+  // automatic fallback below runs only when Scholar has no results at all.
+  const runOpenAlexSearch = useCallback(async (query: string) => {
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+    try {
+      const oaProfiles = await searchOpenAlexAuthors(query);
+      setResults(oaProfiles);
+      setSource('openalex');
+    } catch {
+      setError('OpenAlex search is unavailable right now. Please try again, or paste a Google Scholar URL.');
+    }
+    setLoading(false);
+  }, []);
 
   // Try Google Scholar first; if it returns nothing or hard-fails, fall back to
   // OpenAlex's open dataset so users still get a result when Scholar is blocked.
@@ -156,6 +129,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       setLoading(false);
       setPastedUrl('');
       setUrlError(null);
+      setClaims(new Map());
       hasAutoSearched.current = false;
     }
   }, [isOpen, initialQuery, runSearch]);
@@ -257,24 +231,27 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
           {loading && (
             <div className="flex flex-col items-center justify-center py-8 text-gray-400">
               <Loader2 className="h-6 w-6 animate-spin mb-2" />
-              <p className="text-sm">Searching Google Scholar...</p>
+              <p className="text-sm">Searching{source === 'openalex' ? ' OpenAlex' : ''}...</p>
             </div>
           )}
 
           {!loading && searched && results.length === 0 && !error && (
-            <UrlFallback
-              message={`No profiles found for "${name.trim()}"`}
-              pastedUrl={pastedUrl}
-              setPastedUrl={setPastedUrl}
-              urlError={urlError}
-              setUrlError={setUrlError}
-              onSubmit={handleUrlSubmit}
-            />
+            <>
+              <NoResultsTips query={name.trim()} />
+              <UrlFallback
+                message="Paste a Google Scholar profile link"
+                pastedUrl={pastedUrl}
+                setPastedUrl={setPastedUrl}
+                urlError={urlError}
+                setUrlError={setUrlError}
+                onSubmit={handleUrlSubmit}
+              />
+            </>
           )}
 
-          {!loading && searched && results.length > 0 && error && (
+          {!loading && searched && results.length === 0 && error && (
             <UrlFallback
-              message="Search failed"
+              message="Paste a Google Scholar profile link instead"
               pastedUrl={pastedUrl}
               setPastedUrl={setPastedUrl}
               urlError={urlError}
@@ -285,63 +262,28 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
 
           {!loading && results.length > 0 && (
             <div className="space-y-2">
-              {source === 'openalex' && (
-                <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 px-3 py-2">
-                  <Database className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
-                    Google Scholar is unavailable right now — showing results from <span className="font-medium">OpenAlex</span> instead. Metrics may differ slightly.
-                  </p>
-                </div>
-              )}
-              <p className="text-xs text-gray-400 mb-3">{results.length} profile{results.length !== 1 ? 's' : ''} found — select the correct one</p>
+              {source === 'openalex' && <OpenAlexNotice />}
+              <p className="text-xs text-gray-400 mb-3">{results.length} profile{results.length !== 1 ? 's' : ''} found. Check the affiliation to pick the right person.</p>
               {results.map((profile) => (
-                <button
+                <SearchResultItem
                   key={profile.authorId}
-                  onClick={() => handleSelect(profile.authorId)}
-                  className="w-full text-left p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-[#2d7d7d] hover:bg-[#2d7d7d]/5 dark:hover:bg-[#2d7d7d]/10 transition-all group"
-                >
-                  <div className="flex items-start gap-3">
-                    {profile.imageUrl ? (
-                      <img
-                        src={profile.imageUrl}
-                        alt=""
-                        className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-gray-100 dark:bg-gray-800"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                        <GraduationCap className="h-5 w-5 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-[#2d7d7d] transition-colors truncate">
-                        {profile.name}
-                      </p>
-                      {profile.affiliation && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate flex items-center gap-1">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          {profile.affiliation}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-3 mt-1">
-                        {profile.citedBy > 0 && (
-                          <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                            Cited by {profile.citedBy.toLocaleString()}
-                          </span>
-                        )}
-                        {profile.interests.length > 0 && (
-                          <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">
-                            {profile.interests.slice(0, 3).join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </button>
+                  profile={profile}
+                  claim={claims.get(profile.authorId)}
+                  onSelect={handleSelect}
+                />
               ))}
-              {/* URL fallback after results */}
+              {source === 'scholar' && name.trim().length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => runOpenAlexSearch(name.trim())}
+                  className="mt-3 w-full text-center text-xs text-gray-500 dark:text-gray-400 hover:text-[#2d7d7d] transition-colors flex items-center justify-center gap-1.5 py-2"
+                >
+                  <Database className="h-3 w-3" />
+                  Not the right person? Search OpenAlex instead
+                </button>
+              )}
               <UrlFallback
-                message="Not finding the right person?"
+                message="Still not finding them?"
                 pastedUrl={pastedUrl}
                 setPastedUrl={setPastedUrl}
                 urlError={urlError}
