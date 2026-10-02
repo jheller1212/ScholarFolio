@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, Search, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, User, Link, Globe, Gauge, TrendingUp, Unlock } from 'lucide-react';
+import { CheckCircle, Search, BarChart, BookOpen, ArrowRight, Menu, X, ExternalLink, Link, Globe, Gauge, TrendingUp, Unlock } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { ScholarSearchModal } from './ScholarSearchModal';
 import { ThemeToggle } from './ThemeToggle';
 import { Logo } from './Logo';
-import { useAuth } from '../contexts/AuthContext';
 import { LandingSeoSections } from './LandingSeoSections';
+import { ExamplePortfolioCard } from './ExamplePortfolioCard';
 
 interface LandingPageProps {
   onSearch: (url: string) => void;
@@ -49,7 +49,7 @@ function useScrollReveal() {
   return ref;
 }
 
-function NameSearchInput({ onSearch, isLoading, onExampleProfile }: { onSearch: (name: string) => void; isLoading: boolean; onExampleProfile: () => void }) {
+function NameSearchInput({ onSearch, isLoading }: { onSearch: (name: string) => void; isLoading: boolean }) {
   const [name, setName] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -67,6 +67,7 @@ function NameSearchInput({ onSearch, isLoading, onExampleProfile }: { onSearch: 
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Search by researcher name..."
+          aria-label="Researcher name"
           disabled={isLoading}
           className="w-full py-3 pl-12 pr-28 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 focus:border-[#2d7d7d] focus:ring-[#2d7d7d]/20 rounded-lg focus:outline-none focus:ring-2 transition-all"
           autoComplete="off"
@@ -84,23 +85,11 @@ function NameSearchInput({ onSearch, isLoading, onExampleProfile }: { onSearch: 
           <span>Find</span>
         </button>
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center space-x-1">
-          <Search className="h-3.5 w-3.5 gradient-icon" />
-          <span>Enter a name to find their profile</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onExampleProfile()}
-          className="flex items-center space-x-1 text-[#2d7d7d] hover:text-[#1f5c5c] transition-colors"
-        >
-          <BookOpen className="h-3.5 w-3.5" />
-          <span>See an example portfolio</span>
-        </button>
-      </div>
     </form>
   );
 }
+
+const EXAMPLE_PROFILE_URL = 'https://scholar.google.com/citations?user=NOSPtp8AAAAJ';
 
 export function LandingPage({ onSearch, loading, error, onNavigate, authControls }: LandingPageProps) {
   const [showScholarSearch, setShowScholarSearch] = useState(false);
@@ -109,7 +98,6 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const featuresRef = useScrollReveal();
   const ctaRef = useScrollReveal();
-  const { user } = useAuth();
 
   return (
     <main className="flex-1 mesh-bg">
@@ -117,13 +105,14 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
       <nav className="border-b border-gray-200/60 dark:border-slate-700/60 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Logo size={28} />
+            {/* Build time lives in a hover title (not invisible text) so deploys can
+                still be checked without screen readers announcing a timestamp. */}
+            <span title={`Build ${new Date(__BUILD_TIME__).toLocaleString()}`} className="flex">
+              <Logo size={28} />
+            </span>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">Scholar Folio</span>
               <span className="text-[11px] text-[#94a3b8] hidden sm:inline">Your research, at a glance</span>
-              <span className="text-[9px] text-transparent hidden sm:inline select-all" title="Build time">
-                {new Date(__BUILD_TIME__).toLocaleString()}
-              </span>
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-5">
@@ -193,41 +182,49 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
           </h1>
 
           <p className="animate-fade-up animate-delay-250 text-base md:text-lg text-[#64748b] dark:text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
-            Get a shareable portfolio page for your research — your publications, citations, and collaboration network at a memorable URL like <span className="font-medium text-[#2d7d7d]">scholarfolio.org/your-name</span>.
+            A free, open-source research profile and a funder-ready narrative CV, built from your Google Scholar record — at a URL like <span className="font-medium text-[#2d7d7d]">scholarfolio.org/your-name</span>.
           </p>
 
           {/* Search area — name search primary */}
-          <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto mb-2">
-            <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} onExampleProfile={() => onSearch('https://scholar.google.com/citations?user=NOSPtp8AAAAJ')} />
+          <div className="animate-fade-up-scale animate-delay-350 w-full max-w-xl mx-auto">
+            <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
           </div>
 
-          {!user && (
-            <p className="animate-fade-up animate-delay-350 text-xs text-[#64748b] dark:text-gray-400 mb-3">
-              <span className="inline-flex items-center gap-1">
-                <User className="h-3 w-3" />
-                Sign up to <strong>claim your profile</strong> and get a permanent URL.
-              </span>
-            </p>
-          )}
-
-          <p className="animate-fade-up animate-delay-350 text-xs text-[#94a3b8] dark:text-gray-500 italic mb-4">
-            Numbers here are context, not verdict. Use them to tell your story.
-          </p>
-
-          <button
-            onClick={() => setShowUrlInput(!showUrlInput)}
-            className="animate-fade-up animate-delay-350 inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#2d7d7d] transition-colors group"
-          >
-            <Link className="h-3.5 w-3.5" />
-            <span>Or paste a Google Scholar URL</span>
-            <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-          </button>
+          <div className="animate-fade-up animate-delay-350 mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+            <button
+              type="button"
+              onClick={() => onSearch(EXAMPLE_PROFILE_URL)}
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#2d7d7d]/40 bg-white/70 dark:bg-slate-800/70 px-4 py-2 text-sm font-medium text-[#2d7d7d] hover:border-[#2d7d7d] hover:bg-[#eaf4f4] dark:hover:bg-[#2d7d7d]/15 disabled:opacity-50 transition-colors"
+            >
+              <BookOpen className="h-4 w-4" />
+              See an example portfolio
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowUrlInput(!showUrlInput)}
+              aria-expanded={showUrlInput}
+              className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#2d7d7d] transition-colors group"
+            >
+              <Link className="h-3.5 w-3.5" />
+              <span>Or paste a Google Scholar URL</span>
+              <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+            </button>
+          </div>
 
           {showUrlInput && (
             <div className="animate-fade-up w-full max-w-xl mx-auto mt-3">
               <SearchBar onSearch={onSearch} isLoading={loading} error={error} compact />
             </div>
           )}
+
+          <p className="animate-fade-up animate-delay-350 mt-4 text-xs text-[#94a3b8] dark:text-gray-500">
+            Free and open source. No ads, no paywall. Numbers are context, not verdict.
+          </p>
+        </div>
+
+        <div className="animate-fade-up animate-delay-350 mt-12">
+          <ExamplePortfolioCard onOpen={() => onSearch(EXAMPLE_PROFILE_URL)} />
         </div>
       </section>
 
@@ -321,7 +318,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
             </p>
 
             <div className="max-w-xl mx-auto mb-3">
-              <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} onExampleProfile={() => onSearch('https://scholar.google.com/citations?user=NOSPtp8AAAAJ')} />
+              <NameSearchInput onSearch={(q) => { setInitialSearchQuery(q); setShowScholarSearch(true); }} isLoading={loading} />
             </div>
 
             <p className="text-xs text-white/40 italic mb-5">
