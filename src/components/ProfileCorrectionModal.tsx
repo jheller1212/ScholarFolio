@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Check, BadgeCheck, Loader2 } from 'lucide-react';
 import { OwnerDetailsForm, type OwnerDetails } from './corrections/OwnerDetailsForm';
 import { HideWorksPanel } from './corrections/HideWorksPanel';
+import { MergeRecordPanel } from './corrections/MergeRecordPanel';
 import { fetchProfileOverrides, hiddenWorkTitles } from '../services/corrections';
 
 interface ProfileCorrectionModalProps {
@@ -12,12 +13,12 @@ interface ProfileCorrectionModalProps {
   publicationTitles: string[];
 }
 
-type Tab = 'details' | 'papers';
+type Tab = 'details' | 'papers' | 'records';
 
 /**
  * Self-service corrections for an ORCID-verified profile owner: descriptive
- * details (title, affiliation, name, pronouns) and hiding papers that aren't
- * theirs. Everything goes through the claim-profile function, which re-checks
+ * details (title, affiliation, name, pronouns), hiding papers that aren't
+ * theirs, and merging a split OpenAlex record. Everything goes through the claim-profile function, which re-checks
  * the verified claim and validates each value server-side. Metrics are never
  * editable.
  */
@@ -58,6 +59,7 @@ export function ProfileCorrectionModal({ onClose, authorId, current, publication
         <div className="flex px-6 border-b border-gray-100 dark:border-slate-700" role="tablist">
           <button role="tab" aria-selected={tab === 'details'} className={tabClass('details')} onClick={() => setTab('details')}>Details &amp; pronouns</button>
           <button role="tab" aria-selected={tab === 'papers'} className={tabClass('papers')} onClick={() => setTab('papers')}>Papers that aren&rsquo;t mine</button>
+          <button role="tab" aria-selected={tab === 'records'} className={tabClass('records')} onClick={() => setTab('records')}>Other records</button>
         </div>
 
         <div className="px-6 py-5 overflow-y-auto">
@@ -74,6 +76,7 @@ export function ProfileCorrectionModal({ onClose, authorId, current, publication
           ) : (
             <HideWorksPanel authorId={authorId} visibleTitles={publicationTitles} initialHidden={hidden} onChanged={() => setDirty(true)} />
           ))}
+          {tab === 'records' && <MergeRecordPanel onMerged={() => setDirty(true)} />}
         </div>
       </div>
     </div>

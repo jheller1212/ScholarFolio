@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import { handleOwnerCorrection } from "./corrections.ts";
+import { approveMerge, proposeMerge } from "./merge.ts";
 
 /**
  * ORCID-verified profile claiming.
@@ -19,6 +20,7 @@ import { handleOwnerCorrection } from "./corrections.ts";
 
 const OPENALEX_BASE = "https://api.openalex.org";
 const OA_MAILTO = "info@scholarfolio.org";
+const ADMIN_EMAIL = "jonasheller89@gmail.com";
 
 const ALLOWED_ORIGINS = [
   "https://scholarfolio.org",
@@ -61,7 +63,7 @@ async function getOpenAlexKey(): Promise<string> {
   } catch {
     _oaKeyCache = "";
   }
-  return _oaKeyCache;
+  return _oaKeyCache ?? "";
 }
 
 async function oaFetch(path: string): Promise<any | null> {
@@ -113,6 +115,20 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(jwt);
     if (authErr || !user) return json({ error: "Sign in to claim a profile." }, 401);
 
+    const body = await req.json();
+    const { action, authorId, profileName, slug, displayName, bio, field, value } = body as {
+      action?: string; authorId?: string; profileName?: string; slug?: string;
+      displayName?: string; bio?: string; field?: string; value?: string;
+    };
+
+    // --- Admin: approve a pending "this record is also me" request ---------
+    // Checked before the ORCID gate: the admin's own account needs no ORCID.
+    if (action === "approve-merge") {
+      if (user.email !== ADMIN_EMAIL) return json({ error: "Unauthorized" }, 403);
+      const r = await approveMerge(supabase, user, body.reportId, body.aliasId, body.canonicalId);
+      return json(r.body, r.status);
+    }
+
     // app_metadata is written only by the ORCID callback (service role); user_metadata
     // is editable by the user and must never count as proof of an ORCID iD.
     const userOrcid = normalizeOrcid(user.app_metadata?.orcid_id);
@@ -120,11 +136,12 @@ Deno.serve(async (req) => {
       return json({ verified: false, reason: "no-orcid", message: "Connect your ORCID iD to claim your profile." });
     }
 
-    const body = await req.json();
-    const { action, authorId, profileName, slug, displayName, bio, field, value } = body as {
-      action?: string; authorId?: string; profileName?: string; slug?: string;
-      displayName?: string; bio?: string; field?: string; value?: string;
-    };
+    // --- Owner: "this other OpenAlex record is also me" ----------------------
+    if (action === "propose-merge") {
+      const r = await proposeMerge(supabase, oaFetch, user, userOrcid, body.otherId);
+      return json(r.body, r.status);
+    }
+
     if (!authorId) return json({ error: "authorId is required" }, 400);
 
     // --- Owner self-service correction (requires an existing verified claim) ---

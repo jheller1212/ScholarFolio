@@ -26,8 +26,8 @@ export function toOpenAlexShortId(identifier: string): string {
 /** The `openalex:<id>` token of a person's canonical record. Anything stored
  *  against a profile (corrections, analytics) is keyed on this, so it holds
  *  whichever of a split author's records the visitor opened. */
-export function canonicalOpenAlexId(identifier: string): string {
-  return OPENALEX_ID_PREFIX + openAlexRecordsFor(toOpenAlexShortId(identifier))[0];
+export async function canonicalOpenAlexId(identifier: string): Promise<string> {
+  return OPENALEX_ID_PREFIX + (await openAlexRecordsFor(toOpenAlexShortId(identifier)))[0];
 }
 
 interface OaAuthorRecord {
@@ -114,7 +114,7 @@ export async function fetchOpenAlexProfile(identifier: string): Promise<Author> 
   }
   // One person can be split across several OpenAlex records; load them all so
   // whichever id the visitor arrived with shows the same, complete profile.
-  const recordIds = openAlexRecordsFor(shortId);
+  const recordIds = await openAlexRecordsFor(shortId);
   const authorFilter = recordIds.map(id => `https://openalex.org/${id}`).join('|');
 
   const records = (await Promise.all(
