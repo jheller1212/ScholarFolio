@@ -62,7 +62,7 @@ export function buildErc(
     'Candidate outputs from your profile. Choose up to ten that show how you advanced your field, ' +
     'with emphasis on recent work; any output type counts (preprints, data sets, software, patents…).'
   ));
-  p.push(...publicationEntries(selectKeyOutputs(data.publications), data.openAccess, false));
+  p.push(...publicationEntries(selectKeyOutputs(data.publications), data.openAccess, { maxAuthors: 6 }));
   p.push(placeholderParagraph(
     '[Optional, per output: a short factual explanation of its significance, your role in producing it, ' +
     'and how it shows you can carry out the proposed project.]'

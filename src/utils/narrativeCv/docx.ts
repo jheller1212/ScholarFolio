@@ -5,7 +5,7 @@ import {
 } from 'docx';
 import type { Author, OpenAccessStats, Publication } from '../../types/scholar';
 import type { OrcidProfile } from '../../services/orcid';
-import { isOA, orcidDateRange } from './format';
+import { formatAuthors, isOA, orcidDateRange } from './format';
 
 export const TEAL = '2D7D7D';
 export const DARK = '1E293B';
@@ -134,14 +134,22 @@ export function fundingEntries(fus: OrcidProfile['fundings']): Paragraph[] {
   return result;
 }
 
+interface PublicationEntryOptions {
+  includeCitations?: boolean;
+  /** Cap the author list with "et al."; omit for the full list (NWO requires it). */
+  maxAuthors?: number;
+}
+
 export function publicationEntries(
-  pubs: Publication[], openAccess?: OpenAccessStats, includeCitations = false
+  pubs: Publication[],
+  openAccess?: OpenAccessStats,
+  { includeCitations = false, maxAuthors }: PublicationEntryOptions = {},
 ): Paragraph[] {
   const result: Paragraph[] = [];
   for (let i = 0; i < pubs.length; i++) {
     const pub = pubs[i];
     const oaFlag = isOA(pub, openAccess) ? ' [OA]' : '';
-    const authorsText = pub.authors.slice(0, 6).join(', ') + (pub.authors.length > 6 ? ' et al.' : '');
+    const authorsText = formatAuthors(pub.authors, maxAuthors);
     const venue = pub.venue ? pub.venue.replace(/,.*$/, '').trim() : '';
 
     const metaParts = [venue, pub.year ? String(pub.year) : ''].filter(Boolean);

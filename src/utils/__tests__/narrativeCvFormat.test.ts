@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isOA, normalizeTitle, orcidDateRange, stripMarkdown, topicNames } from '../narrativeCv/format';
+import {
+  dropMetricSentences, formatAuthors, isOA, normalizeTitle, orcidDateRange, selectKeyOutputs, stripMarkdown, topicNames,
+} from '../narrativeCv/format';
 import type { Author, OpenAccessStats, Publication } from '../../types/scholar';
 
 const pub = (over: Partial<Publication> = {}): Publication => ({
@@ -31,5 +33,27 @@ describe('narrative CV format helpers', () => {
   it('flattens topic names of either shape', () => {
     const data = { topics: [{ name: 'Marketing' }, { name: { title: 'AI' } }, { name: '' }] } as unknown as Author;
     expect(topicNames(data)).toEqual(['Marketing', 'AI']);
+  });
+});
+
+describe('key output selection and author lists', () => {
+  it('orders by citations then recency, ignoring journal rankings', () => {
+    const ranked = pub({ title: 'Ranked', citations: 5, year: 2019, journalRanking: { ft50: true, abs: '4*' } as Publication['journalRanking'] });
+    const cited = pub({ title: 'Cited', citations: 50, year: 2015 });
+    const tieNew = pub({ title: 'Tie new', citations: 5, year: 2023 });
+    expect(selectKeyOutputs([ranked, cited, tieNew]).map(p => p.title)).toEqual(['Cited', 'Tie new', 'Ranked']);
+    expect(selectKeyOutputs(Array.from({ length: 15 }, (_, i) => pub({ title: `P${i}` })))).toHaveLength(10);
+  });
+
+  it('keeps full author lists unless a cap is given', () => {
+    const authors = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    expect(formatAuthors(authors)).toBe('A, B, C, D, E, F, G, H');
+    expect(formatAuthors(authors, 6)).toBe('A, B, C, D, E, F et al.');
+    expect(formatAuthors([' A ', '', 'B'])).toBe('A, B');
+  });
+
+  it('drops sentences with author-level metrics', () => {
+    const text = 'Ada studies **engines**. She has 1,200 citations, yielding an h-index of 12. Her work spans 10 years.';
+    expect(dropMetricSentences(text)).toBe('Ada studies engines. Her work spans 10 years.');
   });
 });
