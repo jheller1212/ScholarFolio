@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Unlock, Heart, BadgeCheck, Globe, FileText, MessageSquare, MapPin, AlertTriangle } from 'lucide-react';
+import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Unlock, BadgeCheck, Globe, FileText, MessageSquare, MapPin, AlertTriangle } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
 import { ClaimProfileBar } from './ClaimProfileBar';
@@ -12,6 +12,7 @@ import { ProfileMetricsTab } from './ProfileMetricsTab';
 import { HeroMetrics } from './HeroMetrics';
 import { ProfileTabs, type ProfileTab } from './ProfileTabs';
 import { ProfileActions } from './ProfileActions';
+import { SupportProjectCard } from './SupportProjectCard';
 import { ResearcherNarrative } from './ResearcherNarrative';
 
 // Lazy-load heavy tab components (D3, Leaflet, recharts, docx)
@@ -324,29 +325,6 @@ export function ProfileView({
           </div>
         </div>
 
-        {onSupport && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#2d7d7d]/15 shadow-card p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#eaf4f4] flex items-center justify-center flex-shrink-0">
-                <Heart className="h-4 w-4 text-[#2d7d7d]" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Support open research tools</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-2xl">
-                  Scholar Folio is built for researchers, not ranking systems. If this helped you understand or share your research profile, a small contribution helps cover paid Scholar data access.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onSupport}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#2d7d7d] hover:bg-[#1f5c5c] rounded-lg transition-colors whitespace-nowrap"
-            >
-              <Heart className="h-3.5 w-3.5" />
-              Support Scholar Folio
-            </button>
-          </div>
-        )}
-
         {/* Explore Co-Authors CTA */}
         {data.metrics.totalCoAuthors > 0 && (
           <div className="bg-gradient-to-r from-[#eaf4f4] to-[#e0f0f0] dark:from-[#2d7d7d]/15 dark:to-[#2d7d7d]/10 rounded-xl border border-[#2d7d7d]/10 dark:border-[#2d7d7d]/20 p-4 mb-6">
@@ -429,6 +407,8 @@ export function ProfileView({
         )}
         </Suspense>
         </div>
+
+        {onSupport && <SupportProjectCard onSupport={onSupport} />}
       </main>
 
       <ScholarSearchModal
