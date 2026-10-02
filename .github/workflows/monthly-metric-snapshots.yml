@@ -1,13 +1,22 @@
 name: Monthly metric snapshots
 
-# Captures each verified profile's OpenAlex metrics once a month, so the
-# citation digest has a history to diff against. pg_net isn't installed, so we
-# trigger the edge function from GitHub's scheduler instead of pg_cron.
+# Captures each verified profile's metrics once a month, then sends the
+# citation digest that diffs them. pg_net isn't installed, so we trigger the
+# edge functions from GitHub's scheduler instead of pg_cron.
+#
+# Manual runs default to a digest DRY RUN (lists who would get an email, sends
+# nothing). Untick "digest_dry_run" to send for real. The snapshot step is an
+# idempotent upsert, so re-running it in the same month is safe.
 
 on:
   schedule:
     - cron: '0 4 1 * *'   # 04:00 UTC on the 1st of each month
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      digest_dry_run:
+        description: 'Digest dry run (list recipients, send nothing)'
+        type: boolean
+        default: true
 
 jobs:
   snapshot:
@@ -22,4 +31,19 @@ jobs:
             "https://$REF.supabase.co/functions/v1/snapshot-metrics" \
             -H "Authorization: Bearer $CRON_SECRET")
           echo "HTTP $code"; cat /tmp/out.json; echo
+          test "$code" = "200"
+
+      - name: Send citation digest
+        env:
+          # Scheduled runs send; manual runs follow the checkbox (default: dry run).
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.digest_dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then payload='{"dryRun":true}'; else payload='{}'; fi
+          echo "Payload: $payload"
+          code=$(curl -s -o /tmp/digest.json -w '%{http_code}' -X POST \
+            "https://$REF.supabase.co/functions/v1/send-digest" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --data "$payload")
+          echo "HTTP $code"; cat /tmp/digest.json; echo
           test "$code" = "200"
