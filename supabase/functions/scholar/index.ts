@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import { DOMParser } from "npm:linkedom@0.16.8";
+import { hasMoreArticles, isLikelyTruncated, SERP_MAX_PAGES, SERP_PAGE_SIZE } from "./pagination.ts";
 
 const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
@@ -117,22 +118,21 @@ async function fetchViaSerpAPI(authorId: string) {
     throw new Error("Failed to fetch publications");
   }
 
-  // Collect all articles across pages (max 10 pages = 1000 articles as safety limit)
+  // Collect all articles across pages. The full list is needed on first paint
+  // (the client derives publication count, career span, h-index etc. from it),
+  // so we page to the end, but never request a page that cannot exist.
   let allArticles = [...(authorData.articles || [])];
-  let start = allArticles.length;
-  const MAX_PAGES = 10;
+  let morePages = hasMoreArticles(authorData);
+  let publicationsComplete = !morePages;
 
-  for (let page = 1; page < MAX_PAGES; page++) {
-    // Stop if the first page returned fewer than 100 — no more pages
-    if (allArticles.length < start) break;
-
+  for (let page = 1; page < SERP_MAX_PAGES && morePages; page++) {
     const nextUrl = new URL('https://serpapi.com/search.json');
     nextUrl.searchParams.set('api_key', SERPAPI_KEY);
     nextUrl.searchParams.set('engine', 'google_scholar_author');
     nextUrl.searchParams.set('author_id', authorId);
     nextUrl.searchParams.set('sort', 'pubdate');
-    nextUrl.searchParams.set('num', '100');
-    nextUrl.searchParams.set('start', String(start));
+    nextUrl.searchParams.set('num', String(SERP_PAGE_SIZE));
+    nextUrl.searchParams.set('start', String(allArticles.length));
 
     const nextResponse = await fetch(nextUrl.toString());
     if (!nextResponse.ok) {
@@ -142,15 +142,13 @@ async function fetchViaSerpAPI(authorId: string) {
 
     const nextData = await nextResponse.json();
     const nextArticles = nextData.articles || [];
-
-    if (nextArticles.length === 0) break;
-
     allArticles = allArticles.concat(nextArticles);
-    start += nextArticles.length;
     console.log(`[SerpAPI] Page ${page + 1}: fetched ${nextArticles.length} articles (total: ${allArticles.length})`);
 
-    // If fewer than 100 returned, we've reached the last page
-    if (nextArticles.length < 100) break;
+    morePages = hasMoreArticles(nextData);
+    // Reaching the safety cap is deliberate, not a failure: mark it complete so
+    // the cache serves it instead of refetching 10 pages on every view.
+    if (!morePages || page === SERP_MAX_PAGES - 1) publicationsComplete = true;
   }
 
   console.log(`[SerpAPI] Total articles fetched: ${allArticles.length}`);
@@ -201,7 +199,8 @@ async function fetchViaSerpAPI(authorId: string) {
     imageUrl: authorData.author?.thumbnail || "",
     topics,
     publications,
-    citationsPerYear
+    citationsPerYear,
+    publicationsComplete
   };
 }
 
@@ -375,7 +374,7 @@ async function fetchScholarProfile(authorId: string) {
     throw new Error("Invalid author ID format");
   }
 
-  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[]; citationsPerYear?: Record<string, number>; scrapedHIndex?: number; scrapedI10Index?: number };
+  let rawData: { name: string; affiliation: string; imageUrl: string; topics: any[]; publications: any[]; citationsPerYear?: Record<string, number>; scrapedHIndex?: number; scrapedI10Index?: number; publicationsComplete?: boolean };
   let source = 'serpapi';
 
   try {
@@ -448,7 +447,9 @@ async function fetchScholarProfile(authorId: string) {
     metrics,
     totalCitations,
     publications,
-    _source: source
+    _source: source,
+    // Lets the cache tell a genuinely 100-publication profile from a truncated one.
+    ...(rawData.publicationsComplete ? { _publicationsComplete: true } : {})
   };
 }
 
@@ -1303,10 +1304,8 @@ Deno.serve(async (req) => {
     if (cached?.data) {
       const hasCitationGraph = cached.data.metrics?.citationsPerYear
         && Object.keys(cached.data.metrics.citationsPerYear).length > 0;
-      // Invalidate cache entries that were stored before pagination fix
-      // (exactly 100 publications is suspicious — likely truncated)
       const pubCount = cached.data.publications?.length || 0;
-      const likelyTruncated = pubCount === 100;
+      const likelyTruncated = isLikelyTruncated(cached.data);
 
       // For cacheOnly (claimed profile views), always serve cache if it exists
       if (cacheOnly && hasCitationGraph) {
