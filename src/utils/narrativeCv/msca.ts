@@ -8,10 +8,11 @@ import {
 } from './docx';
 import { selectKeyOutputs, stripMarkdown, topicNames } from './format';
 
-// ============================================================
-// MSCA Postdoctoral Fellowship (Part B2 - CV)
-// Citation counts acceptable, no JIF requirement
-// ============================================================
+// MSCA Postdoctoral Fellowship, Part B-2 section 4 "CV of the researcher"
+// (indicative length 5 pages). Outputs should carry "a very short qualitative
+// assessment of their scientific significance and not ... the Journal Impact
+// Factor". Source: HE MSCA PF application form v5.0 (27 March 2026),
+// https://ec.europa.eu/info/funding-tenders/opportunities/docs/2021-2027/horizon/temp-form/af/af_he-msca-pf_en.pdf
 
 export function buildMsca(
   data: Author,
@@ -25,8 +26,8 @@ export function buildMsca(
   p.push(...documentHeader('MSCA POSTDOCTORAL FELLOWSHIP — CV (Part B2)', data));
 
   p.push(placeholderParagraph(
-    'MSCA Postdoctoral Fellowship CV. No strict page limit for Part B2, but keep concise. ' +
-    'Complete placeholder sections before submission.'
+    'MSCA Postdoctoral Fellowship CV (Part B-2, section 4; indicative length 5 pages). Use full dates (dd/mm/yyyy), ' +
+    'most recent first, matching Part A. Complete placeholder sections before submission.'
   ));
 
   // Personal details
@@ -63,7 +64,11 @@ export function buildMsca(
 
   p.push(subHeading('Selected publications'));
   const keyOutputs = selectKeyOutputs(data.publications);
-  p.push(...publicationEntries(keyOutputs, data.openAccess, { includeCitations: true, maxAuthors: 6 }));
+  p.push(...publicationEntries(keyOutputs, data.openAccess, { maxAuthors: 6 }));
+  p.push(placeholderParagraph(
+    '[For each output: a very short qualitative note on its scientific significance (not the journal impact factor). ' +
+    'Outputs are expected to be open access.]'
+  ));
 
   // Grants & awards
   p.push(sectionHeading('Grants, Fellowships & Awards'));
