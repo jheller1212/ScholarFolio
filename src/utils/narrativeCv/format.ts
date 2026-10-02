@@ -18,6 +18,22 @@ export function isOA(pub: Publication, openAccess?: OpenAccessStats): boolean {
   return !!entry && entry.status !== 'closed';
 }
 
+/** Bare DOI ("10.x/y") from any of the usual spellings, or null if it is not one. */
+export function normalizeDoi(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const doi = raw.trim().replace(/^(https?:\/\/(dx\.)?doi\.org\/|doi:\s*)/i, '');
+  return /^10\.\d{4,9}\/\S+$/.test(doi) ? doi : null;
+}
+
+/** DOI for a publication from the OpenAlex title→DOI map, if OpenAlex matched it. */
+export function doiFor(pub: Publication, openAccess?: OpenAccessStats): string | null {
+  return normalizeDoi(openAccess?.doiMap?.[normalizeTitle(pub.title)]);
+}
+
+export function doiUrl(doi: string): string {
+  return `https://doi.org/${doi}`;
+}
+
 export function orcidDateRange(startYear: number | null, endYear: number | null): string {
   if (!startYear) return '';
   return endYear ? `${startYear}–${endYear}` : `${startYear}–present`;

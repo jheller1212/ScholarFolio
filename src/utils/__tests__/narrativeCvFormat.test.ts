@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dropMetricSentences, formatAuthors, isOA, normalizeTitle, orcidDateRange, selectKeyOutputs, stripMarkdown, topicNames,
+  doiFor, doiUrl, dropMetricSentences, formatAuthors, isOA, normalizeDoi, normalizeTitle, orcidDateRange, selectKeyOutputs, stripMarkdown, topicNames,
 } from '../narrativeCv/format';
 import type { Author, OpenAccessStats, Publication } from '../../types/scholar';
 
@@ -33,6 +33,25 @@ describe('narrative CV format helpers', () => {
   it('flattens topic names of either shape', () => {
     const data = { topics: [{ name: 'Marketing' }, { name: { title: 'AI' } }, { name: '' }] } as unknown as Author;
     expect(topicNames(data)).toEqual(['Marketing', 'AI']);
+  });
+});
+
+describe('DOIs', () => {
+  it('normalises the usual DOI spellings and rejects non-DOIs', () => {
+    expect(normalizeDoi('10.1000/xyz.1')).toBe('10.1000/xyz.1');
+    expect(normalizeDoi('https://doi.org/10.1000/ABC')).toBe('10.1000/ABC');
+    expect(normalizeDoi('http://dx.doi.org/10.1000/abc')).toBe('10.1000/abc');
+    expect(normalizeDoi('doi: 10.1000/abc')).toBe('10.1000/abc');
+    expect(normalizeDoi('not a doi')).toBeNull();
+    expect(normalizeDoi(undefined)).toBeNull();
+  });
+
+  it('looks DOIs up by normalised title and formats a resolver link', () => {
+    const oa = { doiMap: { astudy: '10.5555/study' } } as unknown as OpenAccessStats;
+    expect(doiFor(pub({ title: 'A Study!' }), oa)).toBe('10.5555/study');
+    expect(doiFor(pub({ title: 'Other' }), oa)).toBeNull();
+    expect(doiFor(pub(), undefined)).toBeNull();
+    expect(doiUrl('10.5555/study')).toBe('https://doi.org/10.5555/study');
   });
 });
 

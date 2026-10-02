@@ -19,12 +19,17 @@ describe('NWO CV builder', () => {
     affiliation: 'Analytical Engine Lab',
     topics: [],
     publications: [{ title: 'Notes on the engine', authors, venue: 'Taylor', year: 1843, citations: 100, url: '' }],
+    openAccess: { doiMap: { notesontheengine: '10.1234/engine.1843' } },
   } as unknown as Author;
   const text = textOf(buildNwo(data, null, undefined));
 
   it('lists all authors without et al.', () => {
     expect(text).toContain(authors.join(', '));
     expect(text).not.toContain('et al.');
+  });
+
+  it('adds the DOI link OpenAlex found for a key output', () => {
+    expect(text).toContain('https://doi.org/10.1234/engine.1843');
   });
 
   it('contains no prestige ranking language or author-level metrics', () => {

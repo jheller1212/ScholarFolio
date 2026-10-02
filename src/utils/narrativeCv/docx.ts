@@ -5,7 +5,7 @@ import {
 } from 'docx';
 import type { Author, OpenAccessStats, Publication } from '../../types/scholar';
 import type { OrcidProfile } from '../../services/orcid';
-import { formatAuthors, isOA, orcidDateRange } from './format';
+import { doiFor, doiUrl, formatAuthors, isOA, orcidDateRange } from './format';
 
 export const TEAL = '2D7D7D';
 export const DARK = '1E293B';
@@ -156,6 +156,10 @@ export function publicationEntries(
     if (includeCitations && pub.citations > 0) {
       metaParts.push(`${pub.citations} citation${pub.citations !== 1 ? 's' : ''}`);
     }
+    // Funders ask for a persistent identifier per output (NWO: the key-output
+    // URL field, preferably a DOI; DFG: DOI where available).
+    const doi = doiFor(pub, openAccess);
+    if (doi) metaParts.push(doiUrl(doi));
 
     result.push(
       new Paragraph({
