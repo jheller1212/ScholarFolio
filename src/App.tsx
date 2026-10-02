@@ -22,7 +22,7 @@ import { ProfileSkeleton } from './components/ProfileSkeleton';
 import { PasswordResetModal } from './components/PasswordResetModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
-import { ADMIN_EMAIL } from './lib/constants';
+import { ADMIN_EMAIL, ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS } from './lib/constants';
 import type { Author } from './types/scholar';
 import { scholarService } from './services/scholar';
 import { openAlexService, fetchOpenAlexProfile, resolveOpenAlexFallback, canonicalOpenAlexId, OPENALEX_ID_PREFIX } from './services/openalex';
@@ -166,7 +166,6 @@ function AppContent() {
   const requestInProgressRef = useRef(false);
   const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean, nameFallback?: string) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome, showPasswordReset, dismissPasswordReset, updatePassword } = useAuth();
-  const [showBonus, setShowBonus] = useState(() => !localStorage.getItem('sf_bonus_seen'));
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Capture referrer + UTM on first load
@@ -320,7 +319,7 @@ function AppContent() {
     localStorage.setItem('sf_searches', String(count));
     return count;
   };
-  const ANON_FREE_LIMIT = 2;
+  const ANON_FREE_LIMIT = ANON_FREE_LOOKUPS;
 
   /** Re-key S2 enrichment results to PublicationsList normalization and update state */
   const applyS2Data = (s2Result: Awaited<ReturnType<typeof enrichWithSemanticScholar>>, pubs: Array<{ title: string }>) => {
@@ -654,25 +653,12 @@ function AppContent() {
       {showWelcome && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
           <p className="text-sm font-medium mb-1">Welcome to Scholar Folio!</p>
-          <p className="text-xs text-gray-600">You have <strong>10 free profile refreshes</strong> to get started.</p>
+          <p className="text-xs text-gray-600">You get <strong>{MONTHLY_FREE_LOOKUPS} fresh profile lookups every month</strong>, free. Recently viewed profiles don&apos;t count.</p>
           <button
             onClick={dismissWelcome}
             className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
           >
             Got it
-          </button>
-        </div>
-      )}
-      {/* One-time thank-you bonus popup for existing users */}
-      {user && !showWelcome && showBonus && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
-          <p className="text-sm font-medium mb-1">Thank you for being a Scholar Folio user!</p>
-          <p className="text-xs text-gray-600">We've added <strong>10 bonus credits</strong> to your account as a thank you for signing up.</p>
-          <button
-            onClick={() => { localStorage.setItem('sf_bonus_seen', '1'); setShowBonus(false); refreshCredits(); }}
-            className="mt-2 text-xs text-[#2d7d7d] hover:underline font-medium"
-          >
-            Awesome, thanks!
           </button>
         </div>
       )}

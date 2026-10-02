@@ -1,5 +1,6 @@
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
+import { ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS } from '../lib/constants';
 
 interface TermsPageProps {
   onBack: () => void;
@@ -20,7 +21,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
 
       <div className="max-w-2xl mx-auto px-6 py-20">
         <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-4">Terms of Use</h1>
-        <p className="text-sm text-gray-500 mb-10">Last updated: June 4, 2026</p>
+        <p className="text-sm text-gray-500 mb-10">Last updated: October 2, 2026</p>
 
         <div className="space-y-8 text-[15px] text-[#334155] leading-relaxed">
 
@@ -76,11 +77,17 @@ export function TermsPage({ onBack }: TermsPageProps) {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">5. Accounts & Credits</h2>
+            <h2 className="text-lg font-semibold text-[#1e293b] mb-2">5. Accounts, Lookups &amp; Voluntary Support</h2>
             <p>
-              Creating an account is optional. Registered users receive a limited number of free profile lookups.
-              Additional lookups can be purchased as credit packs. Payments are processed by Stripe in EUR.
-              Credits are non-refundable and non-transferable.
+              Creating an account is optional. Visitors without an account can make {ANON_FREE_LOOKUPS} fresh profile lookups;
+              registered users receive {MONTHLY_FREE_LOOKUPS} fresh lookups per calendar month as a fair-use limit, which resets
+              on the first day of each month and does not roll over. Viewing cached profiles, direct profile links and
+              claimed profile URLs does not count towards this limit.
+            </p>
+            <p className="mt-3">
+              Users may voluntarily support Scholar Folio with a one-off payment. As a thank-you, supporters receive extra
+              lookups that do not expire. Payments are processed by Stripe in EUR. Extra lookups are non-refundable and
+              non-transferable.
             </p>
           </section>
 

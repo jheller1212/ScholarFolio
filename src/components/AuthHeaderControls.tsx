@@ -4,6 +4,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';
 import { EmailPreferencesModal } from './EmailPreferencesModal';
 import { useAuth } from '../contexts/AuthContext';
+import { ANON_FREE_LOOKUPS } from '../lib/constants';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
 
@@ -14,7 +15,7 @@ interface AuthHeaderControlsProps {
   anonFreeLimit?: number;
 }
 
-export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0, anonFreeLimit = 2 }: AuthHeaderControlsProps) {
+export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0, anonFreeLimit = ANON_FREE_LOOKUPS }: AuthHeaderControlsProps) {
   const { user, credits, signOut } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
   const [unresolvedCount, setUnresolvedCount] = useState(0);

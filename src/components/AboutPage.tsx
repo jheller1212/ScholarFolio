@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Logo } from './Logo';
 import { supabase } from '../lib/supabase';
+import { ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS, PROFILE_CACHE_DAYS, SUPPORT_PACKS } from '../lib/constants';
 
 interface AboutPageProps {
   onBack: () => void;
@@ -120,7 +121,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
               comes from OpenAlex, which is an open bibliometric database run by a nonprofit.
             </p>
             <p>
-              Nothing is stored permanently. There is a 14-day cache to avoid hammering the APIs, and that is it.
+              Nothing is stored permanently. There is a {PROFILE_CACHE_DAYS}-day cache to avoid hammering the APIs, and that is it.
               No researcher data is sold, shared, or monetized. Ever.
             </p>
           </section>
@@ -191,16 +192,16 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
               </li>
               <li>
                 <strong>Voluntary support</strong> from individual researchers. If Scholar Folio is useful to you, you can
-                chip in &euro;5 or &euro;10. As a thank-you you get extra fresh lookups, but supporting is optional and
-                nothing on the site depends on it.
+                chip in {SUPPORT_PACKS.map((p) => `€${p.priceEur}`).join(' or ')}. As a thank-you you get extra fresh lookups,
+                but supporting is optional and nothing on the site depends on it.
               </li>
             </ul>
 
             <p className="mb-3">
-              To keep API costs predictable there is a fair-use limit on <em>fresh</em> lookups: you get 2 without
-              signing up, and more with a free account. With an account, profiles someone looked up recently load
-              from the cache and never count against it. Direct profile links and claimed profile URLs never count
-              for anyone.
+              To keep API costs predictable there is a fair-use limit on <em>fresh</em> lookups: {ANON_FREE_LOOKUPS} without
+              signing up, and {MONTHLY_FREE_LOOKUPS} every month with a free account. With an account, profiles someone
+              looked up in the last {PROFILE_CACHE_DAYS} days load from the cache and never count against it. Direct profile
+              links and claimed profile URLs never count for anyone.
             </p>
             <p>
               You can also earn extra lookups by giving feedback or reporting an error in a profile.
