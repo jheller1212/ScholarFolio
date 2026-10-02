@@ -141,6 +141,9 @@ export interface Author {
    *  Only ever set from a verified correction — never inferred from a name.
    *  Absent means the neutral they/them default. */
   pronouns?: string;
+  /** Academic title / position ("Associate Professor"). Only ever set by a
+   *  verified correction — the sources don't carry it reliably. */
+  title?: string;
 }
 
 export interface AppliedCorrection {

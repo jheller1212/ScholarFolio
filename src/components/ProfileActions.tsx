@@ -147,7 +147,7 @@ export function ProfileActions({
           className="inline-flex items-center gap-1.5 text-xs text-[#2d7d7d] dark:text-[#5bbdbd] hover:text-[#1a5c5c] bg-[#eaf4f4] dark:bg-[#2d7d7d]/20 hover:bg-[#d5ecec] dark:hover:bg-[#2d7d7d]/30 px-2.5 py-1 rounded-full transition-colors"
         >
           <FileText className="h-3 w-3" />
-          Correct details
+          Edit profile
         </button>
       )}
       {data.openAccess?.orcid && (

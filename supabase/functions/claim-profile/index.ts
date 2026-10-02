@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
+import { handleOwnerCorrection } from "./corrections.ts";
 
 /**
  * ORCID-verified profile claiming.
@@ -80,6 +81,16 @@ function normalizeOrcid(raw: string | null | undefined): string {
   return m ? m[1].toUpperCase() : "";
 }
 
+// Vanity slugs share the URL space with site pages, so the server enforces the
+// same rule as ClaimProfileModal — the browser check alone can be bypassed.
+const RESERVED_SLUGS = new Set([
+  "scholar", "about", "institutions", "terms", "privacy", "changelog", "trending",
+  "admin", "api", "sitemap", "unsubscribe", "badge", "embed", "guides",
+]);
+function isValidSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) && !RESERVED_SLUGS.has(slug);
+}
+
 /** Loose person-name match (last name equal, first initials compatible). */
 function namesMatch(a: string, b: string): boolean {
   const norm = (s: string) =>
@@ -115,27 +126,9 @@ Deno.serve(async (req) => {
     if (!authorId) return json({ error: "authorId is required" }, 400);
 
     // --- Owner self-service correction (requires an existing verified claim) ---
-    if (action === "correct") {
-      const { data: claim } = await supabase
-        .from("claimed_profiles")
-        .select("id")
-        .eq("user_id", user.id).eq("author_id", authorId).eq("verified", true)
-        .maybeSingle();
-      if (!claim) return json({ error: "You can only correct a profile you have verified as yours." }, 403);
-
-      const allowed = ["affiliation", "display_name"];
-      if (!field || !allowed.includes(field)) return json({ error: "Unsupported field" }, 400);
-      const text = (value ?? "").trim();
-      if (!text || text.length > 300) return json({ error: "Provide a value (max 300 chars)" }, 400);
-
-      // Deactivate any prior self-correction for this field, then insert the new one.
-      await supabase.from("profile_overrides").update({ active: false })
-        .eq("author_id", authorId).eq("field", field).eq("created_by", user.id);
-      const { error: ovErr } = await supabase.from("profile_overrides").insert({
-        author_id: authorId, field, value: text, verified_via: "orcid", created_by: user.id, active: true,
-      });
-      if (ovErr) return json({ error: ovErr.message }, 400);
-      return json({ ok: true });
+    if (action === "correct" || action === "uncorrect") {
+      const r = await handleOwnerCorrection(supabase, user.id, authorId, action, field, value);
+      return json(r.body, r.status);
     }
 
     // --- Verify ownership via ORCID -------------------------------------------
@@ -171,7 +164,10 @@ Deno.serve(async (req) => {
         orcid: `https://orcid.org/${userOrcid}`,
         verified_via: "orcid",
       };
-      if (slug) row.slug = slug;
+      if (slug) {
+        if (!isValidSlug(slug)) return json({ error: "That URL is reserved or not allowed. Use 3-40 lowercase letters, digits or dashes." }, 400);
+        row.slug = slug;
+      }
       if (displayName) row.display_name = displayName;
       if (bio) row.bio = bio;
       const { error: upErr } = await supabase.from("claimed_profiles").upsert(row, { onConflict: "user_id" });

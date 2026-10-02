@@ -268,7 +268,7 @@ export function ProfileView({
                     data.name
                   )}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{data.affiliation}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{[data.title, data.affiliation].filter(Boolean).join(' · ')}</p>
               </div>
             </div>
 
@@ -445,8 +445,8 @@ export function ProfileView({
         <ProfileCorrectionModal
           onClose={() => setShowCorrectModal(false)}
           authorId={claimAuthorId}
-          currentName={data.name}
-          currentAffiliation={data.affiliation}
+          current={{ name: data.name, affiliation: data.affiliation, title: data.title, pronouns: data.pronouns }}
+          publicationTitles={data.publications.map(p => p.title)}
         />
       )}
 
