@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 import { extractLastName } from './names';
-import { generateNarrativeParagraphs, generateFieldMetricsParagraphText, generateGeoParagraphText, generateCitationDistributionParagraphText, generateOpenAccessParagraphText } from '../components/ResearcherNarrative';
+import { generateNarrativeParagraphs } from '../lib/narrative/paragraphs';
+import { generateFieldMetricsParagraphText, generateGeoParagraphText, generateCitationDistributionParagraphText, generateOpenAccessParagraphText } from '../lib/narrative/extraParagraphs';
 
 const PAGE_W = 210;
 const PAGE_H = 297;

@@ -4,7 +4,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type { Author, Publication, OpenAccessStats, CoAuthorGeoData } from '../types/scholar';
-import { generateNarrativeParagraphs } from '../components/ResearcherNarrative';
+import { generateNarrativeParagraphs } from '../lib/narrative/paragraphs';
 import { fetchOrcidProfile } from '../services/orcid';
 import type { OrcidProfile } from '../services/orcid';
 import { findOpenAlexAuthor } from '../services/openalex/author-lookup';
