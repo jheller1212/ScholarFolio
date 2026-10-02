@@ -6,6 +6,16 @@ const LOADING_PAGE = (name: string) => `<!DOCTYPE html><html><head><title>Schola
 const scholarSearchUrl = (name: string) =>
   `https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(name)}`;
 
+/** Open a new tab showing a spinner; call synchronously inside a click handler. */
+export function openLoadingTab(name: string): Window | null {
+  const newWindow = window.open('about:blank', '_blank');
+  if (newWindow) {
+    newWindow.document.write(LOADING_PAGE(name));
+    newWindow.document.close();
+  }
+  return newWindow;
+}
+
 /**
  * Open a co-author's ScholarFolio profile in a new tab, resolving their Scholar
  * id by name. The tab is opened synchronously (call this inside the click
@@ -19,11 +29,7 @@ export async function openCoAuthorProfile(
   notFound: 'close' | 'scholar-search',
   source: string
 ): Promise<void> {
-  const newWindow = window.open('about:blank', '_blank');
-  if (newWindow) {
-    newWindow.document.write(LOADING_PAGE(name));
-    newWindow.document.close();
-  }
+  const newWindow = openLoadingTab(name);
   const giveUp = () => {
     if (!newWindow) return;
     if (notFound === 'close') newWindow.close();

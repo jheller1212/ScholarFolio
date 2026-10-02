@@ -391,6 +391,7 @@ export function ProfileView({
             authorName={data.name}
             authorAffiliation={data.affiliation}
             prefetchedData={prefetchedGeo}
+            canInvite={claimedByCurrentUser}
           />
         )}
 
