@@ -8,6 +8,11 @@ vi.mock('../author-lookup', () => ({
   OA_EMAIL: 'test@example.com',
 }));
 
+// The profile build reads the author_aliases table; no test may reach a real project.
+vi.mock('../../../lib/supabase', () => ({
+  supabase: { from: () => ({ select: async () => ({ data: [], error: null }) }) },
+}));
+
 const mockFetch = vi.mocked(oaFetchJson);
 
 /** Minimal author-search payload: one OpenAlex record per (name, citations). */

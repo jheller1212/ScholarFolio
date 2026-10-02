@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
 import { OVERDUE_DAYS, daysWaiting, triageOrder } from '../utils/reportTriage';
+import { MergeRequestsPanel } from './admin/MergeRequestsPanel';
 
 type Period = 'day' | 'week' | 'month' | 'all';
 type ChartPeriod = 'week' | 'month' | 'all';
@@ -109,7 +110,7 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
           fetchAllLogs(),
           supabase.from('user_credits').select('user_id,credits_remaining,total_purchased,created_at'),
           supabase.from('credit_purchases').select('pack,amount_cents,credits,created_at').order('created_at', { ascending: false }),
-          supabase.from('profile_reports').select('*').order('created_at', { ascending: false }).limit(100),
+          supabase.from('profile_reports').select('*').neq('kind', 'merge_request').order('created_at', { ascending: false }).limit(100),
           supabase.from('daily_search_stats').select('*').order('day', { ascending: true }),
           supabase.from('feedback').select('id,user_id,rating,comment,credits_granted,source,profile_viewed,created_at').order('created_at', { ascending: false }).limit(200),
           supabase.from('client_errors').select('id,created_at,category,message,stack,component,action,context,browser,os,screen_size,url,session_id').order('created_at', { ascending: false }).limit(200),
@@ -625,6 +626,8 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             )}
           </div>
         ) : null}
+
+        <MergeRequestsPanel />
 
         {/* Error Reports */}
         {reports.length > 0 && (

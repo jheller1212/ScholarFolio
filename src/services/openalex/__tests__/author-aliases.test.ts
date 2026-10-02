@@ -1,7 +1,12 @@
 import { vi } from 'vitest';
 import { fetchOpenAlexProfile, canonicalOpenAlexId } from '../profile';
-import { openAlexRecordsFor } from '../author-aliases';
+import { openAlexRecordsFor, groupFor, resetAuthorAliasesCache } from '../author-aliases';
 import { oaFetchJson } from '../author-lookup';
+
+const aliasRows = vi.hoisted(() => [{ alias_id: 'A5141099083', canonical_id: 'A5044727833' }]);
+vi.mock('../../../lib/supabase', () => ({
+  supabase: { from: () => ({ select: async () => ({ data: aliasRows, error: null }) }) },
+}));
 
 vi.mock('../author-lookup', () => ({
   oaFetchJson: vi.fn(),
@@ -42,6 +47,7 @@ describe('split OpenAlex author records', () => {
 
   beforeEach(() => {
     worksUrl = '';
+    resetAuthorAliasesCache();
     mockFetch.mockImplementation((async (url: string) => {
       if (url.includes('/works?')) {
         worksUrl = url;
@@ -52,15 +58,15 @@ describe('split OpenAlex author records', () => {
     }) as typeof oaFetchJson);
   });
 
-  it('leaves an author with no known duplicates alone', () => {
-    expect(openAlexRecordsFor('A1')).toEqual(['A1']);
-    expect(canonicalOpenAlexId('openalex:A1')).toBe('openalex:A1');
+  it('leaves an author with no known duplicates alone', async () => {
+    expect(await openAlexRecordsFor('A1')).toEqual(['A1']);
+    expect(await canonicalOpenAlexId('openalex:A1')).toBe('openalex:A1');
   });
 
   // A correction saved against one record must apply when the other is opened.
-  it('keys both records of one person on the same id', () => {
-    expect(canonicalOpenAlexId(`openalex:${VARIANT}`)).toBe(`openalex:${CANONICAL}`);
-    expect(canonicalOpenAlexId(`openalex:${CANONICAL}`)).toBe(`openalex:${CANONICAL}`);
+  it('keys both records of one person on the same id', async () => {
+    expect(await canonicalOpenAlexId(`openalex:${VARIANT}`)).toBe(`openalex:${CANONICAL}`);
+    expect(await canonicalOpenAlexId(`openalex:${CANONICAL}`)).toBe(`openalex:${CANONICAL}`);
   });
 
   // The reported case: the visitor opened the two-work record and saw a
@@ -77,5 +83,19 @@ describe('split OpenAlex author records', () => {
     // Citations 14, 8, 3 → h = 3; adding the per-record h-indexes would be wrong.
     expect(profile.hIndex).toBe(3);
     expect(profile.metrics.citationsPerYear).toMatchObject({ '2025': 10, '2026': 2 });
+  });
+});
+
+describe('groupFor', () => {
+  const rows = [
+    { alias_id: 'A2', canonical_id: 'A1' },
+    { alias_id: 'A3', canonical_id: 'A1' },
+  ];
+  it('puts the canonical record first from any member', () => {
+    expect(groupFor(rows, 'A3')).toEqual(['A1', 'A2', 'A3']);
+    expect(groupFor(rows, 'A1')).toEqual(['A1', 'A2', 'A3']);
+  });
+  it('returns just the id for an unknown record', () => {
+    expect(groupFor(rows, 'A9')).toEqual(['A9']);
   });
 });

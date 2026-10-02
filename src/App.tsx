@@ -381,7 +381,7 @@ function AppContent() {
       if (isOpenAlex) {
         // Keep the "openalex:<id>" token for sharing + analytics — the canonical
         // one, so a correction applies whichever of a person's records was opened.
-        userId = canonicalOpenAlexId(url);
+        userId = await canonicalOpenAlexId(url);
         profileData = await fetchOpenAlexProfile(url);
       } else {
         const validated = scholarService.validateProfileUrl(url);
