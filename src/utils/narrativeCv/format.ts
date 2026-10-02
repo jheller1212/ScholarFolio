@@ -29,17 +29,35 @@ export function topicNames(data: Author): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Candidate key outputs: most cited first, newest first on ties. Deliberately
+ * ignores journal rankings: NWO and other DORA-aligned funders do not accept
+ * journal prestige as a quality signal, and the researcher replaces these anyway.
+ */
 export function selectKeyOutputs(publications: Publication[], limit = 10): Publication[] {
   return [...publications]
-    .sort((a, b) => {
-      const aFt = a.journalRanking?.ft50 ? 1 : 0;
-      const bFt = b.journalRanking?.ft50 ? 1 : 0;
-      if (aFt !== bFt) return bFt - aFt;
-      const absOrder: Record<string, number> = { '4*': 5, '4': 4, '3': 3, '2': 2, '1': 1 };
-      const aAbs = absOrder[a.journalRanking?.abs || ''] || 0;
-      const bAbs = absOrder[b.journalRanking?.abs || ''] || 0;
-      if (aAbs !== bAbs) return bAbs - aAbs;
-      return b.citations - a.citations;
-    })
+    .sort((a, b) => (b.citations - a.citations) || ((b.year || 0) - (a.year || 0)))
     .slice(0, limit);
+}
+
+/**
+ * Author list for an output entry. NWO forbids "et al." so committees can see
+ * the applicant's position; other formats may cap very long lists.
+ */
+export function formatAuthors(authors: string[], max = Infinity): string {
+  const names = authors.map(a => a.trim()).filter(Boolean);
+  if (names.length <= max) return names.join(', ');
+  return `${names.slice(0, max).join(', ')} et al.`;
+}
+
+// Author-level metrics (h-index, citation totals) are not allowed in the NWO CV.
+const METRIC_SENTENCE = /h-index|i10|citation|\bcited\b|impact factor/i;
+
+/** Strip markdown and drop whole sentences that cite author-level metrics. */
+export function dropMetricSentences(text: string): string {
+  return stripMarkdown(text)
+    .split(/(?<=[.!?])\s+/)
+    .filter(sentence => !METRIC_SENTENCE.test(sentence))
+    .join(' ')
+    .trim();
 }

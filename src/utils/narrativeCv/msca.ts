@@ -63,7 +63,7 @@ export function buildMsca(
 
   p.push(subHeading('Selected publications'));
   const keyOutputs = selectKeyOutputs(data.publications);
-  p.push(...publicationEntries(keyOutputs, data.openAccess, true));
+  p.push(...publicationEntries(keyOutputs, data.openAccess, { includeCitations: true, maxAuthors: 6 }));
 
   // Grants & awards
   p.push(sectionHeading('Grants, Fellowships & Awards'));
