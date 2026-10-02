@@ -81,6 +81,16 @@ function normalizeOrcid(raw: string | null | undefined): string {
   return m ? m[1].toUpperCase() : "";
 }
 
+// Vanity slugs share the URL space with site pages, so the server enforces the
+// same rule as ClaimProfileModal — the browser check alone can be bypassed.
+const RESERVED_SLUGS = new Set([
+  "scholar", "about", "institutions", "terms", "privacy", "changelog", "trending",
+  "admin", "api", "sitemap", "unsubscribe", "badge", "embed",
+]);
+function isValidSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) && !RESERVED_SLUGS.has(slug);
+}
+
 /** Loose person-name match (last name equal, first initials compatible). */
 function namesMatch(a: string, b: string): boolean {
   const norm = (s: string) =>
@@ -154,7 +164,10 @@ Deno.serve(async (req) => {
         orcid: `https://orcid.org/${userOrcid}`,
         verified_via: "orcid",
       };
-      if (slug) row.slug = slug;
+      if (slug) {
+        if (!isValidSlug(slug)) return json({ error: "That URL is reserved or not allowed. Use 3-40 lowercase letters, digits or dashes." }, 400);
+        row.slug = slug;
+      }
       if (displayName) row.display_name = displayName;
       if (bio) row.bio = bio;
       const { error: upErr } = await supabase.from("claimed_profiles").upsert(row, { onConflict: "user_id" });
