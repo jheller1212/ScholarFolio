@@ -4,7 +4,8 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { AuthHeaderControls } from './components/AuthHeaderControls';
 import { LandingPage } from './components/LandingPage';
 import { ApiError } from './utils/api';
-import { ErrorModal } from './components/ErrorModal';
+import { ProfileLoadError } from './components/ProfileLoadError';
+import { nameQueryForFailedLookup } from './lib/profileErrors';
 import { ProfileView } from './components/ProfileView';
 import { AboutPage } from './components/AboutPage';
 import { InstitutionsPage } from './components/InstitutionsPage';
@@ -156,6 +157,9 @@ function AppContent() {
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  // The last lookup attempted, so a failure can offer "retry this profile".
+  const [lastLookup, setLastLookup] = useState<{ url: string; bypassCredits: boolean; cacheOnly: boolean; nameFallback?: string } | null>(null);
   const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
@@ -368,7 +372,9 @@ function AppContent() {
       requestInProgressRef.current = true;
       setLoading(true);
       setError(null);
+      setErrorCode(null);
       setData(null);
+      setLastLookup({ url, bypassCredits, cacheOnly, nameFallback });
 
       let profileData: Awaited<ReturnType<typeof scholarService.fetchProfile>>;
       let userId: string | null;
@@ -380,8 +386,8 @@ function AppContent() {
       } else {
         const validated = scholarService.validateProfileUrl(url);
         if (!validated.isValid) {
+          // Shown inline under the search box; there is no profile to retry.
           setError('Invalid Google Scholar URL format. Please enter a valid profile URL.');
-          setShowError(true);
           return;
         }
         userId = validated.userId;
@@ -400,6 +406,7 @@ function AppContent() {
       }
       if (!profileData) {
         setError('Unable to fetch profile data. Please try again later or contact the site administrator.');
+        setErrorCode('NO_DATA');
         setShowError(true);
         return;
       }
@@ -513,6 +520,7 @@ function AppContent() {
 
       if (err instanceof ApiError) {
         errorMessage = err.message;
+        setErrorCode(err.code);
         if (err.code !== 'CREDITS_EXHAUSTED') {
           logCaughtError(err, 'profile', 'App', 'fetch-profile', { url, code: err.code });
         }
@@ -601,6 +609,23 @@ function AppContent() {
       return <ProfileSkeleton />;
     }
 
+    if (showError && error && lastLookup) {
+      return (
+        <div className="page-enter">
+          <ProfileLoadError
+            code={errorCode}
+            rawMessage={error}
+            nameQuery={nameQueryForFailedLookup(lastLookup.nameFallback, window.location.pathname)}
+            retrying={loading}
+            onRetry={() => handleSearch(lastLookup.url, lastLookup.bypassCredits, lastLookup.cacheOnly, lastLookup.nameFallback)}
+            onSearch={handleSearch}
+            onHome={handleReset}
+            authControls={authControls}
+          />
+        </div>
+      );
+    }
+
     if (data && !error) {
       return (
         <div className="page-enter">
@@ -655,9 +680,6 @@ function AppContent() {
         {renderPage()}
       </div>
       <Footer onNavigate={handleNavigate} onSupport={() => setShowCreditPacks(true)} />
-      {showError && error && (
-        <ErrorModal message={error} onClose={handleReset} />
-      )}
       {showCreditPacks && (
         <CreditPacks onClose={() => setShowCreditPacks(false)} />
       )}
