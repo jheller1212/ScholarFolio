@@ -85,7 +85,7 @@ function normalizeOrcid(raw: string | null | undefined): string {
 // same rule as ClaimProfileModal — the browser check alone can be bypassed.
 const RESERVED_SLUGS = new Set([
   "scholar", "about", "institutions", "terms", "privacy", "changelog", "trending",
-  "admin", "api", "sitemap", "unsubscribe", "badge", "embed",
+  "admin", "api", "sitemap", "unsubscribe", "badge", "embed", "guides",
 ]);
 function isValidSlug(slug: string): boolean {
   return /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(slug) && !RESERVED_SLUGS.has(slug);
