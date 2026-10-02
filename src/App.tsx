@@ -372,6 +372,7 @@ function AppContent() {
       requestInProgressRef.current = true;
       setLoading(true);
       setError(null);
+      setShowError(false);
       setErrorCode(null);
       setData(null);
       setLastLookup({ url, bypassCredits, cacheOnly, nameFallback });
