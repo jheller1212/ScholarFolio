@@ -5,19 +5,20 @@ import { zoom as d3Zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
 import { geoNaturalEarth1, geoPath, geoCentroid, geoInterpolate, type GeoPermissibleObjects, type GeoProjection } from 'd3-geo';
 import * as topojson from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
-import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw, ExternalLink, Share2, Loader2 } from 'lucide-react';
+import { Globe, Info, MapPin, Users, Flag, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import type { Publication, CoAuthorGeoData } from '../types/scholar';
 import { fetchCoAuthorGeoData } from '../services/openalex/coauthor-geo';
 import { timeoutSignal } from '../utils/api';
 import { logCaughtError } from '../lib/errorLogger';
-import { scholarService } from '../services/scholar';
-import { lookupCoAuthorLink, saveCoAuthorLink } from '../services/coauthor-links';
+import { CoAuthorPopup } from './CoAuthorPopup';
 
 interface CoAuthorMapProps {
   publications: Publication[];
   authorName: string;
   authorAffiliation: string;
   prefetchedData?: { mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null;
+  /** Viewer owns this claimed profile: co-author popups offer "Invite to claim". */
+  canInvite?: boolean;
 }
 
 interface TooltipState {
@@ -75,7 +76,7 @@ const REGION_VIEWS = [
   { id: 'oceania', label: 'Oceania', center: [145, -25] as [number, number], scale: 4 },
 ];
 
-export function CoAuthorMap({ publications, authorName, authorAffiliation, prefetchedData }: CoAuthorMapProps) {
+export function CoAuthorMap({ publications, authorName, authorAffiliation, prefetchedData, canInvite = false }: CoAuthorMapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -84,10 +85,6 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
   const [geoData, setGeoData] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, data: null });
   const [clickedCoAuthor, setClickedCoAuthor] = useState<CoAuthorGeoData | null>(null);
-  const [scholarIdLookup, setScholarIdLookup] = useState<{ loading: boolean; scholarId: string | null; notFound: boolean }>({ loading: false, scholarId: null, notFound: false });
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlInputValue, setUrlInputValue] = useState('');
-  const [urlInputError, setUrlInputError] = useState('');
   const [mapError, setMapError] = useState(false);
   const [activeRegion, setActiveRegion] = useState('world');
 
@@ -338,10 +335,6 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
             .on('click', (event: MouseEvent) => {
               event.stopPropagation();
               setClickedCoAuthor(coAuthor);
-              setScholarIdLookup({ loading: false, scholarId: null, notFound: false });
-              setShowUrlInput(false);
-              setUrlInputValue('');
-              setUrlInputError('');
               setTooltip(prev => ({ ...prev, visible: false }));
             });
         });
@@ -600,168 +593,14 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
         </div>
       )}
 
-      {/* Co-author click popup */}
       {clickedCoAuthor && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setClickedCoAuthor(null)}>
-          <div
-            className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-sm w-full p-5"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100">{clickedCoAuthor.name}</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{clickedCoAuthor.institution}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">{clickedCoAuthor.countryCode}</p>
-              </div>
-              <button onClick={() => setClickedCoAuthor(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-            </div>
-            {clickedCoAuthor.sharedPapers > 0 && (
-              <div className="text-sm text-gray-600 dark:text-gray-300 mb-4 pb-3 border-b border-gray-100 dark:border-slate-700">
-                <span className="text-[#2d7d7d] font-medium">{clickedCoAuthor.sharedPapers}</span> shared {clickedCoAuthor.sharedPapers === 1 ? 'paper' : 'papers'} · {clickedCoAuthor.sharedCitations.toLocaleString()} citations
-              </div>
-            )}
-            <div className="space-y-2">
-              <button
-                onClick={async () => {
-                  if (scholarIdLookup.loading) return;
-                  if (scholarIdLookup.scholarId) {
-                    window.open(`${window.location.origin}/scholar/${encodeURIComponent(scholarIdLookup.scholarId)}`, '_blank');
-                    return;
-                  }
-                  if (scholarIdLookup.notFound) {
-                    setShowUrlInput(true);
-                    setUrlInputValue('');
-                    setUrlInputError('');
-                    return;
-                  }
-                  // Open window immediately to avoid popup blocker
-                  const newWindow = window.open('about:blank', '_blank');
-                  if (newWindow) {
-                    newWindow.document.write(`<!DOCTYPE html><html><head><title>Scholar Folio</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafa;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#334155}.wrap{text-align:center}.spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2d7d7d;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}@keyframes spin{to{transform:rotate(360deg)}}.title{font-size:14px;font-weight:600;color:#1e293b;margin-bottom:4px}.sub{font-size:13px;color:#64748b}</style></head><body><div class="wrap"><div class="spinner"></div><div class="title">Loading profile</div><div class="sub">${clickedCoAuthor.name.replace(/'/g, '&#39;')}</div></div></body></html>`);
-                    newWindow.document.close();
-                  }
-                  setScholarIdLookup({ loading: true, scholarId: null, notFound: false });
-                  const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                  try {
-                    // 1. Check community-contributed cache first
-                    const cached = await lookupCoAuthorLink(searchName);
-                    if (cached?.scholar_id) {
-                      setScholarIdLookup({ loading: false, scholarId: cached.scholar_id, notFound: false });
-                      if (newWindow) {
-                        newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(cached.scholar_id)}`;
-                      }
-                      return;
-                    }
-                    // 2. Search with institution for better disambiguation
-                    const queryWithInst = clickedCoAuthor.institution
-                      ? `${searchName} ${clickedCoAuthor.institution}`
-                      : searchName;
-                    let results = await scholarService.searchAuthors(queryWithInst);
-                    if (results.length === 0 && clickedCoAuthor.institution) {
-                      results = await scholarService.searchAuthors(searchName);
-                    }
-                    // Validate: check the result's last name matches
-                    const targetLast = searchName.split(/\s+/).pop()?.toLowerCase() ?? '';
-                    const match = results.find(r => {
-                      const resultLast = r.name.split(/\s+/).pop()?.toLowerCase() ?? '';
-                      return resultLast === targetLast;
-                    });
-                    if (match) {
-                      // Save to cache for future lookups
-                      saveCoAuthorLink({ name: searchName, scholarId: match.authorId, openalexId: clickedCoAuthor.openalexId, institution: clickedCoAuthor.institution }).catch(() => {});
-                      setScholarIdLookup({ loading: false, scholarId: match.authorId, notFound: false });
-                      if (newWindow) {
-                        newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(match.authorId)}`;
-                      }
-                    } else {
-                      setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                      newWindow?.close();
-                    }
-                  } catch {
-                    setScholarIdLookup({ loading: false, scholarId: null, notFound: true });
-                    newWindow?.close();
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
-              >
-                {scholarIdLookup.loading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Looking up profile...</>
-                ) : scholarIdLookup.notFound ? (
-                  <><MapPin className="h-4 w-4" /> Link Google Scholar profile</>
-                ) : (
-                  <><ExternalLink className="h-4 w-4" /> View on ScholarFolio</>
-                )}
-              </button>
-
-              {/* URL input modal for manual linking */}
-              {showUrlInput && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 space-y-2">
-                  <p className="text-xs text-amber-800 dark:text-amber-200">
-                    We couldn't automatically find <strong>{clickedCoAuthor.fullName || clickedCoAuthor.name}</strong> on Google Scholar. Multiple authors may share this name. Paste their Google Scholar profile URL below to link it.
-                  </p>
-                  <input
-                    type="url"
-                    value={urlInputValue}
-                    onChange={e => { setUrlInputValue(e.target.value); setUrlInputError(''); }}
-                    placeholder="https://scholar.google.com/citations?user=..."
-                    className="w-full text-xs px-2.5 py-2 rounded border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-[#2d7d7d] focus:border-[#2d7d7d] outline-none"
-                  />
-                  {urlInputError && <p className="text-xs text-red-600 dark:text-red-400">{urlInputError}</p>}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const validation = scholarService.validateProfileUrl(urlInputValue);
-                        if (!validation.isValid || !validation.userId) {
-                          setUrlInputError('Please enter a valid Google Scholar profile URL (must contain ?user=...)');
-                          return;
-                        }
-                        const scholarId = validation.userId;
-                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                        // Save to community cache
-                        saveCoAuthorLink({
-                          name: searchName,
-                          scholarId,
-                          scholarUrl: urlInputValue,
-                          openalexId: clickedCoAuthor.openalexId,
-                          institution: clickedCoAuthor.institution,
-                        }).catch(() => {});
-                        setScholarIdLookup({ loading: false, scholarId, notFound: false });
-                        setShowUrlInput(false);
-                        window.open(`${window.location.origin}/scholar/${encodeURIComponent(scholarId)}`, '_blank');
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded bg-[#2d7d7d] text-white hover:bg-[#1f5c5c] transition-colors"
-                    >
-                      <ExternalLink className="h-3 w-3" /> Link &amp; View
-                    </button>
-                    <button
-                      onClick={() => {
-                        const searchName = clickedCoAuthor.fullName || clickedCoAuthor.name;
-                        window.open(`https://scholar.google.com/citations?view_op=search_authors&mauthors=${encodeURIComponent(searchName)}`, '_blank');
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                    >
-                      Search Scholar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  const text = `Check out your research profile on ScholarFolio: ${window.location.origin}`;
-                  if (navigator.share) {
-                    navigator.share({ title: `${clickedCoAuthor.name} — ScholarFolio`, text, url: window.location.origin });
-                  } else {
-                    navigator.clipboard.writeText(text);
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <Share2 className="h-4 w-4" /> Share with {clickedCoAuthor.name.split(' ')[0]}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CoAuthorPopup
+          key={clickedCoAuthor.name}
+          coAuthor={clickedCoAuthor}
+          ownerName={authorName}
+          canInvite={canInvite}
+          onClose={() => setClickedCoAuthor(null)}
+        />
       )}
 
       {/* Info box */}
@@ -774,7 +613,7 @@ export function CoAuthorMap({ publications, authorName, authorAffiliation, prefe
               <li>• Teal dot marks your location; darker dots are co-authors</li>
               <li>• Dot size scales with number of shared papers</li>
               <li>• Arcs show collaboration routes across the globe</li>
-              <li>• Click a co-author dot to view their profile or share ScholarFolio with them</li>
+              <li>• Click a co-author dot to view their profile{canInvite ? ' or invite them to claim it' : ' or share ScholarFolio with them'}</li>
               <li>• Tap or hover a dot for details · Pinch or scroll to zoom · Drag to pan</li>
               <li>• Use region buttons or zoom controls to explore specific areas</li>
               <li>• Locations sourced from OpenAlex — top 50 co-authors by shared papers</li>
