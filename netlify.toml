@@ -22,14 +22,19 @@
 [functions]
   directory = "netlify/functions"
 
+# Crawler OG/SEO injection for every profile URL: /, ?user=<id>,
+# /scholar/<id> and vanity slugs (/<slug>). The function itself falls through
+# immediately for humans and for paths that can't be a profile; the excluded
+# paths below keep static files and server routes from invoking it at all.
 [[edge_functions]]
-  path = "/"
+  path = "/*"
   function = "og-meta"
-
-# Canonical profile paths (/scholar/<id>) need the same crawler OG injection
-[[edge_functions]]
-  path = "/scholar/*"
-  function = "og-meta"
+  excludedPath = [
+    "/assets/*", "/fonts/*", "/guides/*", "/api/*", "/badge/*", "/.netlify/*",
+    "/sitemap.xml", "/robots.txt",
+    "/*.js", "/*.css", "/*.png", "/*.jpg", "/*.svg", "/*.ico", "/*.json",
+    "/*.txt", "/*.xml", "/*.woff2", "/*.webmanifest", "/*.map", "/*.html",
+  ]
 
 # ORCID OAuth callback
 [[redirects]]
