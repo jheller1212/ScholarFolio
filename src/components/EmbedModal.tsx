@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Check, Code } from 'lucide-react';
+import { badgeUrlFor, badgeEmbedCode } from '../lib/badge';
 
 interface EmbedModalProps {
   isOpen: boolean;
@@ -23,14 +24,9 @@ export function EmbedModal({ isOpen, onClose, scholarId, authorName, profileUrl 
 
   if (!isOpen) return null;
 
-  // Sanitize scholarId to prevent XSS when embed code is pasted into other sites
-  const safeScholarId = scholarId.replace(/[^a-zA-Z0-9_:-]/g, '');
-  const badgeUrl = `https://scholarfolio.org/badge/${safeScholarId}.svg`;
+  const badgeUrl = badgeUrlFor(scholarId);
   const safeName = authorName.replace(/[<>"&]/g, '');
-
-  const embedCode = `<a href="${profileUrl}">
-  <img src="${badgeUrl}" alt="${safeName} on ScholarFolio" height="20">
-</a>`;
+  const embedCode = badgeEmbedCode(scholarId, authorName, profileUrl);
 
   const handleCopy = async () => {
     try {
