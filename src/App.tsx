@@ -32,6 +32,7 @@ import { logCaughtError, logError } from './lib/errorLogger';
 import { captureAttribution, trackEvent } from './lib/analytics';
 import { savePendingAuthIntent, clearPendingAuthIntent } from './lib/pendingAuthIntent';
 import { useResumeAfterAuth } from './hooks/useResumeAfterAuth';
+import { requestClaim } from './lib/claimRequest';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -537,6 +538,13 @@ function AppContent() {
 
   useResumeAfterAuth(user, (intent) => {
     setShowSignUpWall(false);
+    if (intent.claimAuthorId) {
+      // Claiming starts from a profile the visitor was already viewing, so
+      // reopening it is free; skip the reload if it is still on screen.
+      requestClaim(intent.claimAuthorId);
+      if (profileUrl !== intent.url || !data) handleSearchRef.current?.(intent.url, true);
+      return;
+    }
     handleSearchRef.current?.(intent.url, false, false, intent.nameFallback);
   });
 

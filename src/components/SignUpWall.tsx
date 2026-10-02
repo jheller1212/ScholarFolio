@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { X, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
+import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { AuthLegalNotice } from './AuthLegalNotice';
+import { OrcidIcon } from './OrcidIcon';
 
 /**
  * How the wall was closed. The caller keeps the visitor's pending intent
@@ -13,9 +15,11 @@ export type SignUpWallOutcome = 'dismissed' | 'awaiting-confirmation' | 'signed-
 
 interface SignUpWallProps {
   onClose: (outcome: SignUpWallOutcome) => void;
+  /** Set when the visitor came from "claim this profile" rather than the search limit. */
+  claimSlug?: string;
 }
 
-export function SignUpWall({ onClose }: SignUpWallProps) {
+export function SignUpWall({ onClose, claimSlug }: SignUpWallProps) {
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const [isSignUp, setIsSignUp] = useState(true);
   const [email, setEmail] = useState('');
@@ -76,7 +80,11 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 modal-card" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 id="signup-wall-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {confirmSent ? 'Check your inbox' : isSignUp ? 'Sign up to continue' : 'Sign in to continue'}
+            {confirmSent
+              ? 'Check your inbox'
+              : claimSlug
+                ? 'Claim your profile'
+                : isSignUp ? 'Sign up to continue' : 'Sign in to continue'}
           </h2>
           <button onClick={dismiss} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" aria-label="Close">
             <X className="h-5 w-5" />
@@ -92,7 +100,7 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
               We sent a confirmation link to <strong>{email}</strong>.
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Click it to activate your account. We&apos;ll bring you straight back to the profile you were opening.
+              Click it to activate your account. We&apos;ll bring you straight back to {claimSlug ? 'finish claiming your profile' : 'the profile you were opening'}.
               No email after a few minutes? Check your spam folder.
             </p>
             <button
@@ -104,9 +112,30 @@ export function SignUpWall({ onClose }: SignUpWallProps) {
           </div>
         ) : (
           <>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
-              You've used your free searches. Sign up to <strong>claim your research profile</strong> and get a permanent URL — plus 5 more profile lookups, free.
-            </p>
+            {claimSlug ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                Get <strong>scholarfolio.org/{claimSlug}</strong> as your permanent profile link, free. We confirm it&apos;s you through your ORCID iD, so signing in with ORCID is the quickest route.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-5">
+                You've used your free searches. Sign up to <strong>claim your research profile</strong> and get a permanent URL — plus 5 more profile lookups, free.
+              </p>
+            )}
+
+            {/* Claiming is verified via ORCID, so offer it first on that path */}
+            {claimSlug && (
+              <button
+                onClick={() => {
+                  if (isSignUp && emailOptIn) setPendingEmailConsent({ digest_opt_in: true }, 'signup-wall');
+                  else clearPendingEmailConsent();
+                  startOrcidSignIn();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 mb-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <OrcidIcon className="h-4 w-4" />
+                Continue with ORCID
+              </button>
+            )}
 
             {/* Optional email consent — must stay unticked by default (GDPR) */}
             {isSignUp && (

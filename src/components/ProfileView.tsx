@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 
 import { Search, ArrowLeft, BookOpen, Users, LineChart, Network, BarChart as ChartBar, User, Share2, Check, Code, Download, Unlock, ExternalLink, Heart, BadgeCheck, Link, Globe, FileText, MessageSquare, Mail, MapPin, AlertTriangle } from 'lucide-react';
 import { EmbedModal } from './EmbedModal';
 import { ClaimProfileModal } from './ClaimProfileModal';
+import { ClaimProfileBar } from './ClaimProfileBar';
 import { ProfileCorrectionModal } from './ProfileCorrectionModal';
 // pdfExport is dynamically imported on click to avoid bundling jsPDF (344KB)
 import { ScholarSearchModal } from './ScholarSearchModal';
@@ -252,15 +253,17 @@ export function ProfileView({
               </form>
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
+            {/* Auth stays reachable on phones; only the social links collapse */}
+            <div className="flex items-center gap-3">
               {authControls}
-              {socialLinks}
+              <div className="hidden md:flex items-center gap-3">{socialLinks}</div>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        <ClaimProfileBar authorId={scholarId} authorName={data.name} onOpenClaim={() => setShowClaimModal(true)} />
         {/* Profile summary card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-card p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

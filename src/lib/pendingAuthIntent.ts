@@ -11,8 +11,8 @@ export interface PendingAuthIntent {
   url: string;
   /** Name to fall back to OpenAlex with if Scholar is unreachable. */
   nameFallback?: string;
-  /** Open the claim flow once the profile is back on screen. */
-  claim?: boolean;
+  /** Open the claim flow for this author once the profile is back on screen. */
+  claimAuthorId?: string;
   savedAt: number;
 }
 
@@ -40,14 +40,14 @@ export function readPendingAuthIntent(now = Date.now()): PendingAuthIntent | nul
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
-    const { url, nameFallback, claim, savedAt } = parsed as Record<string, unknown>;
+    const { url, nameFallback, claimAuthorId, savedAt } = parsed as Record<string, unknown>;
     if (typeof url !== 'string' || !url || typeof savedAt !== 'number') return null;
     if (now - savedAt > TTL_MS || savedAt > now + 60_000) return null;
     return {
       url,
       savedAt,
       ...(typeof nameFallback === 'string' && nameFallback ? { nameFallback } : {}),
-      ...(claim === true ? { claim: true } : {}),
+      ...(typeof claimAuthorId === 'string' && claimAuthorId ? { claimAuthorId } : {}),
     };
   } catch {
     return null;
@@ -67,4 +67,15 @@ export function takePendingAuthIntent(now = Date.now()): PendingAuthIntent | nul
   const intent = readPendingAuthIntent(now);
   clearPendingAuthIntent();
   return intent;
+}
+
+/**
+ * Intent for "claim this profile": reopen the profile by its id (Scholar id
+ * or "openalex:" token) and then open the claim flow.
+ */
+export function claimIntentFor(authorId: string): Omit<PendingAuthIntent, 'savedAt'> {
+  const url = authorId.startsWith('openalex:')
+    ? authorId
+    : `https://scholar.google.com/citations?user=${encodeURIComponent(authorId)}`;
+  return { url, claimAuthorId: authorId };
 }
