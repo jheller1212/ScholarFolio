@@ -17,12 +17,15 @@ jobs:
           version: latest
 
       - name: Deploy edge functions
+        # Enumerate the directory so a new function is never silently left undeployed.
+        # Every ScholarFolio function needs --no-verify-jwt; they do their own auth checks.
         run: |
-          supabase functions deploy scholar --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy create-checkout --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy stripe-webhook --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy delete-account --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy export-data --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase functions deploy submit-feedback --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          for dir in supabase/functions/*/; do
+            fn=$(basename "$dir")
+            case "$fn" in _*) continue ;; esac
+            [ -f "$dir/index.ts" ] || continue
+            echo "Deploying $fn"
+            supabase functions deploy "$fn" --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
