@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Coins, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download, Mail } from 'lucide-react';
+import { Coins, Heart, Shield, LogOut, User, ChevronDown, Trash2, Loader2, Download, Mail } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AuthButton } from './AuthButton';
 import { EmailPreferencesModal } from './EmailPreferencesModal';
@@ -112,10 +112,10 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
                 ? 'text-red-700 bg-red-50 border border-red-200 hover:bg-red-100'
                 : 'text-[#2d7d7d] bg-[#eaf4f4] border border-[#2d7d7d]/20 hover:bg-[#d5ebeb]'
           }`}
-          title="Buy more searches"
+          title="Fresh lookups left (this month's free allowance plus any extras). Cached profiles are always free."
         >
           <Coins className="h-3.5 w-3.5" />
-          {credits} credit{credits !== 1 ? 's' : ''}
+          {credits} lookup{credits !== 1 ? 's' : ''}
         </button>
       )}
 
@@ -141,7 +141,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
               </p>
               {credits !== null && (
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  {credits} credit{credits !== 1 ? 's' : ''} remaining
+                  {credits} fresh lookup{credits !== 1 ? 's' : ''} left
                 </p>
               )}
             </DropdownMenu.Label>
@@ -152,8 +152,8 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
               className="flex items-center gap-2 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 outline-none cursor-pointer hover:bg-[#eaf4f4] dark:hover:bg-[#2d7d7d]/20 hover:text-[#2d7d7d] transition-colors"
               onSelect={onBuyCredits}
             >
-              <Coins className="h-3.5 w-3.5" />
-              Buy credits
+              <Heart className="h-3.5 w-3.5" />
+              Support ScholarFolio
             </DropdownMenu.Item>
 
             <DropdownMenu.Item
