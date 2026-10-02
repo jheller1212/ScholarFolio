@@ -1367,7 +1367,9 @@ Deno.serve(async (req) => {
       .upsert({
         url: normalizedUrl,
         data,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
+        // Reset on every refresh so the profile can show when its data was fetched.
+        created_at: new Date().toISOString()
       });
 
     if (upsertError) {
