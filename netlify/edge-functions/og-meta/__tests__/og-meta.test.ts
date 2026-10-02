@@ -44,6 +44,13 @@ describe('buildHead', () => {
     expect(tags).toContain('href="https://scholarfolio.org/ada-lovelace"');
     expect(tags).toContain('12,345 citations · h-index 42');
     expect(tags).toContain('"@type":"Person"');
+    expect(tags).toContain('content="https://scholarfolio.org/og/ABCDEF123456.png?v=12345-42"');
+    expect(tags).toContain('content="summary_large_image"');
+  });
+
+  it('keeps the default card for anonymous and OpenAlex-only profiles', () => {
+    expect(buildHead({ data: {}, authorId: 'X', claimedSlug: null }).tags).toContain('og-default.png');
+    expect(buildHead({ data: { name: 'B' }, authorId: 'openalex:A1', claimedSlug: null }).tags).toContain('og-default.png');
   });
 
   it('falls back to the claimed name when the profile is not cached', () => {

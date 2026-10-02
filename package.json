@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@resvg/resvg-wasm": "^2.6.2",
     "@supabase/supabase-js": "^2.107.0",
     "@types/topojson-client": "^3.1.5",
     "d3": "^7.8.5",

@@ -22,6 +22,14 @@
 [functions]
   directory = "netlify/functions"
 
+# Share card renderer reads the resvg wasm and its fonts from disk at runtime;
+# the bundler can't see those reads, so ship them explicitly.
+[functions.og-image]
+  included_files = [
+    "node_modules/@resvg/resvg-wasm/index_bg.wasm",
+    "netlify/functions/og-image/fonts/*.ttf",
+  ]
+
 # Crawler OG/SEO injection for every profile URL: /, ?user=<id>,
 # /scholar/<id> and vanity slugs (/<slug>). The function itself falls through
 # immediately for humans and for paths that can't be a profile; the excluded

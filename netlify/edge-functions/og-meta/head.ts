@@ -34,6 +34,16 @@ export function slugToName(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Generated 1200×630 card (netlify/functions/og-image). The query string
+// versions it by the headline metrics so platforms re-fetch when they change;
+// the function falls back to the default card on any error. OpenAlex-only
+// profiles aren't in scholar_cache under their id, so they keep the default.
+export function shareCardUrl(name: string | undefined, data: ScholarData, authorId: string): string {
+  if (!name || authorId.startsWith('openalex:')) return DEFAULT_IMAGE;
+  const version = `${data.totalCitations ?? 0}-${data.hIndex ?? 0}`;
+  return `${SITE}/og/${encodeURIComponent(authorId)}.png?v=${version}`;
+}
+
 export function buildDescription(name: string | undefined, data: ScholarData): string {
   if (!name) return DEFAULT_DESCRIPTION;
   const parts: string[] = [];
@@ -48,7 +58,7 @@ export function buildHead({ data, authorId, claimedSlug, fallbackName }: HeadInp
   const name = data.name || fallbackName || undefined;
   const title = name ? `${name} — ScholarFolio` : DEFAULT_TITLE;
   const description = buildDescription(name, data);
-  const image = data.imageUrl || DEFAULT_IMAGE;
+  const image = shareCardUrl(name, data, authorId);
   const url = canonicalUrl(authorId, claimedSlug);
 
   // schema.org Person — structured data for search engines. JSON.stringify
@@ -77,10 +87,14 @@ export function buildHead({ data, authorId, claimedSlug, fallbackName }: HeadInp
     <meta property="og:title" content="${escapeAttr(title)}" />
     <meta property="og:description" content="${escapeAttr(description)}" />
     <meta property="og:image" content="${escapeAttr(image)}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${escapeAttr(name ? `${name} on ScholarFolio` : 'ScholarFolio')}" />
     <meta property="og:url" content="${escapeAttr(url)}" />
     <meta property="og:type" content="profile" />
     <meta property="og:site_name" content="ScholarFolio" />
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="${escapeAttr(image)}" />
     <meta name="twitter:title" content="${escapeAttr(title)}" />
     <meta name="twitter:description" content="${escapeAttr(description)}" />${jsonLd}`;
 
