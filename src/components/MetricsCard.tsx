@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 import { metricInfo } from '../data/metricInfo';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface MetricsCardProps {
   title: string;
@@ -51,7 +52,9 @@ function useCountUp(target: number | string, duration = 600) {
   useEffect(() => {
     if (hasRun.current) return;
     const numericTarget = typeof target === 'string' ? parseFloat(target.replace(/,/g, '')) : target;
-    if (isNaN(numericTarget)) {
+    // Non-numeric values, reduced-motion visitors and browsers without
+    // IntersectionObserver (old in-app WebViews) get the final value at once.
+    if (isNaN(numericTarget) || prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
       setDisplay(String(target));
       return;
     }
@@ -231,7 +234,8 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
     }
   };
 
-  const tooltipInfo = metricInfo[getMetricKey()];
+  const metricKey = getMetricKey();
+  const tooltipInfo = metricKey in metricInfo ? metricInfo[metricKey as keyof typeof metricInfo] : undefined;
 
   const getIconGradient = () => {
     switch (icon) {
@@ -289,7 +293,7 @@ export function MetricsCard({ title, value, subtitle, icon }: MetricsCardProps) 
   };
 
   const cardContent = (
-    <div ref={countRef} className={`${getCategoryBg()} dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100/80 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
+    <div ref={countRef} className={`${getCategoryBg()} dark:bg-slate-800 p-3.5 rounded-xl border border-gray-100/80 dark:border-slate-700 shadow-card w-full transition-all duration-200 hover:shadow-card-hover hover:border-gray-200 dark:hover:border-slate-600 motion-safe:hover:scale-[1.02] ${tooltipInfo ? 'cursor-help' : ''}`}>
       <div className="flex items-start gap-2.5">
         <div className={`p-1.5 bg-gradient-to-br ${getIconGradient()} rounded-lg text-white mt-0.5 flex-shrink-0`}>
           {getIcon()}
