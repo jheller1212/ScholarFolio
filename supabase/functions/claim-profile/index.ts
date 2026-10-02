@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
+import { handleOwnerCorrection } from "./corrections.ts";
 
 /**
  * ORCID-verified profile claiming.
@@ -115,27 +116,9 @@ Deno.serve(async (req) => {
     if (!authorId) return json({ error: "authorId is required" }, 400);
 
     // --- Owner self-service correction (requires an existing verified claim) ---
-    if (action === "correct") {
-      const { data: claim } = await supabase
-        .from("claimed_profiles")
-        .select("id")
-        .eq("user_id", user.id).eq("author_id", authorId).eq("verified", true)
-        .maybeSingle();
-      if (!claim) return json({ error: "You can only correct a profile you have verified as yours." }, 403);
-
-      const allowed = ["affiliation", "display_name"];
-      if (!field || !allowed.includes(field)) return json({ error: "Unsupported field" }, 400);
-      const text = (value ?? "").trim();
-      if (!text || text.length > 300) return json({ error: "Provide a value (max 300 chars)" }, 400);
-
-      // Deactivate any prior self-correction for this field, then insert the new one.
-      await supabase.from("profile_overrides").update({ active: false })
-        .eq("author_id", authorId).eq("field", field).eq("created_by", user.id);
-      const { error: ovErr } = await supabase.from("profile_overrides").insert({
-        author_id: authorId, field, value: text, verified_via: "orcid", created_by: user.id, active: true,
-      });
-      if (ovErr) return json({ error: ovErr.message }, 400);
-      return json({ ok: true });
+    if (action === "correct" || action === "uncorrect") {
+      const r = await handleOwnerCorrection(supabase, user.id, authorId, action, field, value);
+      return json(r.body, r.status);
     }
 
     // --- Verify ownership via ORCID -------------------------------------------
