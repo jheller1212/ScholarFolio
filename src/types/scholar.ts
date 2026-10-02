@@ -83,6 +83,10 @@ export interface OpenAccessStats {
   preprintCount?: number;
   /** OA repository/source breakdown: display_name → count */
   repositoryCounts?: Record<string, number>;
+  /** Works on the OpenAlex record that matched the profile's publication list */
+  matchedWorks?: number;
+  /** Sum of OpenAlex cited_by_count over those matched works */
+  openAlexCitations?: number;
 }
 
 export interface FieldNormalizedMetrics {

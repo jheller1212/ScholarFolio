@@ -387,7 +387,7 @@ export function ProfileView({
         {/* Tab content */}
         {/* Metrics tab stays mounted (hidden) so P-Index computation survives tab switches */}
         <div id="tabpanel-metrics" role="tabpanel" aria-labelledby="tab-metrics" className={activeTab === 'metrics' ? 'tab-content-enter' : 'hidden'}>
-          <ProfileMetricsTab data={data} onPIndexResult={setPIndexResult} />
+          <ProfileMetricsTab data={data} onPIndexResult={setPIndexResult} isOpenAlexProfile={isOpenAlexProfile} />
         </div>
 
         <div key={tabKey} id="tabpanel-content" role="tabpanel" aria-labelledby={`tab-${activeTab}`} hidden={activeTab === 'metrics'} className="tab-content-enter">
@@ -414,7 +414,7 @@ export function ProfileView({
         )}
 
         {activeTab === 'openscience' && (
-          <OpenScienceTab data={data} />
+          <OpenScienceTab data={data} isOpenAlexProfile={isOpenAlexProfile} />
         )}
 
         {activeTab === 'publications' && (

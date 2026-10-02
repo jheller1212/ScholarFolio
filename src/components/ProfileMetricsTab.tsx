@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { MetricsCard, MetricsCardSkeleton } from './MetricsCard';
 import { PIndexSection } from './PIndexSection';
+import { SourceDiscrepancyNote } from './SourceDiscrepancyNote';
 import { extractLastName } from '../utils/names';
 import type { Author } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
@@ -9,6 +10,7 @@ import type { PIndexResult } from '../services/openalex/pindex';
 interface ProfileMetricsTabProps {
   data: Author;
   onPIndexResult: (result: PIndexResult | null) => void;
+  isOpenAlexProfile: boolean;
 }
 
 // On phones only this many impact cards show until "All metrics" is tapped.
@@ -26,7 +28,7 @@ function SectionTitle({ dotClass, children }: { dotClass: string; children: Reac
   );
 }
 
-export function ProfileMetricsTab({ data, onPIndexResult }: ProfileMetricsTabProps) {
+export function ProfileMetricsTab({ data, onPIndexResult, isOpenAlexProfile }: ProfileMetricsTabProps) {
   const [showAll, setShowAll] = useState(false);
   // Hidden on <sm while collapsed; always visible from sm upward.
   const mobileHidden = showAll ? '' : 'hidden sm:block';
@@ -102,6 +104,7 @@ export function ProfileMetricsTab({ data, onPIndexResult }: ProfileMetricsTabPro
             {' '}— counts may differ from Google Scholar as coverage varies.
           </p>
         )}
+        <SourceDiscrepancyNote data={data} isOpenAlexProfile={isOpenAlexProfile} className="mt-3" />
         <button
           type="button"
           onClick={() => setShowAll(v => !v)}
