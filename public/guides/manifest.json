@@ -1,0 +1,28 @@
+{
+  "generated": "scripts/guides/build.mjs",
+  "pages": [
+    {
+      "path": "/guides/",
+      "title": "Narrative CV guides for grant applications",
+      "lastmod": "2026-10-02"
+    },
+    {
+      "path": "/guides/nwo-veni-vidi-vici-narrative-cv/",
+      "title": "NWO Veni, Vidi, Vici narrative CV: how to write the evidence-based CV",
+      "lastmod": "2026-10-02",
+      "format": "nwo"
+    },
+    {
+      "path": "/guides/erc-cv-track-record/",
+      "title": "ERC CV and Track Record: how to write the 4-page section",
+      "lastmod": "2026-10-02",
+      "format": "erc"
+    },
+    {
+      "path": "/guides/msca-postdoctoral-fellowship-cv/",
+      "title": "MSCA Postdoctoral Fellowship CV: how to write section 4 of Part B-2",
+      "lastmod": "2026-10-02",
+      "format": "msca"
+    }
+  ]
+}
