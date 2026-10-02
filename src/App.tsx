@@ -15,7 +15,7 @@ import { TrendingPage } from './components/TrendingPage';
 import { UnsubscribePage } from './components/UnsubscribePage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CreditPacks } from './components/CreditPacks';
-import { SignUpWall } from './components/SignUpWall';
+import { SignUpWall, type SignUpWallOutcome } from './components/SignUpWall';
 import { ProfileSkeleton } from './components/ProfileSkeleton';
 import { PasswordResetModal } from './components/PasswordResetModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -29,6 +29,8 @@ import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
 import { captureAttribution, trackEvent } from './lib/analytics';
+import { savePendingAuthIntent, clearPendingAuthIntent } from './lib/pendingAuthIntent';
+import { useResumeAfterAuth } from './hooks/useResumeAfterAuth';
 
 const SOCIAL_LINKS = {
   linkedin: 'https://www.linkedin.com/in/hellerjonas/',
@@ -340,6 +342,8 @@ function AppContent() {
         // Anonymous user — check local free limit
         if (getAnonSearches() >= ANON_FREE_LIMIT) {
           trackEvent('signup_wall_shown', { searches_used: getAnonSearches() });
+          // Remember the profile so sign-up resumes it instead of dropping it.
+          savePendingAuthIntent({ url, nameFallback });
           setShowSignUpWall(true);
           return;
         }
@@ -522,6 +526,16 @@ function AppContent() {
   // Keep ref in sync for URL-based loading
   handleSearchRef.current = handleSearch;
 
+  useResumeAfterAuth(user, (intent) => {
+    setShowSignUpWall(false);
+    handleSearchRef.current?.(intent.url, false, false, intent.nameFallback);
+  });
+
+  const handleSignUpWallClose = useCallback((outcome: SignUpWallOutcome) => {
+    setShowSignUpWall(false);
+    if (outcome === 'dismissed') clearPendingAuthIntent();
+  }, []);
+
   const handleReset = useCallback(() => {
     setData(null);
     setProfileUrl(null);
@@ -630,7 +644,7 @@ function AppContent() {
         <CreditPacks onClose={() => setShowCreditPacks(false)} />
       )}
       {showSignUpWall && (
-        <SignUpWall onClose={() => setShowSignUpWall(false)} />
+        <SignUpWall onClose={handleSignUpWallClose} />
       )}
     </div>
   );
