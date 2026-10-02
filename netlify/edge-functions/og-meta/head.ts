@@ -14,6 +14,8 @@ export interface HeadInput {
   claimedSlug: string | null;
   // Shown when the profile isn't cached yet (claimed display name / slug).
   fallbackName?: string | null;
+  // ScholarFolio URLs of confirmed co-authors (schema.org colleague).
+  colleagues?: string[];
 }
 
 export function escapeAttr(str: string): string {
@@ -54,7 +56,7 @@ export function buildDescription(name: string | undefined, data: ScholarData): s
   return `${lead} Citation trends, co-author network, and field-normalized metrics on ScholarFolio.`;
 }
 
-export function buildHead({ data, authorId, claimedSlug, fallbackName }: HeadInput): { tags: string; title: string } {
+export function buildHead({ data, authorId, claimedSlug, fallbackName, colleagues }: HeadInput): { tags: string; title: string } {
   const name = data.name || fallbackName || undefined;
   const title = name ? `${name} — ScholarFolio` : DEFAULT_TITLE;
   const description = buildDescription(name, data);
@@ -74,6 +76,9 @@ export function buildHead({ data, authorId, claimedSlug, fallbackName }: HeadInp
       mainEntityOfPage: url,
     };
     if (data.affiliation) person.affiliation = { '@type': 'Organization', name: data.affiliation };
+    const topics = (data.topics ?? []).map((t) => t.name).filter((t): t is string => !!t);
+    if (topics.length) person.knowsAbout = topics;
+    if (colleagues?.length) person.colleague = colleagues;
     if (!authorId.startsWith('openalex:')) {
       person.sameAs = [`https://scholar.google.com/citations?user=${encodeURIComponent(authorId)}`];
     }
