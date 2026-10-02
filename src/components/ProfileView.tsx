@@ -22,6 +22,7 @@ const OpenScienceTab = lazy(() => import('./OpenScienceTab').then(m => ({ defaul
 const NarrativeCvTab = lazy(() => import('./NarrativeCvTab').then(m => ({ default: m.NarrativeCvTab })));
 import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
+import { readCvPreset, clearCvTabPreset } from '../lib/cvPreset';
 import { supabase } from '../lib/supabase';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 import type { PIndexResult } from '../services/openalex/pindex';
@@ -68,7 +69,9 @@ export function ProfileView({
 }: ProfileViewProps) {
   const { user, refreshCredits } = useAuth();
   const feedback = useFeedback(user?.id ?? null);
-  const [activeTab, setActiveTab] = useState<TabId>('metrics');
+  // Visitors arriving from a grant guide (/?tab=cv) land on the Narrative CV tab.
+  const [activeTab, setActiveTab] = useState<TabId>(() => (readCvPreset()?.openTab ? 'narrativecv' : 'metrics'));
+  useEffect(() => { clearCvTabPreset(); }, []);
   const [imgError, setImgError] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);

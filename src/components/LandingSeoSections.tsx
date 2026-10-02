@@ -63,6 +63,13 @@ export function LandingSeoSections() {
             understand a researcher's work at a glance — without clicking through hundreds of raw
             publication entries.
           </p>
+          <p>
+            Applying for an NWO, ERC or MSCA grant? Our{' '}
+            <a href="/guides/" className="text-[#2d7d7d] dark:text-[#3d9494] underline underline-offset-2 hover:text-[#246666]">
+              narrative CV guides
+            </a>{' '}
+            explain each funder's CV format, and ScholarFolio can export a first draft from your profile.
+          </p>
         </div>
 
         <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#1e293b] dark:text-gray-100 mb-6">

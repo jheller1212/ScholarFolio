@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Download, Info, Loader2 } from 'lucide-react';
 import { logCaughtError } from '../lib/errorLogger';
-// docx (~650KB) is dynamically imported on export click
-type NarrativeCvFormat = 'nwo' | 'erc' | 'msca';
+import { readCvPreset } from '../lib/cvPreset';
+// docx (~650KB) is dynamically imported on export click; type-only imports are erased.
+import type { NarrativeCvFormat } from '../utils/narrativeCvExport';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 
 interface NarrativeCvTabProps {
@@ -52,6 +53,8 @@ export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
   const [exporting, setExporting] = useState<NarrativeCvFormat | null>(null);
   const [showTooltip, setShowTooltip] = useState<NarrativeCvFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  // Format named by the grant guide the visitor came from, if any.
+  const [presetFormat] = useState<NarrativeCvFormat | null>(() => readCvPreset()?.format ?? null);
 
   const handleExport = async (format: NarrativeCvFormat) => {
     setExporting(format);
@@ -92,8 +95,13 @@ export function NarrativeCvTab({ data, geoData }: NarrativeCvTabProps) {
         {formats.map(fmt => (
           <div
             key={fmt.id}
-            className={`relative rounded-xl border-2 ${fmt.color} p-5 transition-shadow hover:shadow-md`}
+            className={`relative rounded-xl border-2 ${fmt.color} p-5 transition-shadow hover:shadow-md ${presetFormat === fmt.id ? 'ring-2 ring-[#2d7d7d] ring-offset-2 dark:ring-offset-slate-900' : ''}`}
           >
+            {presetFormat === fmt.id && (
+              <span className="absolute -top-3 left-4 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white bg-[#2d7d7d] rounded-full">
+                From your guide
+              </span>
+            )}
             <div className="flex items-start justify-between mb-3">
               <div>
                 <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
