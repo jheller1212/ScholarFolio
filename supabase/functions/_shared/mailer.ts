@@ -32,9 +32,16 @@ export function firstName(name: string | null | undefined): string | null {
   return first ? first : null;
 }
 
+/** ORCID-only accounts get a placeholder login address that has no mailbox;
+ *  mailing it bounces and hurts the sender's reputation. */
+export function isDeliverableAddress(email: string | null | undefined): email is string {
+  return !!email && !email.toLowerCase().endsWith("@orcid.scholarfolio.org");
+}
+
 export async function getUserEmail(supabase: SupabaseClient, userId: string): Promise<string | null> {
   const { data } = await supabase.auth.admin.getUserById(userId);
-  return data?.user?.email ?? null;
+  const email = data?.user?.email ?? null;
+  return isDeliverableAddress(email) ? email : null;
 }
 
 /** Return the user's stable unsubscribe token, creating an all-off
@@ -90,6 +97,7 @@ export async function sendEmail(
   supabase: SupabaseClient,
   msg: OutgoingEmail,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isDeliverableAddress(msg.to)) return { ok: false, error: "undeliverable placeholder address" };
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) return { ok: false, error: "RESEND_API_KEY not configured" };
   const headers: Record<string, string> = {};
