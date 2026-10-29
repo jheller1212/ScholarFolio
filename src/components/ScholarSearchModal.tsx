@@ -22,6 +22,9 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<'scholar' | 'openalex'>('scholar');
+  // What the spinner says: a Scholar search takes several seconds, and the
+  // OpenAlex fallback runs after it, so a bare "Searching..." read as stuck.
+  const [loadingStage, setLoadingStage] = useState<'scholar' | 'openalex'>('scholar');
   const [pastedUrl, setPastedUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [claims, setClaims] = useState<Map<string, ClaimStatus>>(new Map());
@@ -61,6 +64,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   // Explicit OpenAlex search for when Scholar returned only namesakes: the
   // automatic fallback below runs only when Scholar has no results at all.
   const runOpenAlexSearch = useCallback(async (query: string) => {
+    setLoadingStage('openalex');
     setLoading(true);
     setError(null);
     setSearched(true);
@@ -95,6 +99,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
     setError(null);
     setSearched(true);
     setSource('scholar');
+    setLoadingStage('scholar');
 
     if (scholarService.looksLikeUrl(query)) {
       setResults([]);
@@ -120,6 +125,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
     if (!scholarFailed) loadSuggestions(query);
 
     // Scholar empty or unavailable — try OpenAlex.
+    setLoadingStage('openalex');
     try {
       const oaProfiles = await searchOpenAlexAuthors(query);
       if (oaProfiles.length > 0) {
@@ -299,9 +305,14 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
         {/* Results */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading && (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-              <Loader2 className="h-6 w-6 animate-spin mb-2" />
-              <p className="text-sm">Searching{source === 'openalex' ? ' OpenAlex' : ''}...</p>
+            <div role="status" className="flex flex-col items-center justify-center py-8 text-center text-gray-400">
+              <Loader2 className="h-6 w-6 animate-spin mb-2" aria-hidden="true" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {loadingStage === 'scholar' ? 'Searching Google Scholar…' : 'Checking OpenAlex, the open research catalogue…'}
+              </p>
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                {loadingStage === 'scholar' ? 'This usually takes a few seconds.' : 'Looking beyond Google Scholar.'}
+              </p>
             </div>
           )}
 
