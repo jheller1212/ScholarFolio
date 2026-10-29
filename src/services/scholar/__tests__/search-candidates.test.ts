@@ -2,6 +2,8 @@ import {
   applyProfilePreview,
   extractSearchCandidates,
   nameMatchesQuery,
+  nameMatchesQueryFuzzy,
+  maxSurnameTypos,
   MAX_SEARCH_CANDIDATES,
 } from '../../../../supabase/functions/scholar/searchCandidates.ts';
 
@@ -14,6 +16,43 @@ describe('nameMatchesQuery', () => {
 
   it('rejects a different surname', () => {
     expect(nameMatchesQuery('J Smith', 'Jonas Heller')).toBe(false);
+  });
+
+  it('stays strict about typos', () => {
+    expect(nameMatchesQuery('Tim Hilken', 'Tim Hilkn')).toBe(false);
+  });
+});
+
+describe('nameMatchesQueryFuzzy', () => {
+  it('accepts a surname one typo off, with full or initial given names', () => {
+    expect(nameMatchesQueryFuzzy('Tim Hilken', 'Tim Hilkn')).toBe(true);
+    expect(nameMatchesQueryFuzzy('T Hilken', 'Tim Hilkn')).toBe(true);
+    expect(nameMatchesQueryFuzzy('J Heller', 'Jonas Hellr')).toBe(true);
+    expect(nameMatchesQueryFuzzy('K de Ruyter', 'Ko de Ruytr')).toBe(true);
+    expect(nameMatchesQueryFuzzy('Jörg Müller', 'Jorg Mueller')).toBe(true);
+  });
+
+  it('allows two typos only in long surnames', () => {
+    expect(maxSurnameTypos(3)).toBe(0);
+    expect(maxSurnameTypos(5)).toBe(1);
+    expect(maxSurnameTypos(8)).toBe(2);
+    expect(nameMatchesQueryFuzzy('M Joshanloo', 'Joshanlo')).toBe(true);
+    expect(nameMatchesQueryFuzzy('Mohsen Joshanloo', 'Mohsen Joshenlo')).toBe(true);
+    expect(nameMatchesQueryFuzzy('Tim Hilken', 'Tim Hlkn')).toBe(false);
+  });
+
+  it('still behaves exactly like nameMatchesQuery for exact matches', () => {
+    expect(nameMatchesQueryFuzzy('J Heller', 'Jonas Heller')).toBe(true);
+    expect(nameMatchesQueryFuzzy('K de Ruyter', 'Ko de Ruyter')).toBe(true);
+  });
+
+  it('rejects clearly different surnames and incompatible given names', () => {
+    expect(nameMatchesQueryFuzzy('T Smith', 'Tim Hilkn')).toBe(false);
+    expect(nameMatchesQueryFuzzy('Tim Hill', 'Tim Hilkn')).toBe(false);
+    expect(nameMatchesQueryFuzzy('A Hilken', 'Tim Hilkn')).toBe(false);
+    expect(nameMatchesQueryFuzzy('Hilken', 'Tim Hilkn')).toBe(false);
+    // Short surnames get no typo allowance: Lu is not a misspelt Li.
+    expect(nameMatchesQueryFuzzy('Wei Lu', 'Wei Li')).toBe(false);
   });
 });
 
@@ -82,6 +121,23 @@ describe('extractSearchCandidates', () => {
       })),
     };
     expect(extractSearchCandidates(many, 'Smith')).toHaveLength(MAX_SEARCH_CANDIDATES);
+  });
+
+  it('falls back to typo-tolerant matching only when nobody matches exactly', () => {
+    const typo = extractSearchCandidates(response, 'Jonas Hellr');
+    expect(typo.map(c => c.authorId)).toEqual(['AAAAAAAAAAAA', 'CCCCCCCCCCCC']);
+
+    const mixed = {
+      organic_results: [{
+        title: 'P',
+        publication_info: { authors: [
+          { name: 'J Keller', author_id: 'KKKKKKKKKKKK' },
+          { name: 'J Heller', author_id: 'AAAAAAAAAAAA' },
+        ] },
+      }],
+    };
+    // Correct spelling: the one-letter-off namesake stays out.
+    expect(extractSearchCandidates(mixed, 'Jonas Heller').map(c => c.authorId)).toEqual(['AAAAAAAAAAAA']);
   });
 });
 
