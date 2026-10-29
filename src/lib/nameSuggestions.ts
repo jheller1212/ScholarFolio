@@ -124,3 +124,20 @@ export function rankNameSuggestions(query: string, candidates: NameSuggestion[],
     })
     .slice(0, limit);
 }
+
+/** Fewest characters before the typeahead asks OpenAlex anything. */
+export const TYPEAHEAD_MIN_CHARS = 3;
+
+/**
+ * Whether typed input looks like a person's name worth suggesting for. Pasted
+ * Google Scholar links and bare profile ids ("NOSPtp8AAAAJ") must keep going
+ * straight to the normal search, so anything URL-like or containing digits is
+ * left alone: names don't have digits.
+ */
+export function isTypeaheadNameQuery(input: string): boolean {
+  const trimmed = input.trim();
+  if (trimmed.length < TYPEAHEAD_MIN_CHARS) return false;
+  if (/\d/.test(trimmed)) return false;
+  if (/[/@?=:]|www\.|scholar\.google|\.[a-z]{2,}$/i.test(trimmed)) return false;
+  return /\p{L}/u.test(trimmed);
+}
