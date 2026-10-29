@@ -30,6 +30,11 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const inputRef = useRef<HTMLInputElement>(null);
   const hasAutoSearched = useRef(false);
   const suggestAbort = useRef<AbortController | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Parents pass an inline onClose; a ref keeps the focus effect from re-running
+  // (and bouncing focus out and back) on every parent render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // A misspelt name finds nobody on Scholar, and OpenAlex's /authors search is
   // not typo tolerant either. Autocomplete suggestions are free (OpenAlex via
@@ -134,14 +139,48 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
     setLoading(false);
   }, [onSelect, onClose, loadSuggestions]);
 
+  // Focus moves into the dialog on open (also when it opens already searching
+  // from the landing box, which used to leave focus behind the overlay so
+  // Escape and Tab acted on the page underneath) and returns on close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const inside = dialogRef.current.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(focusTimer);
+      document.removeEventListener('keydown', onKey);
+      if (returnTo?.isConnected) returnTo.focus();
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       if (initialQuery && !hasAutoSearched.current) {
         setName(initialQuery);
         hasAutoSearched.current = true;
         runSearch(initialQuery);
-      } else {
-        setTimeout(() => inputRef.current?.focus(), 100);
       }
     } else {
       setName('');
@@ -206,9 +245,9 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       aria-modal="true"
       aria-labelledby="scholar-search-title"
       onClick={onClose}
-      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
     >
       <div
+        ref={dialogRef}
         className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full shadow-2xl flex flex-col max-h-[75vh]"
         onClick={e => e.stopPropagation()}
       >
