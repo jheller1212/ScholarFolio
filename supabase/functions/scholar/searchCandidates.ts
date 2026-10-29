@@ -1,6 +1,7 @@
-// Pure helpers for the name search. Kept import-free so the browser test suite
-// (vitest) can exercise them directly; the edge function imports them with a
-// .ts specifier, which Deno requires.
+// Pure helpers for the name search. Kept free of Deno/npm imports (only other
+// pure modules) so the browser test suite (vitest) can exercise them directly;
+// the edge function imports them with a .ts specifier, which Deno requires.
+import { editDistance } from '../_shared/editDistance.ts';
 
 export interface SearchCandidate {
   name: string;
@@ -31,17 +32,49 @@ export function stripDiacritics(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-export function nameMatchesQuery(candidateName: string, query: string): boolean {
-  const queryParts = stripDiacritics(query.toLowerCase().trim()).split(/\s+/);
-  const candidateParts = stripDiacritics(candidateName.toLowerCase().trim()).split(/\s+/);
+function nameParts(name: string): string[] {
+  return stripDiacritics(name.toLowerCase().trim()).split(/\s+/).filter(Boolean);
+}
 
-  return queryParts.every(qp =>
-    candidateParts.some(cp =>
-      cp.includes(qp) || qp.includes(cp) ||
-      (cp.length === 1 && qp.startsWith(cp)) ||
-      (qp.length === 1 && cp.startsWith(qp))
-    )
-  );
+/** Same token, a substring of it, or an initial standing in for it. */
+function partsCompatible(qp: string, cp: string): boolean {
+  return cp.includes(qp) || qp.includes(cp) ||
+    (cp.length === 1 && qp.startsWith(cp)) ||
+    (qp.length === 1 && cp.startsWith(qp));
+}
+
+export function nameMatchesQuery(candidateName: string, query: string): boolean {
+  const queryParts = nameParts(query);
+  const candidateParts = nameParts(candidateName);
+  return queryParts.every(qp => candidateParts.some(cp => partsCompatible(qp, cp)));
+}
+
+/** Typos tolerated in a surname of this length. Short surnames get none: Li/Lu
+ *  or Kim/Kin are different people, not misspellings. */
+export function maxSurnameTypos(length: number): number {
+  if (length < 4) return 0;
+  if (length <= 7) return 1;
+  return 2;
+}
+
+/**
+ * Like nameMatchesQuery, but the surname (last word) may be a small edit
+ * distance off: "Tim Hilkn" accepts "T Hilken". Every other query word must
+ * still match a given name or initial of the candidate the strict way.
+ */
+export function nameMatchesQueryFuzzy(candidateName: string, query: string): boolean {
+  if (nameMatchesQuery(candidateName, query)) return true;
+  const queryParts = nameParts(query);
+  const candidateParts = nameParts(candidateName);
+  if (queryParts.length === 0 || candidateParts.length === 0) return false;
+
+  const qSurname = queryParts[queryParts.length - 1];
+  const cSurname = candidateParts[candidateParts.length - 1];
+  const max = maxSurnameTypos(qSurname.length);
+  if (max === 0 || editDistance(qSurname, cSurname, max) > max) return false;
+
+  const candidateGiven = candidateParts.slice(0, -1);
+  return queryParts.slice(0, -1).every(qp => candidateGiven.some(cp => partsCompatible(qp, cp)));
 }
 
 /** Year from a GS summary line like "J Heller, K de Ruyter - Journal of X, 2020 - Elsevier". */
@@ -70,11 +103,24 @@ export function extractSearchCandidates(
   query: string,
   limit = MAX_SEARCH_CANDIDATES,
 ): SearchCandidate[] {
+  const strict = collectCandidates(data, query, limit, nameMatchesQuery);
+  if (strict.length > 0) return strict;
+  // Only when nobody matches exactly: a correctly spelt "Jonas Heller" must not
+  // pull in "J Keller", but a misspelt "Jonas Hellr" should still find him.
+  return collectCandidates(data, query, limit, nameMatchesQueryFuzzy);
+}
+
+function collectCandidates(
+  data: SerpScholarSearchResponse,
+  query: string,
+  limit: number,
+  matches: (candidateName: string, query: string) => boolean,
+): SearchCandidate[] {
   const byId = new Map<string, SearchCandidate>();
 
   for (const author of data.profiles?.authors ?? []) {
     if (!author.author_id || byId.has(author.author_id)) continue;
-    if (!nameMatchesQuery(author.name || '', query)) continue;
+    if (!matches(author.name || '', query)) continue;
     byId.set(author.author_id, emptyCandidate(author.author_id, author.name || ''));
   }
 
@@ -88,7 +134,7 @@ export function extractSearchCandidates(
         if (!existing.knownFor && paper) existing.knownFor = paper;
         continue;
       }
-      if (!nameMatchesQuery(author.name || '', query)) continue;
+      if (!matches(author.name || '', query)) continue;
       const candidate = emptyCandidate(author.author_id, author.name || '');
       if (paper) candidate.knownFor = paper;
       byId.set(author.author_id, candidate);
