@@ -18,6 +18,7 @@ import {
   isRealAuthorName,
   surnamesCompatible,
 } from './names';
+import { editDistanceWithin } from '../lib/editDistance';
 
 export { isRealAuthorName };
 
@@ -243,23 +244,6 @@ export function isSameResearcher(byline: string, reference: string): boolean {
   return surnamesCompatible(a.last, b.last)
     && initialsCompatible(aInitials, bInitials)
     && givenNamesDifferByOneTypo(a.given, b.given);
-}
-
-/** Levenshtein distance, bailing out once it exceeds `max`. */
-function editDistanceWithin(a: string, b: string, max: number): boolean {
-  if (Math.abs(a.length - b.length) > max) return false;
-  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const curr = [i];
-    for (let j = 1; j <= b.length; j++) {
-      curr[j] = a[i - 1] === b[j - 1]
-        ? prev[j - 1]
-        : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
-    }
-    if (Math.min(...curr) > max) return false;
-    prev = curr;
-  }
-  return prev[b.length] <= max;
 }
 
 /**
