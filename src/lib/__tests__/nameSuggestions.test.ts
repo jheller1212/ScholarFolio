@@ -1,4 +1,4 @@
-import { rankNameSuggestions, scoreNameSuggestion, suggestionQueries, type NameSuggestion } from '../nameSuggestions';
+import { isTypeaheadNameQuery, rankNameSuggestions, scoreNameSuggestion, suggestionQueries, type NameSuggestion } from '../nameSuggestions';
 import { editDistance, editDistanceWithin } from '../editDistance';
 
 const s = (id: string, name: string, citedBy = 0, institution = ''): NameSuggestion => ({ id, name, citedBy, institution });
@@ -78,5 +78,22 @@ describe('rankNameSuggestions', () => {
       s('B3', 'Tim Hilkin', 500),
     ], 2);
     expect(ranked.map(r => r.id)).toEqual(['B2', 'B3']);
+  });
+});
+
+describe('isTypeaheadNameQuery', () => {
+  it('accepts names, including diacritics, hyphens and apostrophes', () => {
+    expect(isTypeaheadNameQuery('Tim Hil')).toBe(true);
+    expect(isTypeaheadNameQuery('Jörg Müller-Lüdenscheidt')).toBe(true);
+    expect(isTypeaheadNameQuery("O'Brien")).toBe(true);
+  });
+
+  it('skips short input, URLs and Scholar profile ids', () => {
+    expect(isTypeaheadNameQuery('Ti')).toBe(false);
+    expect(isTypeaheadNameQuery('https://scholar.google.com/citations?user=NOSPtp8AAAAJ')).toBe(false);
+    expect(isTypeaheadNameQuery('scholar.google.com/citations')).toBe(false);
+    expect(isTypeaheadNameQuery('NOSPtp8AAAAJ')).toBe(false);
+    expect(isTypeaheadNameQuery('www.example')).toBe(false);
+    expect(isTypeaheadNameQuery('example.com')).toBe(false);
   });
 });
