@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import { DOMParser } from "npm:linkedom@0.16.8";
 import { hasMoreArticles, isLikelyTruncated, SERP_MAX_PAGES, SERP_PAGE_SIZE } from "./pagination.ts";
-import { applyProfilePreview, extractSearchCandidates, nameMatchesQuery, PREVIEW_PROFILE_LIMIT } from "./searchCandidates.ts";
+import { applyProfilePreview, extractSearchCandidates, nameMatchesQuery, PREVIEW_PROFILE_LIMIT, type SerpScholarSearchResponse } from "./searchCandidates.ts";
 
 const ALLOWED_ORIGINS = [
   'https://scholarfolio.org',
@@ -689,27 +689,41 @@ async function searchAuthorsByNameSerpAPI(query: string) {
     throw new Error("SERPAPI_KEY not configured");
   }
 
-  const serpUrl = new URL('https://serpapi.com/search.json');
-  serpUrl.searchParams.set('api_key', SERPAPI_KEY);
-  serpUrl.searchParams.set('engine', 'google_scholar');
-  serpUrl.searchParams.set('q', `author:"${query}"`);
-  serpUrl.searchParams.set('hl', 'en');
-  serpUrl.searchParams.set('num', '10');
+  // One paid google_scholar call. "No results" comes back as an error from
+  // SerpAPI; treat it as an empty page so the plain-name fallback still runs.
+  const scholarSearch = async (q: string): Promise<SerpScholarSearchResponse> => {
+    const serpUrl = new URL('https://serpapi.com/search.json');
+    serpUrl.searchParams.set('api_key', SERPAPI_KEY);
+    serpUrl.searchParams.set('engine', 'google_scholar');
+    serpUrl.searchParams.set('q', q);
+    serpUrl.searchParams.set('hl', 'en');
+    serpUrl.searchParams.set('num', '10');
+    console.log(`[Search-SerpAPI] Calling google_scholar engine for: ${q}`);
+    const response = await fetch(serpUrl.toString());
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`SerpAPI search error: ${response.status} — ${errBody}`);
+    }
+    const data = await response.json();
+    if (data.error) {
+      if (/hasn't returned any results/i.test(String(data.error))) return {};
+      throw new Error(`SerpAPI error: ${data.error}`);
+    }
+    return data;
+  };
 
-  console.log(`[Search-SerpAPI] Calling google_scholar engine for: ${query}`);
-  const response = await fetch(serpUrl.toString());
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => '');
-    throw new Error(`SerpAPI search error: ${response.status} — ${errBody}`);
-  }
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(`SerpAPI error: ${data.error}`);
-  }
-
-  const candidates = extractSearchCandidates(data, query);
+  // author:"Tim Hilken" only matches papers that print the full first name, and
+  // most list authors as initials ("T Hilken"), so it can miss a researcher
+  // entirely. A plain name query is where Scholar shows its "User profiles for"
+  // block, so it is the fallback when the first query yields no candidates.
+  const data = await scholarSearch(`author:"${query}"`);
+  let candidates = extractSearchCandidates(data, query);
   console.log(`[Search-SerpAPI] ${data.organic_results?.length ?? 0} organic results -> ${candidates.length} candidates`);
+  if (candidates.length === 0) {
+    const plain = await scholarSearch(query);
+    candidates = extractSearchCandidates(plain, query);
+    console.log(`[Search-SerpAPI] plain-name fallback: ${plain.profiles?.authors?.length ?? 0} profile-block authors, ${plain.organic_results?.length ?? 0} organic results -> ${candidates.length} candidates`);
+  }
 
   // Preview only the top candidates (see PREVIEW_PROFILE_LIMIT); a failed
   // preview just leaves that candidate with its paper-based "knownFor" line.
@@ -1145,9 +1159,11 @@ Deno.serve(async (req) => {
         console.log(`[Search] Cache miss, searching for: ${query}`);
         const results = await searchAuthorsByName(query);
 
-        // Cache successful results (even empty — avoids re-querying no-result names)
+        // Cache results for 24h, but empty ones for only 1h: an empty answer is
+        // often a miss on our side, and a day-long cache hid it from retries.
         try {
-          const expires = new Date(Date.now() + 86400 * 1000).toISOString(); // 24h
+          const ttlSeconds = results.length > 0 ? 86400 : 3600;
+          const expires = new Date(Date.now() + ttlSeconds * 1000).toISOString();
           await supabase.from('scholar_cache').upsert({
             url: cacheKey,
             data: results,
