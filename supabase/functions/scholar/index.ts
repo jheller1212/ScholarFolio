@@ -53,9 +53,11 @@ const SERPAPI_KEY = Deno.env.get('SERPAPI_KEY') ?? '';
 // traffic. We inject a server-side key so every visitor shares one authenticated,
 // rate-stable pool instead of the best-effort anonymous tier.
 const OPENALEX_BASE = 'https://api.openalex.org';
+// 'autocomplete' backs the name-search suggestions ("Did you mean", typeahead):
+// it is prefix-based, so it rescues misspelt names that /authors?search misses.
 const OA_ALLOWED_ENDPOINTS = new Set([
   'authors', 'works', 'institutions', 'sources', 'venues',
-  'concepts', 'topics', 'funders', 'publishers',
+  'concepts', 'topics', 'funders', 'publishers', 'autocomplete',
 ]);
 const OA_CACHE_TTL_SECONDS = 259200; // 3 days
 
