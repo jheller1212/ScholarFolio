@@ -19,6 +19,18 @@ function toOaPath(url: string): string {
   return url.replace(/^https?:\/\/api\.openalex\.org/, '');
 }
 
+/** Aborts when either signal does. AbortSignal.any is too new to rely on
+ *  (Safari < 17.4), and callers like the typeahead need to cancel stale
+ *  requests on top of the timeout. */
+function anySignal(a: AbortSignal, b: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (a.aborted || b.aborted) abort();
+  a.addEventListener('abort', abort, { once: true });
+  b.addEventListener('abort', abort, { once: true });
+  return controller.signal;
+}
+
 /**
  * Generic OpenAlex JSON fetcher. Routed through the `scholar` edge function,
  * which injects a server-side OpenAlex API key (mandatory since 2026-02-13) so
@@ -26,9 +38,10 @@ function toOaPath(url: string): string {
  * best-effort anonymous tier. Responses are cached server-side to conserve the
  * daily credit budget.
  */
-export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
+export async function oaFetchJson<T>(url: string, timeoutMs = 15000, signal?: AbortSignal): Promise<T | null> {
   try {
     await oaRateLimiter.acquireToken();
+    if (signal?.aborted) return null;
     const oaPath = toOaPath(url);
     const response = await fetch(`${SUPABASE_URL}/functions/v1/scholar`, {
       method: 'POST',
@@ -37,7 +50,7 @@ export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T 
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({ action: 'openalex', oaPath }),
-      signal: timeoutSignal(timeoutMs),
+      signal: signal ? anySignal(signal, timeoutSignal(timeoutMs)) : timeoutSignal(timeoutMs),
     });
     if (!response.ok) {
       console.warn(`[OpenAlex] proxy HTTP ${response.status} for ${toOaPath(url).split('?')[0]}`);
@@ -45,7 +58,8 @@ export async function oaFetchJson<T>(url: string, timeoutMs = 15000): Promise<T 
     }
     return await response.json() as T;
   } catch (err) {
-    console.warn('[OpenAlex] Fetch failed:', err instanceof Error ? err.message : err);
+    // A caller cancelling a stale request is not a failure worth logging.
+    if (!signal?.aborted) console.warn('[OpenAlex] Fetch failed:', err instanceof Error ? err.message : err);
     return null;
   }
 }

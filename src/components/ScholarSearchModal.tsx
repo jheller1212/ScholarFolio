@@ -4,7 +4,9 @@ import { Search, X, GraduationCap, Loader2, Database } from 'lucide-react';
 import { scholarService, type AuthorSearchResult } from '../services/scholar/index';
 import { searchOpenAlexAuthors, OPENALEX_ID_PREFIX } from '../services/openalex';
 import { fetchClaimStatuses, type ClaimStatus } from '../services/claimed-profiles';
-import { UrlFallback, SearchResultItem, NoResultsTips, OpenAlexNotice } from './ScholarSearchResults';
+import { fetchNameSuggestions } from '../services/openalex/name-suggestions';
+import { UrlFallback, SearchResultItem, NoResultsTips, OpenAlexNotice, DidYouMean } from './ScholarSearchResults';
+import type { NameSuggestion } from '../lib/nameSuggestions';
 
 interface ScholarSearchModalProps {
   isOpen: boolean;
@@ -23,8 +25,22 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
   const [pastedUrl, setPastedUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [claims, setClaims] = useState<Map<string, ClaimStatus>>(new Map());
+  const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
+  const [searchedQuery, setSearchedQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const hasAutoSearched = useRef(false);
+  const suggestAbort = useRef<AbortController | null>(null);
+
+  // A misspelt name finds nobody on Scholar, and OpenAlex's /authors search is
+  // not typo tolerant either. Autocomplete suggestions are free (OpenAlex via
+  // our proxy), and arrive independently so they never delay the results.
+  const loadSuggestions = useCallback((query: string) => {
+    const controller = new AbortController();
+    suggestAbort.current = controller;
+    fetchNameSuggestions(query, controller.signal).then(found => {
+      if (!controller.signal.aborted) setSuggestions(found);
+    });
+  }, []);
 
   // Badges arrive after the results so a slow lookup never delays the list.
   useEffect(() => {
@@ -67,6 +83,9 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       return;
     }
 
+    suggestAbort.current?.abort();
+    setSuggestions([]);
+    setSearchedQuery(query);
     setLoading(true);
     setError(null);
     setSearched(true);
@@ -91,6 +110,10 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       scholarFailed = true;
     }
 
+    // Only for a genuine "nobody found": when Scholar itself is down, picking a
+    // suggestion would just hit the same failure.
+    if (!scholarFailed) loadSuggestions(query);
+
     // Scholar empty or unavailable — try OpenAlex.
     try {
       const oaProfiles = await searchOpenAlexAuthors(query);
@@ -109,7 +132,7 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       setError('Search is temporarily unavailable. Please try again, or paste a Google Scholar URL.');
     }
     setLoading(false);
-  }, [onSelect, onClose]);
+  }, [onSelect, onClose, loadSuggestions]);
 
   useEffect(() => {
     if (isOpen) {
@@ -130,6 +153,9 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
       setPastedUrl('');
       setUrlError(null);
       setClaims(new Map());
+      suggestAbort.current?.abort();
+      setSuggestions([]);
+      setSearchedQuery('');
       hasAutoSearched.current = false;
     }
   }, [isOpen, initialQuery, runSearch]);
@@ -150,6 +176,11 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
     onSelect(target);
     onClose();
   }, [onSelect, onClose]);
+
+  const handlePickSuggestion = useCallback((corrected: string) => {
+    setName(corrected);
+    runSearch(corrected);
+  }, [runSearch]);
 
   const handleUrlSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -235,9 +266,13 @@ export function ScholarSearchModal({ isOpen, onClose, onSelect, initialQuery = '
             </div>
           )}
 
+          {!loading && suggestions.length > 0 && (
+            <DidYouMean query={searchedQuery} suggestions={suggestions} onPick={handlePickSuggestion} />
+          )}
+
           {!loading && searched && results.length === 0 && !error && (
             <>
-              <NoResultsTips query={name.trim()} />
+              <NoResultsTips query={searchedQuery} showHeading={suggestions.length === 0} />
               <UrlFallback
                 message="Paste a Google Scholar profile link"
                 pastedUrl={pastedUrl}

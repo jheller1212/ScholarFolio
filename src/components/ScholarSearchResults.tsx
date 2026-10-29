@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { MapPin, GraduationCap, Link, ArrowRight, BadgeCheck, UserCheck, Database } from 'lucide-react';
+import { MapPin, GraduationCap, Link, ArrowRight, BadgeCheck, UserCheck, Database, Sparkles } from 'lucide-react';
 import type { AuthorSearchResult } from '../services/scholar/index';
 import type { ClaimStatus } from '../services/claimed-profiles';
+import type { NameSuggestion } from '../lib/nameSuggestions';
 
 export function UrlFallback({ message, pastedUrl, setPastedUrl, urlError, setUrlError, onSubmit, compact }: {
   message: string;
@@ -126,10 +127,10 @@ export function SearchResultItem({ profile, claim, onSelect }: {
   );
 }
 
-export function NoResultsTips({ query }: { query: string }) {
+export function NoResultsTips({ query, showHeading = true }: { query: string; showHeading?: boolean }) {
   return (
     <div className="py-4">
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">No profiles found for &ldquo;{query}&rdquo;</p>
+      {showHeading && <p className="text-sm font-medium text-gray-700 dark:text-gray-200">No profiles found for &ldquo;{query}&rdquo;</p>}
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">We searched Google Scholar and OpenAlex. Some things to try:</p>
       <ul className="mt-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300 list-disc pl-5">
         <li>Search the first and last name only, without titles or middle initials.</li>
@@ -147,6 +148,37 @@ export function OpenAlexNotice() {
       <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
         Showing results from <span className="font-medium">OpenAlex</span>, the open research catalogue. Metrics may differ slightly from Google Scholar.
       </p>
+    </div>
+  );
+}
+
+/** Spelling suggestions from OpenAlex when a name found nobody on Scholar.
+ *  Picking one re-runs the normal name search with the corrected name. */
+export function DidYouMean({ query, suggestions, onPick }: {
+  query: string;
+  suggestions: NameSuggestion[];
+  onPick: (name: string) => void;
+}) {
+  return (
+    <div className="mb-3 rounded-lg border border-[#2d7d7d]/20 bg-[#eaf4f4]/60 dark:bg-[#2d7d7d]/10 px-3 py-2.5">
+      <p className="text-sm text-gray-700 dark:text-gray-200 flex items-start gap-1.5">
+        <Sparkles className="h-3.5 w-3.5 text-[#2d7d7d] mt-0.5 flex-shrink-0" />
+        <span>No exact match for &ldquo;{query}&rdquo;. Did you mean:</span>
+      </p>
+      <ul className="mt-1.5 space-y-0.5">
+        {suggestions.map(s => (
+          <li key={s.id}>
+            <button
+              type="button"
+              onClick={() => onPick(s.name)}
+              className="w-full text-left rounded-md px-2 py-1.5 text-sm hover:bg-white dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2d7d7d]/40 transition-colors break-words"
+            >
+              <span className="font-medium text-[#2d7d7d]">{s.name}</span>
+              {s.institution && <span className="text-xs text-gray-500 dark:text-gray-400"> · {s.institution}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
