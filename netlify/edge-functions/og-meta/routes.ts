@@ -36,3 +36,25 @@ export function resolveProfileTarget(pathname: string, search: URLSearchParams):
   if (!SLUG_RE.test(slug) || RESERVED_PATHS.has(slug)) return null;
   return { kind: 'slug', slug };
 }
+
+// Social preview bots only read <head>, so they skip the body's extra lookups.
+const PREVIEW_AGENTS = [
+  'facebookexternalhit', 'twitterbot', 'linkedinbot', 'slackbot', 'whatsapp', 'telegrambot', 'discordbot',
+];
+
+// Search engines and the answer engines public/robots.txt allows both index the
+// body text. Answer engines fetch without running JS, so without this they would
+// see the empty SPA shell the robots policy invites them to read. Training
+// crawlers (GPTBot, ClaudeBot, ...) stay out: robots.txt blocks them.
+const TEXT_AGENTS = [
+  'googlebot', 'bingbot', 'duckduckbot', 'applebot', 'yandex', 'baiduspider',
+  'chatgpt-user', 'oai-searchbot', 'perplexity', 'claude-user', 'claude-searchbot', 'youbot',
+];
+
+const matchesAny = (userAgent: string, agents: string[]): boolean => {
+  const ua = userAgent.toLowerCase();
+  return agents.some((bot) => ua.includes(bot));
+};
+
+export const wantsText = (userAgent: string): boolean => matchesAny(userAgent, TEXT_AGENTS);
+export const wantsHead = (userAgent: string): boolean => wantsText(userAgent) || matchesAny(userAgent, PREVIEW_AGENTS);

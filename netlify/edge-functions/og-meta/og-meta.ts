@@ -3,43 +3,18 @@ import { buildBody, injectBody } from './body.ts';
 import type { CoauthorLink } from './body.ts';
 import { candidateProfiles, frequentCoauthorKeys, listsAuthor } from './coauthors.ts';
 import { buildHead, canonicalUrl, injectHead, slugToName } from './head.ts';
-import { resolveProfileTarget } from './routes.ts';
+import { resolveProfileTarget, wantsHead, wantsText } from './routes.ts';
 import {
   fetchAuthorStrings, fetchClaimByAuthor, fetchClaimBySlug, fetchProfileIndex, fetchScholarData,
 } from './supabase.ts';
 import type { Claim, ScholarData } from './supabase.ts';
 
-// Social preview bots AND search engines get a real title, canonical, meta
+// Social preview bots, search engines and answer engines get a real title, canonical, meta
 // description, and Person JSON-LD injected from the cache, so every profile
 // URL (/scholar/<id> and vanity /<slug>) unfurls and indexes as a unique
 // document instead of the empty SPA shell. Cache-only — never triggers a paid
 // fetch. Humans pass straight through.
-const CRAWLER_AGENTS = [
-  'facebookexternalhit',
-  'twitterbot',
-  'linkedinbot',
-  'slackbot',
-  'whatsapp',
-  'telegrambot',
-  'discordbot',
-  'googlebot',
-  'bingbot',
-  'duckduckbot',
-  'applebot',
-  'yandex',
-  'baiduspider',
-];
-
-// Search engines also get the text summary + co-author links; link-preview
-// bots only read <head>, so they skip the extra lookups and stay fast.
-const SEARCH_AGENTS = ['googlebot', 'bingbot', 'duckduckbot', 'applebot', 'yandex', 'baiduspider'];
-
 const MAX_COAUTHOR_CHECKS = 8;
-
-function matchesAny(userAgent: string, agents: string[]): boolean {
-  const ua = userAgent.toLowerCase();
-  return agents.some((bot) => ua.includes(bot));
-}
 
 async function findCoauthorLinks(data: ScholarData, authorId: string): Promise<CoauthorLink[]> {
   if (!data.name || !data.publications?.length) return [];
@@ -70,7 +45,7 @@ async function resolve(url: URL): Promise<Resolved | null> {
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
   const userAgent = req.headers.get('user-agent') || '';
-  if (!matchesAny(userAgent, CRAWLER_AGENTS)) return context.next();
+  if (!wantsHead(userAgent)) return context.next();
 
   const resolved = await resolve(new URL(req.url));
   if (!resolved) return context.next();
@@ -93,7 +68,7 @@ export default async function handler(req: Request, context: Context): Promise<R
   }
 
   const { authorId, claim, data } = resolved;
-  const isSearch = matchesAny(userAgent, SEARCH_AGENTS);
+  const isSearch = wantsText(userAgent);
   const coauthors = isSearch && data ? await findCoauthorLinks(data, authorId).catch(() => []) : [];
   const { tags, title } = buildHead({
     data: data || {},
