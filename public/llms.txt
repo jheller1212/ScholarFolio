@@ -1,0 +1,17 @@
+# ScholarFolio
+
+> Free, open source citation metrics dashboard and academic portfolio for
+> researchers. Turns a public Google Scholar profile into one page with citation
+> trends, a co-author network, h-index, i10-index and field-normalized metrics.
+
+- Data: public Google Scholar profiles, enriched with OpenAlex and Semantic
+  Scholar. Profiles are cached and refreshed regularly, so figures are snapshots.
+- Claiming: researchers verify ownership through ORCID and get a permanent URL.
+
+## Pages
+
+- [Home](https://scholarfolio.org/): what ScholarFolio is, and profile search.
+- [Researcher profile](https://scholarfolio.org/scholar/NOSPtp8AAAAJ): example of the URL form, /scholar/<Google Scholar user ID>. Readable as text for search and answer engines when the profile is cached.
+- [Narrative CV guides](https://scholarfolio.org/guides/): NWO, ERC, MSCA, UKRI, SNSF and DFG.
+- [Google Scholar vs OpenAlex citation counts](https://scholarfolio.org/guides/google-scholar-vs-openalex-citation-counts/): why the numbers differ.
+- [About](https://scholarfolio.org/about)
