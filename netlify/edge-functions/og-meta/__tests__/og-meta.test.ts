@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHead, injectHead, slugToName } from '../head.ts';
-import { resolveProfileTarget } from '../routes.ts';
+import { resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
 
 const q = (s = '') => new URLSearchParams(s);
 
@@ -73,5 +73,27 @@ describe('injectHead', () => {
     expect(out).toContain('<title>New</title>');
     expect(out).not.toContain('content="Old"');
     expect(out).not.toContain('name="description"');
+  });
+});
+
+describe('agent routing', () => {
+  it('gives answer engines the text body, including browser-shaped user agents', () => {
+    for (const ua of ['ChatGPT-User/1.0', 'OAI-SearchBot/1.0', 'PerplexityBot/1.0', 'Claude-User/1.0',
+      'Claude-SearchBot/1.0', 'Mozilla/5.0 AppleWebKit/537.36 (compatible; ChatGPT-User/1.0; +https://openai.com/bot)',
+      'Mozilla/5.0 (compatible; Googlebot/2.1)']) {
+      expect(wantsText(ua)).toBe(true);
+      expect(wantsHead(ua)).toBe(true);
+    }
+  });
+
+  it('gives preview bots the head only', () => {
+    expect(wantsHead('LinkedInBot/1.0')).toBe(true);
+    expect(wantsText('LinkedInBot/1.0')).toBe(false);
+  });
+
+  it('passes humans and robots-blocked training crawlers straight through', () => {
+    for (const ua of ['Mozilla/5.0 (Macintosh) Chrome/130 Safari/537.36', 'GPTBot/1.2', 'ClaudeBot/1.0', 'CCBot/2.0']) {
+      expect(wantsHead(ua)).toBe(false);
+    }
   });
 });
