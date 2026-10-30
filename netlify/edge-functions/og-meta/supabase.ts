@@ -154,3 +154,24 @@ export function fetchClaimByAuthor(id: string): Promise<Claim | null> {
     return toClaim(rows?.[0]);
   });
 }
+
+// Counts assistant fetches so the case for deeper integration rests on data. Holds
+// the agent name and path only, no IP. Bounded and silent: a logging failure must
+// never affect the page being served.
+export async function logAgentFetch(agent: string, pathname: string, hasProfile: boolean): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/analytics_events`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ event: 'agent_fetch', pathname, properties: { agent, has_profile: hasProfile } }),
+      signal: AbortSignal.timeout(1000),
+    });
+  } catch {
+    // Swallowed on purpose.
+  }
+}

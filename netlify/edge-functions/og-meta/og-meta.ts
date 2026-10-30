@@ -3,9 +3,9 @@ import { buildBody, injectBody } from './body.ts';
 import type { CoauthorLink } from './body.ts';
 import { candidateProfiles, frequentCoauthorKeys, listsAuthor } from './coauthors.ts';
 import { buildHead, canonicalUrl, injectHead, slugToName } from './head.ts';
-import { resolveProfileTarget, wantsHead, wantsText } from './routes.ts';
+import { answerAgent, resolveProfileTarget, wantsHead, wantsText } from './routes.ts';
 import {
-  fetchAuthorStrings, fetchClaimByAuthor, fetchClaimBySlug, fetchProfileIndex, fetchScholarData,
+  fetchAuthorStrings, fetchClaimByAuthor, fetchClaimBySlug, fetchProfileIndex, fetchScholarData, logAgentFetch,
 } from './supabase.ts';
 import type { Claim, ScholarData } from './supabase.ts';
 
@@ -47,7 +47,10 @@ export default async function handler(req: Request, context: Context): Promise<R
   const userAgent = req.headers.get('user-agent') || '';
   if (!wantsHead(userAgent)) return context.next();
 
-  const resolved = await resolve(new URL(req.url));
+  const url = new URL(req.url);
+  const resolved = await resolve(url);
+  const agent = answerAgent(userAgent);
+  if (agent) await logAgentFetch(agent, url.pathname, !!resolved?.data);
   if (!resolved) return context.next();
 
   let originalResponse: Response;

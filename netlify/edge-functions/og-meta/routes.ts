@@ -58,3 +58,11 @@ const matchesAny = (userAgent: string, agents: string[]): boolean => {
 
 export const wantsText = (userAgent: string): boolean => matchesAny(userAgent, TEXT_AGENTS);
 export const wantsHead = (userAgent: string): boolean => wantsText(userAgent) || matchesAny(userAgent, PREVIEW_AGENTS);
+
+const ANSWER_AGENTS = ['chatgpt-user', 'oai-searchbot', 'perplexity', 'claude-user', 'claude-searchbot', 'youbot'];
+
+// Which answer engine this is, if any. Used to measure real assistant demand.
+export const answerAgent = (userAgent: string): string | null => {
+  const ua = userAgent.toLowerCase();
+  return ANSWER_AGENTS.find((bot) => ua.includes(bot)) ?? null;
+};
