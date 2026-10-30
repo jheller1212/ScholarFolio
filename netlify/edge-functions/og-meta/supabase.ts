@@ -21,6 +21,7 @@ export interface ScholarData {
   metrics?: { i10Index?: number };
   topics?: Array<{ name?: string }>;
   publications?: Publication[];
+  snapshotDate?: string; // ISO day the cached figures were fetched; derived, not stored in the payload
 }
 
 // A cached Google Scholar profile, for linking co-authors to their pages.
@@ -71,12 +72,23 @@ export function scholarCacheKey(id: string): string {
   return `https://scholar.google.com/citations?user=${encodeURIComponent(id)}`;
 }
 
+// The table has no fetched-at column, but every profile write sets expires_at
+// to now + the scholar function's CACHE_DURATION (keep the two in step).
+const PROFILE_CACHE_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function snapshotDate(expiresAt: string | null): string | undefined {
+  const ms = expiresAt ? Date.parse(expiresAt) : NaN;
+  return Number.isNaN(ms) ? undefined : new Date(ms - PROFILE_CACHE_MS).toISOString().slice(0, 10);
+}
+
 export function fetchScholarData(id: string): Promise<ScholarData | null> {
   return cached(`data:${id}`, async () => {
-    const rows = await rest<{ data: ScholarData }>(
-      `scholar_cache?url=eq.${encodeURIComponent(scholarCacheKey(id))}&select=data&limit=1`,
+    const rows = await rest<{ data: ScholarData; expires_at: string | null }>(
+      `scholar_cache?url=eq.${encodeURIComponent(scholarCacheKey(id))}&select=data,expires_at&limit=1`,
     );
-    return rows?.[0]?.data ?? null;
+    const row = rows?.[0];
+    if (!row?.data) return null;
+    return { ...row.data, snapshotDate: snapshotDate(row.expires_at) };
   });
 }
 

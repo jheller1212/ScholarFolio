@@ -60,6 +60,20 @@ describe('buildBody', () => {
     expect(html).toContain('<li>Computing</li>');
   });
 
+  it('names the source and snapshot date of the numbers', () => {
+    const html = buildBody({ ...data, snapshotDate: '2026-10-21' }, 'ABCDEF123456', []);
+    expect(html).toContain('Google Scholar: 1,200 citations');
+    expect(html).toContain('Source: Google Scholar, snapshot of 2026-10-21.');
+  });
+
+  it('labels OpenAlex profiles as OpenAlex, with a matching caveat and link', () => {
+    const html = buildBody(data, 'openalex:A123', []);
+    expect(html).toContain('OpenAlex: 1,200 citations');
+    expect(html).not.toContain('Google Scholar');
+    expect(html).toContain('Author matching in OpenAlex is automated');
+    expect(html).toContain('https://openalex.org/authors/A123');
+  });
+
   it('renders nothing without a name and injects into the empty root only', () => {
     expect(buildBody({}, 'X', [])).toBe('');
     expect(injectBody('<div id="root"></div>', '<main>x</main>')).toBe('<div id="root"><main>x</main></div>');

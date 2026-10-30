@@ -79,9 +79,9 @@ export function buildHead({ data, authorId, claimedSlug, fallbackName, colleague
     const topics = (data.topics ?? []).map((t) => t.name).filter((t): t is string => !!t);
     if (topics.length) person.knowsAbout = topics;
     if (colleagues?.length) person.colleague = colleagues;
-    if (!authorId.startsWith('openalex:')) {
-      person.sameAs = [`https://scholar.google.com/citations?user=${encodeURIComponent(authorId)}`];
-    }
+    person.sameAs = authorId.startsWith('openalex:')
+      ? [`https://openalex.org/authors/${encodeURIComponent(authorId.slice('openalex:'.length))}`]
+      : [`https://scholar.google.com/citations?user=${encodeURIComponent(authorId)}`];
     const payload = JSON.stringify(person).replace(/</g, '\\u003c');
     jsonLd = `\n    <script type="application/ld+json">${payload}</script>`;
   }
