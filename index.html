@@ -30,18 +30,23 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Static, crawlable links to legal/info pages. ScholarFolio is a SPA, so
-         these ensure the policy pages are discoverable by crawlers and
-         compliance scanners that don't execute JavaScript. -->
+    <!-- Readable without JavaScript: answer engines and other fetchers that don't
+         run JS see this on every route; browsers ignore it. Keep in step with
+         LandingSeoSections. Profile routes additionally get per-researcher text
+         from the og-meta edge function. -->
     <noscript>
-      <div style="max-width:640px;margin:2rem auto;padding:1rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">
-        <p>ScholarFolio needs JavaScript enabled to run. Legal and information pages:</p>
+      <main style="max-width:640px;margin:2rem auto;padding:1rem;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;">
+        <h1>ScholarFolio: academic research profiles</h1>
+        <p>ScholarFolio is a free, open source citation metrics dashboard and academic portfolio for researchers. It turns a public Google Scholar profile into one page with citation trends, an interactive co-author network, h-index and i10-index, and field-normalized metrics. Researchers can claim a profile, verify it with their ORCID iD, and share one permanent URL.</p>
+        <p>Publication and citation data come from public Google Scholar profiles, enriched with open data from OpenAlex and Semantic Scholar. Profile pages live at <code>scholarfolio.org/scholar/&lt;Google Scholar user ID&gt;</code>.</p>
+        <p>The interactive app needs JavaScript. These pages do not all require it:</p>
         <ul>
+          <li><a href="/guides/">Narrative CV guides</a> for NWO, ERC, MSCA, UKRI, SNSF and DFG applications</li>
+          <li><a href="/about">About</a> · <a href="/changelog">Changelog</a></li>
           <li><a href="/privacy">Privacy Policy</a> — how we collect, use, and protect your data (GDPR rights, cookies, first-party analytics)</li>
           <li><a href="/terms">Terms of Service</a></li>
-          <li><a href="/about">About</a> · <a href="/changelog">Changelog</a></li>
         </ul>
-      </div>
+      </main>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
