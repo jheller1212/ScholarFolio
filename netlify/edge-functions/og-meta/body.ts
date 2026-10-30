@@ -33,7 +33,15 @@ export function buildBody(data: ScholarData, authorId: string, coauthors: Coauth
   if (data.totalCitations != null) metrics.push(`${data.totalCitations.toLocaleString('en-US')} citations`);
   if (data.hIndex != null) metrics.push(`h-index ${data.hIndex}`);
   if (data.metrics?.i10Index != null) metrics.push(`i10-index ${data.metrics.i10Index}`);
-  if (metrics.length) parts.push(`<p>Google Scholar: ${metrics.join(' · ')}</p>`);
+  const fromOpenAlex = authorId.startsWith('openalex:');
+  const source = fromOpenAlex ? 'OpenAlex' : 'Google Scholar';
+  if (metrics.length) {
+    parts.push(`<p>${source}: ${metrics.join(' · ')}</p>`);
+    const asOf = data.snapshotDate ? `, snapshot of ${esc(data.snapshotDate)}` : '';
+    // OpenAlex builds author records by disambiguation, not from an owner-kept profile.
+    const caveat = fromOpenAlex ? ' Author matching in OpenAlex is automated, so works may be missing or misattributed.' : '';
+    parts.push(`<p>Source: ${source}${asOf}.${caveat}</p>`);
+  }
 
   const topics = (data.topics ?? []).map((t) => t.name).filter((t): t is string => !!t && !!t.trim());
   if (topics.length) {
@@ -57,7 +65,9 @@ export function buildBody(data: ScholarData, authorId: string, coauthors: Coauth
       .join('')}</ul>`);
   }
 
-  if (!authorId.startsWith('openalex:')) {
+  if (fromOpenAlex) {
+    parts.push(`<p><a href="https://openalex.org/authors/${esc(encodeURIComponent(authorId.slice('openalex:'.length)))}" rel="nofollow">OpenAlex author record</a></p>`);
+  } else {
     parts.push(`<p><a href="https://scholar.google.com/citations?user=${esc(encodeURIComponent(authorId))}" rel="nofollow">Google Scholar profile</a></p>`);
   }
   return `<main>\n${parts.join('\n')}\n</main>`;
