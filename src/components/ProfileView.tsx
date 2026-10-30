@@ -253,7 +253,7 @@ export function ProfileView({
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 sm:mb-1 truncate">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 sm:mb-1 truncate">
                   {profileUrl && !isOpenAlexProfile ? (
                     <a
                       href={profileUrl}
@@ -267,7 +267,7 @@ export function ProfileView({
                   ) : (
                     data.name
                   )}
-                </h2>
+                </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{[data.title, data.affiliation].filter(Boolean).join(' · ')}</p>
               </div>
             </div>
