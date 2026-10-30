@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHead, injectHead, slugToName } from '../head.ts';
-import { resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
+import { answerAgent, resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
 
 const q = (s = '') => new URLSearchParams(s);
 
@@ -95,5 +95,14 @@ describe('agent routing', () => {
     for (const ua of ['Mozilla/5.0 (Macintosh) Chrome/130 Safari/537.36', 'GPTBot/1.2', 'ClaudeBot/1.0', 'CCBot/2.0']) {
       expect(wantsHead(ua)).toBe(false);
     }
+  });
+});
+
+describe('answerAgent', () => {
+  it('names answer engines and ignores search engines and people', () => {
+    expect(answerAgent('Mozilla/5.0 (compatible; ChatGPT-User/1.0)')).toBe('chatgpt-user');
+    expect(answerAgent('Claude-User/1.0')).toBe('claude-user');
+    expect(answerAgent('Googlebot/2.1')).toBeNull();
+    expect(answerAgent('Mozilla/5.0 Chrome/130')).toBeNull();
   });
 });
