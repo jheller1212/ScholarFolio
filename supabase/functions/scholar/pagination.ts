@@ -37,3 +37,14 @@ export function isLikelyTruncated(cached: { publications?: unknown[]; _publicati
   if (cached._publicationsComplete === true) return false;
   return (cached.publications?.length ?? 0) === SERP_PAGE_SIZE;
 }
+
+// A background refresh replaces a working cached copy, so unlike a cache miss it
+// must not accept a degraded result: the scraper fallback caps at one page, and a
+// SerpAPI run can stop mid-pagination.
+export function isAcceptableRefresh(fresh: any, current: any): boolean {
+  if (fresh?._source !== 'serpapi') return false;
+  if (!Object.keys(fresh.metrics?.citationsPerYear ?? {}).length) return false;
+  const count = fresh.publications?.length ?? 0;
+  if (count === 0) return false;
+  return fresh._publicationsComplete === true || count >= (current?.publications?.length ?? 0);
+}
