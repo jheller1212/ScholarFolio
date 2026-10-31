@@ -2,7 +2,7 @@ import {
   hasMoreArticles,
   isLikelyTruncated,
   SERP_PAGE_SIZE,
-} from '../../../../supabase/functions/scholar/pagination.ts';
+  isAcceptableRefresh, } from '../../../../supabase/functions/scholar/pagination.ts';
 
 const articles = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `P${i}` }));
 
@@ -36,5 +36,31 @@ describe('isLikelyTruncated', () => {
     expect(isLikelyTruncated({ publications: articles(99) })).toBe(false);
     expect(isLikelyTruncated({ publications: articles(250) })).toBe(false);
     expect(isLikelyTruncated({})).toBe(false);
+  });
+});
+
+describe('isAcceptableRefresh', () => {
+  const graph = { metrics: { citationsPerYear: { 2025: 10 } } };
+  const pubs = (n: number) => Array.from({ length: n }, () => ({}));
+  const current = { publications: pubs(300) };
+
+  it('accepts a complete SerpAPI result, even with fewer publications', () => {
+    expect(isAcceptableRefresh({ _source: 'serpapi', _publicationsComplete: true, publications: pubs(290), ...graph }, current)).toBe(true);
+  });
+
+  it('rejects the scraper fallback, which caps at one page', () => {
+    expect(isAcceptableRefresh({ _source: 'scraper', publications: pubs(100), ...graph }, current)).toBe(false);
+  });
+
+  it('rejects a run that stopped mid-pagination and lost publications', () => {
+    expect(isAcceptableRefresh({ _source: 'serpapi', _publicationsComplete: false, publications: pubs(100), ...graph }, current)).toBe(false);
+  });
+
+  it('rejects an empty result even when marked complete', () => {
+    expect(isAcceptableRefresh({ _source: 'serpapi', _publicationsComplete: true, publications: [], ...graph }, current)).toBe(false);
+  });
+
+  it('rejects a result without a citation graph', () => {
+    expect(isAcceptableRefresh({ _source: 'serpapi', _publicationsComplete: true, publications: pubs(300), metrics: {} }, current)).toBe(false);
   });
 });

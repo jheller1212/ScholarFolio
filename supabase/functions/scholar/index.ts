@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 import { DOMParser } from "npm:linkedom@0.16.8";
-import { hasMoreArticles, isLikelyTruncated, SERP_MAX_PAGES, SERP_PAGE_SIZE } from "./pagination.ts";
+import { hasMoreArticles, isAcceptableRefresh, isLikelyTruncated, SERP_MAX_PAGES, SERP_PAGE_SIZE } from "./pagination.ts";
 import { applyProfilePreview, extractSearchCandidates, nameMatchesQuery, PREVIEW_PROFILE_LIMIT, type SerpScholarSearchResponse } from "./searchCandidates.ts";
 
 const ALLOWED_ORIGINS = [
@@ -28,6 +28,11 @@ function getCorsHeaders(req: Request) {
 
 // In-flight request coalescing to prevent duplicate API calls
 const inflightRequests = new Map<string, Promise<any>>();
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void } | undefined;
+
+// How long a claimed profile's refresh attempt holds off the next one.
+const REFRESH_LEASE_MS = 12 * 60 * 60 * 1000;
 
 // --- Rate limit constants ---
 const RATE_LIMIT_MAX_PROFILE = 10;  // max profile fetches per IP per hour
@@ -370,6 +375,65 @@ async function fetchViaDirectScraping(authorId: string) {
   const scrapedI10Index = statCells.length >= 6 ? parseInt(statCells[4]?.textContent?.trim() || '0') || 0 : 0;
 
   return { name, affiliation, imageUrl, topics, publications, citationsPerYear, scrapedHIndex, scrapedI10Index };
+}
+
+async function cacheProfile(normalizedUrl: string, data: unknown) {
+  const expiresAt = new Date();
+  expiresAt.setSeconds(expiresAt.getSeconds() + CACHE_DURATION);
+
+  const { error: upsertError } = await supabase
+    .from('scholar_cache')
+    .upsert({
+      url: normalizedUrl,
+      data,
+      expires_at: expiresAt.toISOString(),
+      // Reset on every refresh so the profile can show when its data was fetched.
+      created_at: new Date().toISOString()
+    });
+
+  if (upsertError) {
+    console.error("Cache update error:", upsertError);
+  } else {
+    console.log("Successfully cached data for:", normalizedUrl);
+  }
+}
+
+// Refreshes an expired claimed profile without ever making its cached copy worse.
+async function refreshClaimedProfile(authorId: string, normalizedUrl: string, current: unknown, req: Request, userId: string | null) {
+  const { data: claim } = await supabase
+    .from('claimed_profiles')
+    .select('author_id')
+    .eq('author_id', authorId)
+    .maybeSingle();
+  if (!claim) return;
+
+  // Atomic lease: across isolates only one insert of this key can succeed, and a
+  // failed or rejected attempt can't retry (and pay) until it lapses. It is its own
+  // row because the profile's expires_at also drives its "data as of" date and
+  // snapshot-metrics' freshness check. Any insert error means no refresh: fail closed.
+  const leaseKey = `refresh-lease:${authorId}`;
+  await supabase.from('scholar_cache').delete().eq('url', leaseKey).lte('expires_at', new Date().toISOString());
+  const { error: leaseError } = await supabase.from('scholar_cache').insert({
+    url: leaseKey,
+    data: {},
+    expires_at: new Date(Date.now() + REFRESH_LEASE_MS).toISOString(),
+  });
+  if (leaseError) return;
+
+  let pending = inflightRequests.get(authorId);
+  if (!pending) {
+    pending = fetchScholarProfile(authorId).finally(() => {
+      inflightRequests.delete(authorId);
+    });
+    inflightRequests.set(authorId, pending);
+  }
+  const fresh = await pending;
+  logRequest(req, authorId, fresh._source === 'scraper' ? 'scraper' : 'serpapi', userId);
+  if (isAcceptableRefresh(fresh, current)) {
+    await cacheProfile(normalizedUrl, fresh);
+  } else {
+    console.warn("Refresh rejected, keeping cached copy:", authorId);
+  }
 }
 
 // --- Main fetch with fallback ---
@@ -1254,7 +1318,7 @@ Deno.serve(async (req) => {
     // Check cache (for claimed profiles / cacheOnly, also serve expired cache)
     const cacheQuery = supabase
       .from('scholar_cache')
-      .select('data')
+      .select('data, expires_at')
       .eq('url', normalizedUrl);
 
     // Only filter by expiry for normal requests, not cacheOnly
@@ -1277,6 +1341,15 @@ Deno.serve(async (req) => {
       // For cacheOnly (claimed profile views), always serve cache if it exists
       if (cacheOnly && hasCitationGraph) {
         console.log("Cache-only hit (claimed profile) for:", normalizedUrl);
+        // Claimed rows survive retention cleanup, so nothing else forces a refetch
+        // once they expire: without this a vanity URL would serve frozen numbers
+        // forever. The visitor gets the old copy now and is never charged. Claimed
+        // only, so a cacheOnly request can't spend SerpAPI on an arbitrary profile.
+        if (Date.parse(cached.expires_at) <= Date.now()) {
+          const refresh = refreshClaimedProfile(authorId, normalizedUrl, cached.data, req, userId)
+            .catch((err) => console.error("Background refresh failed:", authorId, err));
+          if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(refresh);
+        }
         logRequest(req, authorId, 'cache', userId);
         return new Response(
           JSON.stringify({ ...cached.data, cacheStatus: 'hit' }),
@@ -1376,25 +1449,7 @@ Deno.serve(async (req) => {
       throw fetchError;
     }
 
-    // Cache the result
-    const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + CACHE_DURATION);
-
-    const { error: upsertError } = await supabase
-      .from('scholar_cache')
-      .upsert({
-        url: normalizedUrl,
-        data,
-        expires_at: expiresAt.toISOString(),
-        // Reset on every refresh so the profile can show when its data was fetched.
-        created_at: new Date().toISOString()
-      });
-
-    if (upsertError) {
-      console.error("Cache update error:", upsertError);
-    } else {
-      console.log("Successfully cached data for:", normalizedUrl);
-    }
+    await cacheProfile(normalizedUrl, data);
 
     logRequest(req, authorId, data._source === 'scraper' ? 'scraper' : 'serpapi', userId);
 
