@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Loader2, MailCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import { checkNewEmail } from '../lib/accountEmail';
-import { logCaughtError } from '../lib/errorLogger';
+import { checkNewEmail, requestPlaceholderEmailChange } from '../lib/accountEmail';
 
 interface AddEmailFormProps {
   /** Tighter layout for use inside another card (claim success screen). */
@@ -12,9 +10,10 @@ interface AddEmailFormProps {
 
 /**
  * "Where should we send your updates?" for ORCID-only accounts, whose login
- * address is a placeholder with no mailbox. Uses Supabase's own email-change
- * confirmation: the address only becomes the account's email once the link
- * sent to it is clicked, so nobody can point updates at an inbox they don't own.
+ * address is a placeholder with no mailbox. Secure email change would want a
+ * confirmation from that dead address too, so the placeholder-email-change
+ * function vouches for the old side and mails a link to the new address only.
+ * The address becomes the account's email only once that link is clicked.
  */
 export function AddEmailForm({ compact = false }: AddEmailFormProps) {
   const { user } = useAuth();
@@ -35,17 +34,10 @@ export function AddEmailForm({ compact = false }: AddEmailFormProps) {
     }
     setSaving(true);
     setError(null);
-    const { error: updateError } = await supabase.auth.updateUser(
-      { email: check.email },
-      { emailRedirectTo: window.location.origin }
-    );
+    const result = await requestPlaceholderEmailChange(check.email);
     setSaving(false);
-    if (updateError) {
-      const taken = /already|registered|exists/i.test(updateError.message);
-      setError(taken
-        ? 'That address already belongs to another ScholarFolio account. Email info@scholarfolio.org and we will merge them.'
-        : 'Could not send the confirmation email. Please try again.');
-      if (!taken) logCaughtError(updateError, 'auth', 'AddEmailForm', 'update-email');
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
     setSentTo(check.email);
@@ -63,7 +55,7 @@ export function AddEmailForm({ compact = false }: AddEmailFormProps) {
           <MailCheck className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
           <span>
             We sent a confirmation link to <strong>{pending}</strong>. Click it to start receiving email there;
-            until then we won&apos;t send anything. No email after a few minutes? Check your spam folder, or enter it again below.
+            until then nothing changes and we won&apos;t send anything else. No email after a few minutes? Check your spam folder, or enter it again below.
           </span>
         </p>
       )}
