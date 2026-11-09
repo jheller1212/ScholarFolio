@@ -84,8 +84,13 @@ footer.site a{color:var(--soft)}
 // Mirrors the app's ThemeToggle ('sf_theme': light | dark | system).
 const THEME_SCRIPT = `<script>try{var t=localStorage.getItem('sf_theme');if(t==='dark'||((t==='system'||!t)&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>`;
 
-export function page({ path, title, description, ogType = 'article', body, structuredData = [] }) {
+// noindex: for the guides 404 page, served at whatever URL was requested, so
+// it must not claim a canonical or og:url of its own.
+export function page({ path, title, description, ogType = 'article', body, structuredData = [], noindex = false }) {
   const url = `${SITE}${path}`;
+  const identity = noindex
+    ? '<meta name="robots" content="noindex">'
+    : `<link rel="canonical" href="${url}">`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -93,15 +98,14 @@ export function page({ path, title, description, ogType = 'article', body, struc
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<link rel="canonical" href="${url}">
+${identity}
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
 <meta name="theme-color" content="#1e293b">
 <meta property="og:type" content="${ogType}">
 <meta property="og:site_name" content="ScholarFolio">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
-<meta property="og:url" content="${url}">
-<meta property="og:image" content="${SITE}/og-default.png">
+${noindex ? '' : `<meta property="og:url" content="${url}">\n`}<meta property="og:image" content="${SITE}/og-default.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">

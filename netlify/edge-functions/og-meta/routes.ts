@@ -37,6 +37,40 @@ export function resolveProfileTarget(pathname: string, search: URLSearchParams):
   return { kind: 'slug', slug };
 }
 
+// App pages the SPA routes by path (src/App.tsx PAGE_ROUTES, matched
+// case-insensitively there too). 'home' is the root.
+export const APP_PAGES = new Set(['about', 'institutions', 'terms', 'privacy', 'changelog', 'trending', 'unsubscribe']);
+
+// First path segments owned by static files, functions or the app's own
+// non-page routes. Netlify (or the SPA) decides what these are; the edge
+// function must never answer 404 for them.
+const PASSTHROUGH_SEGMENTS = new Set([...RESERVED_PATHS, 'og', 'llms']);
+
+export type Route =
+  | { kind: 'profile'; target: ProfileTarget }
+  | { kind: 'page'; page: string }
+  | { kind: 'other' }
+  | { kind: 'unknown' };
+
+// What a request path is, before any lookup. 'unknown' means nothing in the
+// SPA can render there (it would show the homepage shell), so crawlers get a
+// 404 instead of a duplicate of the homepage.
+export function classifyRoute(pathname: string, search: URLSearchParams): Route {
+  const target = resolveProfileTarget(pathname, search);
+  if (target) return { kind: 'profile', target };
+
+  const trimmed = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (trimmed === '') return { kind: 'page', page: 'home' };
+  const lower = trimmed.toLowerCase();
+  if (APP_PAGES.has(lower)) return { kind: 'page', page: lower };
+
+  const first = lower.split('/')[0];
+  if (PASSTHROUGH_SEGMENTS.has(first) || first.startsWith('.')) return { kind: 'other' };
+  // Anything file-shaped is left to Netlify's static handling.
+  if (/\.[a-z0-9]{1,8}$/.test(lower)) return { kind: 'other' };
+  return { kind: 'unknown' };
+}
+
 // Social preview bots only read <head>, so they skip the body's extra lookups.
 const PREVIEW_AGENTS = [
   'facebookexternalhit', 'twitterbot', 'linkedinbot', 'slackbot', 'whatsapp', 'telegrambot', 'discordbot',
