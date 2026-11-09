@@ -29,4 +29,15 @@ describe('readOrcidReturn', () => {
     expect(readOrcidReturn(q('orcid_error=access_denied'), null).notice).toBeNull();
     expect(readOrcidReturn(q('orcid_state=abc'), 'abc')).toMatchObject({ notice: null, stateMismatch: false, linked: false });
   });
+
+  it('reports a confirmed email and asks for a session refresh', () => {
+    const r = readOrcidReturn(q('email_confirmed=1'), null);
+    expect(r).toMatchObject({ linked: true, stateMismatch: false, consumedParams: ['email_confirmed'] });
+    expect(r.notice?.tone).toBe('success');
+  });
+
+  it('explains a failed email confirmation', () => {
+    expect(readOrcidReturn(q('email_error=expired'), null).notice?.text).toMatch(/expired/);
+    expect(readOrcidReturn(q('email_error=whatever'), null).notice?.tone).toBe('error');
+  });
 });

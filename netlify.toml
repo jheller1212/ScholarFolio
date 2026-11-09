@@ -60,6 +60,17 @@
   to = "/.netlify/functions/orcid-link-start"
   status = 200
 
+# ORCID-only accounts adding a real address (request, then the new-inbox link lands here)
+[[redirects]]
+  from = "/api/placeholder-email-change"
+  to = "/.netlify/functions/placeholder-email-change"
+  status = 200
+
+[[redirects]]
+  from = "/api/placeholder-email-confirm"
+  to = "/.netlify/functions/placeholder-email-confirm"
+  status = 200
+
 # Canonicalize www → non-www. Auth (incl. the ORCID magic-link round-trip) and
 # the session live per-origin; serving both www and non-www split the session
 # and silently signed ORCID users out. Force a 301 to the non-www canonical host.

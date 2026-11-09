@@ -14,7 +14,7 @@ export interface OrcidReturn {
   notice: OrcidNotice | null;
   /** State came back but doesn't match what this tab sent: possible forgery. */
   stateMismatch: boolean;
-  /** The iD was linked server-side; the session's copy of the user is stale. */
+  /** The account changed server-side (iD linked, email confirmed); the session's copy is stale. */
   linked: boolean;
   /** Params to strip from the address bar. */
   consumedParams: string[];
@@ -32,6 +32,15 @@ const ERROR_TEXT: Record<string, string> = {
   link_failed: 'Something went wrong while connecting your ORCID iD. Please try again.',
 };
 
+// Placeholder (ORCID-only) accounts adding a real address come back via
+// placeholder-email-confirm with one of these.
+const EMAIL_TEXT: Record<string, OrcidNotice> = {
+  email_confirmed: { tone: 'success', text: 'Your email address is confirmed. Updates you opt into will go there.' },
+  invalid: { tone: 'error', text: 'That confirmation link is not valid. Ask for a new one under Email preferences.' },
+  expired: { tone: 'error', text: 'That confirmation link has expired. Ask for a new one under Email preferences.' },
+  failed: { tone: 'error', text: 'We could not confirm that address. Please ask for a new link under Email preferences.' },
+};
+
 export function readOrcidReturn(params: URLSearchParams, storedState: string | null): OrcidReturn {
   const error = params.get('orcid_error');
   const state = params.get('orcid_state');
@@ -45,11 +54,15 @@ export function readOrcidReturn(params: URLSearchParams, storedState: string | n
   } else if (linked && !stateMismatch) {
     notice = { tone: 'success', text: 'Your ORCID iD is now connected to this account.' };
   }
+  const emailConfirmed = params.get('email_confirmed') === '1';
+  const emailError = params.get('email_error');
+  if (emailConfirmed) notice = EMAIL_TEXT.email_confirmed;
+  else if (emailError) notice = EMAIL_TEXT[emailError] ?? EMAIL_TEXT.failed;
 
   return {
     notice,
     stateMismatch,
-    linked: linked && !stateMismatch,
-    consumedParams: ['orcid_error', 'orcid_state', 'orcid_linked'].filter((k) => params.has(k)),
+    linked: (linked && !stateMismatch) || emailConfirmed,
+    consumedParams: ['orcid_error', 'orcid_state', 'orcid_linked', 'email_confirmed', 'email_error'].filter((k) => params.has(k)),
   };
 }

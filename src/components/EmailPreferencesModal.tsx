@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { X, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getEmailPreferences, saveEmailPreferences } from '../lib/emailPreferences';
+import { isPlaceholderEmail } from '../lib/accountEmail';
+import { AddEmailForm } from './AddEmailForm';
 
 interface EmailPreferencesModalProps {
   onClose: () => void;
@@ -15,6 +17,7 @@ export function EmailPreferencesModal({ onClose }: EmailPreferencesModalProps) {
   const [marketing, setMarketing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const needsEmail = isPlaceholderEmail(user?.email);
 
   useEffect(() => {
     if (!user) {
@@ -74,6 +77,11 @@ export function EmailPreferencesModal({ onClose }: EmailPreferencesModalProps) {
           </div>
         ) : (
           <>
+            {needsEmail && (
+              <div className="mb-4">
+                <AddEmailForm />
+              </div>
+            )}
             <label className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300 mb-3 cursor-pointer">
               <input
                 type="checkbox"

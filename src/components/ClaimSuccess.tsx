@@ -3,6 +3,9 @@ import { Check, Copy, Mail, Linkedin, GraduationCap, Code, ChevronRight, CheckCi
 import { badgeUrlFor, badgeEmbedCode } from '../lib/badge';
 import { withRef } from '../lib/entryAttribution';
 import { trackEvent } from '../lib/analytics';
+import { useAuth } from '../contexts/AuthContext';
+import { isPlaceholderEmail } from '../lib/accountEmail';
+import { AddEmailForm } from './AddEmailForm';
 
 interface ClaimSuccessProps {
   slug: string;
@@ -20,6 +23,10 @@ interface ClaimSuccessProps {
  */
 export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrections }: ClaimSuccessProps) {
   const [copied, setCopied] = useState<string | null>(null);
+  const { user } = useAuth();
+  // Right after claiming is when an ORCID-only researcher cares about updates,
+  // and the only moment we can ask before they leave without an address.
+  const needsEmail = isPlaceholderEmail(user?.email);
   const profileUrl = `https://scholarfolio.org/${slug}`;
   // Links handed out from here carry ?ref=share so the visits they bring are attributable.
   const shareUrl = withRef(profileUrl, 'share');
@@ -59,6 +66,8 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
         </div>
 
         <div className="p-6 space-y-5">
+          {needsEmail && <AddEmailForm />}
+
           {/* Primary: the badge */}
           <section>
             <h3 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
