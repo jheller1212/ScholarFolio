@@ -9,48 +9,56 @@
     {
       "path": "/guides/how-to-write-a-narrative-cv/",
       "title": "How to write a narrative CV for a research grant",
+      "summary": "What narrative CVs have in common across funders, a side-by-side comparison, and a writing method.",
       "lastmod": "2026-10-02",
       "format": null
     },
     {
       "path": "/guides/nwo-veni-vidi-vici-narrative-cv/",
       "title": "NWO Veni, Vidi, Vici narrative CV: how to write the evidence-based CV",
+      "summary": "Academic profile, 10 key outputs, word limits per instrument, and the full list of banned indicators.",
       "lastmod": "2026-10-02",
       "format": "nwo"
     },
     {
       "path": "/guides/erc-cv-track-record/",
       "title": "ERC CV and Track Record: how to write the 4-page section",
+      "summary": "Up to four pages, three sections, up to ten research outputs with a short explanation of each.",
       "lastmod": "2026-10-02",
       "format": "erc"
     },
     {
       "path": "/guides/msca-postdoctoral-fellowship-cv/",
       "title": "MSCA Postdoctoral Fellowship CV: how to write section 4 of Part B-2",
+      "summary": "Indicative length 5 pages, exact dates, and outputs described by their significance rather than by impact factor.",
       "lastmod": "2026-10-02",
       "format": "msca"
     },
     {
       "path": "/guides/ukri-r4ri-narrative-cv/",
       "title": "UKRI Résumé for Research and Innovation (R4RI): how to write the narrative CV",
+      "summary": "Four modules plus optional context, one résumé for the whole team, word count set by each funding opportunity.",
       "lastmod": "2026-10-02",
       "format": null
     },
     {
       "path": "/guides/snsf-cv-format/",
       "title": "SNSF CV format: how to write your major achievements",
+      "summary": "Five elements, 1–3 narrative achievements, up to 10 selected works, and no proxy metrics.",
       "lastmod": "2026-10-02",
       "format": null
     },
     {
       "path": "/guides/dfg-cv-template/",
       "title": "DFG CV template (form 53.200): how to fill it in",
+      "summary": "Mandatory for all DFG programmes: four pages, up to 10 + 10 publications with a note on your role.",
       "lastmod": "2026-10-02",
       "format": null
     },
     {
       "path": "/guides/google-scholar-vs-openalex-citation-counts/",
       "title": "Why Google Scholar and OpenAlex citation counts differ",
+      "summary": "Different indexes, different matching, different author profiles: what that means for your numbers.",
       "lastmod": "2026-10-02",
       "format": null
     }

@@ -11,6 +11,8 @@ export default {
     'What the ERC CV and Track Record must contain under the 2026 and 2027 Work Programmes: personal details, up to 10 research outputs, peer recognition, career context. Plus a free draft from your Google Scholar profile.',
   h1: 'ERC CV and Track Record: how to write the 4-page section',
   summary: 'Up to four pages, three sections, up to ten research outputs with a short explanation of each.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that drafts an ERC Curriculum Vitae and Track Record from your Google Scholar profile.',
   lede:
     'Every ERC Starting, Consolidator, Advanced and Synergy Grant application includes a <strong>Curriculum Vitae and Track Record</strong> of up to four pages per Principal Investigator. Since the 2025 calls the ERC no longer prescribes PI profiles; instead you present up to ten research outputs and your peer recognition, with room to explain them. At Step 1 the panel reads only this section and Part I of the scientific proposal.',
   facts: [

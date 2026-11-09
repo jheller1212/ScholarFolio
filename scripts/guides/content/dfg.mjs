@@ -11,6 +11,8 @@ export default {
     'How to fill in the mandatory DFG CV template, form 53.200: the sections, up to 10 category A and 10 category B publications, the 4-page limit, and why impact factors and h-index are not considered.',
   h1: 'DFG CV template (form 53.200): how to fill it in',
   summary: 'Mandatory for all DFG programmes: four pages, up to 10 + 10 publications with a note on your role.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that shortlists candidate publications for the DFG CV template (form 53.200) from your Google Scholar profile.',
   lede:
     'Since 1 March 2023 every applicant in every DFG programme must use the <strong>DFG CV template, form 53.200</strong>. It is designed for a more individual, qualitative assessment: a short list of your most important results, each with a note on your role, instead of a full publication record.',
   facts: [

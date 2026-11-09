@@ -11,6 +11,8 @@ export default {
     "How to write UKRI's narrative CV, the Résumé for Research and Innovation (R4RI): the four modules, the additional information section, word counts, and why h-index and impact factors don't count.",
   h1: 'UKRI Résumé for Research and Innovation (R4RI): how to write the narrative CV',
   summary: 'Four modules plus optional context, one résumé for the whole team, word count set by each funding opportunity.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that gathers the key outputs, positions and collaborations for a UKRI Résumé for Research and Innovation (R4RI) from your Google Scholar profile.',
   lede:
     "The <strong>Résumé for Research and Innovation (R4RI)</strong> is UKRI's flexible narrative CV template. When a funding opportunity asks for it, it goes in the <em>Applicant and team capability to deliver</em> section and is used to evidence a wider range of skills and experience than a traditional academic CV.",
   facts: [
