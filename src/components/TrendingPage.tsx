@@ -148,7 +148,7 @@ export function TrendingPage({ onBack }: TrendingPageProps) {
 
                   {/* View profile button */}
                   <a
-                    href={`/?user=${encodeURIComponent(profile.scholar_id)}`}
+                    href={`/?user=${encodeURIComponent(profile.scholar_id)}&ref=trending`}
                     className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[#2d7d7d] text-white hover:bg-[#25696a] transition-colors"
                   >
                     View <ExternalLink className="h-3 w-3" />

@@ -9,6 +9,6 @@ describe('badge', () => {
   test('strips markup from everything pasted into other sites', () => {
     const code = badgeEmbedCode('abc"><script>', 'Ada <b>"L"</b>', 'https://scholarfolio.org/ada"onload=x');
     expect(code).not.toMatch(/<script|<b>|"onload/);
-    expect(code).toContain('href="https://scholarfolio.org/adaonload=x"');
+    expect(code).toContain('href="https://scholarfolio.org/adaonload=x?ref=badge"');
   });
 });

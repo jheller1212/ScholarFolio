@@ -31,6 +31,8 @@ import { fetchFieldNormalizedMetrics } from './services/openalex/field-metrics';
 import { enrichWithSemanticScholar } from './services/semanticscholar';
 import { logCaughtError, logError } from './lib/errorLogger';
 import { captureAttribution, trackEvent } from './lib/analytics';
+import { installPageViewTracking } from './lib/pageViews';
+import { captureProfileEntry } from './lib/entryAttribution';
 import { savePendingAuthIntent, clearPendingAuthIntent } from './lib/pendingAuthIntent';
 import { useResumeAfterAuth } from './hooks/useResumeAfterAuth';
 import { requestClaim } from './lib/claimRequest';
@@ -169,7 +171,7 @@ function AppContent() {
   const isAdmin = user?.email === ADMIN_EMAIL;
 
   // Capture referrer + UTM on first load
-  useEffect(() => { captureAttribution(); }, []);
+  useEffect(() => { captureAttribution(); installPageViewTracking(); }, []);
 
   // Handle shareable profile URL (?user=AUTHOR_ID) or vanity slug path (e.g. /jonas-heller)
   const [initialUrlHandled, setInitialUrlHandled] = useState(false);
@@ -366,6 +368,9 @@ function AppContent() {
         return;
       }
     }
+
+    // Only user-initiated lookups are metered, so !bypassCredits means "searched here".
+    captureProfileEntry(!bypassCredits);
 
     try {
       requestInProgressRef.current = true;

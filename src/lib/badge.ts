@@ -1,3 +1,5 @@
+import { withRef } from './entryAttribution';
+
 /**
  * Embeddable citation badge (served by netlify/functions/badge.ts). The
  * snippet gets pasted into other people's sites, so everything interpolated
@@ -10,7 +12,8 @@ export function badgeUrlFor(authorId: string): string {
 
 export function badgeEmbedCode(authorId: string, authorName: string, profileUrl: string): string {
   const safeName = authorName.replace(/[<>"&]/g, '');
-  const safeHref = profileUrl.replace(/["<>]/g, '');
+  // ?ref=badge lets visits that arrive through an embedded badge be attributed.
+  const safeHref = withRef(profileUrl, 'badge').replace(/["<>]/g, '');
   return `<a href="${safeHref}">
   <img src="${badgeUrlFor(authorId)}" alt="${safeName} on ScholarFolio" height="20">
 </a>`;

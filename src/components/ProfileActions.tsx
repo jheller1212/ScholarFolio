@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Share2, Check, Code, Download, ExternalLink, BadgeCheck, Link, FileText, Mail } from 'lucide-react';
+import { trackEvent } from '../lib/analytics';
+import { withRef } from '../lib/entryAttribution';
 import type { Author, CoAuthorGeoData } from '../types/scholar';
 
 interface ProfileActionsProps {
@@ -41,8 +43,13 @@ export function ProfileActions({
     return () => clearTimeout(t);
   }, [exportError]);
 
+  // Shared links carry ?ref=share so the visits they bring are attributable.
+  const shareUrl = () => withRef(window.location.href, 'share');
+  const logShare = (channel: string) => trackEvent('share_click', { channel, is_owner: claimedByCurrentUser, context: 'profile' });
+
   const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href).then(() => {
+    logShare('copy');
+    navigator.clipboard.writeText(shareUrl()).then(() => {
       setCopied(true);
       setShowShareMenu(false);
       setTimeout(() => setCopied(false), 2000);
@@ -69,21 +76,24 @@ export function ProfileActions({
               </button>
               <button onClick={() => {
                 // share-offsite takes only a URL; the card text comes from our OG tags
-                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400');
+                logShare('linkedin');
+                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl())}`, '_blank', 'width=600,height=400');
                 setShowShareMenu(false);
               }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
                 <ExternalLink className="h-3 w-3" /> Share on LinkedIn
               </button>
               <button onClick={() => {
                 const text = `${data.name}'s research profile — ${data.totalCitations.toLocaleString()} citations, h-index ${data.hIndex}`;
-                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank', 'width=600,height=400');
+                logShare('x');
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl())}`, '_blank', 'width=600,height=400');
                 setShowShareMenu(false);
               }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
                 <ExternalLink className="h-3 w-3" /> Share on X
               </button>
               <button onClick={() => {
                 const subject = `${data.name} — Research Profile`;
-                const body = `Check out ${data.name}'s research profile on ScholarFolio:\n\n${data.affiliation}\n${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex}\n\n${window.location.href}`;
+                const body = `Check out ${data.name}'s research profile on ScholarFolio:\n\n${data.affiliation}\n${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex}\n\n${shareUrl()}`;
+                logShare('email');
                 window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 setShowShareMenu(false);
               }} className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">

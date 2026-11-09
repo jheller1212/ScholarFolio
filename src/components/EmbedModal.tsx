@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Copy, Check, Code } from 'lucide-react';
 import { badgeUrlFor, badgeEmbedCode } from '../lib/badge';
+import { trackEvent } from '../lib/analytics';
+import { withRef } from '../lib/entryAttribution';
 
 interface EmbedModalProps {
   isOpen: boolean;
@@ -9,9 +11,11 @@ interface EmbedModalProps {
   authorName: string;
   /** Canonical page URL the badge links to (vanity slug if claimed). */
   profileUrl: string;
+  /** Viewer owns this claimed profile (for share analytics only). */
+  isOwner?: boolean;
 }
 
-export function EmbedModal({ isOpen, onClose, scholarId, authorName, profileUrl }: EmbedModalProps) {
+export function EmbedModal({ isOpen, onClose, scholarId, authorName, profileUrl, isOwner = false }: EmbedModalProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<number>();
 
@@ -29,6 +33,7 @@ export function EmbedModal({ isOpen, onClose, scholarId, authorName, profileUrl 
   const embedCode = badgeEmbedCode(scholarId, authorName, profileUrl);
 
   const handleCopy = async () => {
+    trackEvent('share_click', { channel: 'badge', is_owner: isOwner, context: 'embed' });
     try {
       await navigator.clipboard.writeText(embedCode);
       setCopied(true);
@@ -98,7 +103,7 @@ export function EmbedModal({ isOpen, onClose, scholarId, authorName, profileUrl 
 
           <div className="bg-[#eaf4f4] dark:bg-[#2d7d7d]/10 rounded-lg p-4 text-sm text-[#1e293b] dark:text-gray-200">
             <ul className="list-disc list-inside space-y-1 text-[#334155] dark:text-gray-300">
-              <li>Plain HTML — works on university CMS pages, WordPress, Notion, and GitHub READMEs (Markdown: <code className="text-xs">[![ScholarFolio]({badgeUrl})]({profileUrl})</code>)</li>
+              <li>Plain HTML — works on university CMS pages, WordPress, Notion, and GitHub READMEs (Markdown: <code className="text-xs">[![ScholarFolio]({badgeUrl})]({withRef(profileUrl, 'badge')})</code>)</li>
               <li>Citation counts refresh about once a day</li>
               <li>The badge links readers to your full ScholarFolio profile</li>
             </ul>

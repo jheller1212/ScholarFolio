@@ -18,7 +18,7 @@ interface CoAuthorPopupProps {
 
 interface Lookup { loading: boolean; scholarId: string | null; notFound: boolean }
 
-const profileUrl = (scholarId: string) => `${window.location.origin}/scholar/${encodeURIComponent(scholarId)}`;
+const profileUrl = (scholarId: string) => `${window.location.origin}/scholar/${encodeURIComponent(scholarId)}?ref=coauthor`;
 
 /** Popup for a co-author dot on the world map: open their profile, link it, invite them. */
 export function CoAuthorPopup({ coAuthor, ownerName, canInvite, onClose }: CoAuthorPopupProps) {
