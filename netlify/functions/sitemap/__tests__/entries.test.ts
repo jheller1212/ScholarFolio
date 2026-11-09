@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { guideEntries, profileEntries, renderSitemap } from '../entries.ts';
+import { cachedIds, guideEntries, profileEntries, renderSitemap } from '../entries.ts';
 
 const gs = (id: string) => `https://scholar.google.com/citations?user=${id}`;
 
@@ -20,6 +20,27 @@ describe('profileEntries', () => {
     // Claimed lastmod takes the newer of claim edit and cache refresh.
     expect(entries[0].lastmod).toBe('2026-09-30');
     expect(entries[1].lastmod).toBe('2026-09-29');
+  });
+});
+
+describe('claimed profiles without cached data', () => {
+  const claims = [
+    { slug: 'has-cache', author_id: 'AAAAAAAAAAAA', updated_at: null },
+    { slug: 'no-cache', author_id: 'CCCCCCCCCCCC', updated_at: null },
+    { slug: 'old-cache', author_id: 'DDDDDDDDDDDD', updated_at: null },
+  ];
+  const recent = [{ url: gs('AAAAAAAAAAAA'), created_at: '2026-09-30T10:00:00Z' }];
+
+  it('skips claims with no cache row of any age', () => {
+    const anyAge = cachedIds([{ url: gs('AAAAAAAAAAAA') }, { url: gs('DDDDDDDDDDDD') }]);
+    expect(profileEntries(claims, recent, anyAge).map((e) => e.loc)).toEqual([
+      'https://scholarfolio.org/has-cache',
+      'https://scholarfolio.org/old-cache',
+    ]);
+  });
+
+  it('lists every claim when the cache check failed', () => {
+    expect(profileEntries(claims, recent, null)).toHaveLength(3);
   });
 });
 

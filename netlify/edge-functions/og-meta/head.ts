@@ -39,9 +39,12 @@ export function slugToName(slug: string): string {
 // Generated 1200×630 card (netlify/functions/og-image). The query string
 // versions it by the headline metrics so platforms re-fetch when they change;
 // the function falls back to the default card on any error. OpenAlex-only
-// profiles aren't in scholar_cache under their id, so they keep the default.
+// profiles aren't in scholar_cache under their id, and a profile with no
+// cached metrics would only render an empty card (and a ?v=0-0 version that
+// platforms then keep), so both get the default.
 export function shareCardUrl(name: string | undefined, data: ScholarData, authorId: string): string {
   if (!name || authorId.startsWith('openalex:')) return DEFAULT_IMAGE;
+  if (data.totalCitations == null && data.hIndex == null) return DEFAULT_IMAGE;
   const version = `${data.totalCitations ?? 0}-${data.hIndex ?? 0}`;
   return `${SITE}/og/${encodeURIComponent(authorId)}.png?v=${version}`;
 }
@@ -52,8 +55,12 @@ export function buildDescription(name: string | undefined, data: ScholarData): s
   if (data.affiliation) parts.push(data.affiliation);
   if (data.totalCitations != null) parts.push(`${data.totalCitations.toLocaleString('en-US')} citations`);
   if (data.hIndex != null) parts.push(`h-index ${data.hIndex}`);
-  const lead = parts.length > 0 ? `${name}: ${parts.join(' · ')}.` : `${name} on ScholarFolio.`;
-  return `${lead} Citation trends, co-author network, and field-normalized metrics on ScholarFolio.`;
+  // Not cached yet (e.g. a claimed profile awaiting refresh): still say what
+  // the page offers instead of a bare name.
+  if (parts.length === 0) {
+    return `Research profile of ${name} on ScholarFolio: publications, citation trends, h-index, co-author network and field-normalized metrics, drawn from Google Scholar and OpenAlex.`;
+  }
+  return `${name}: ${parts.join(' · ')}. Citation trends, co-author network, and field-normalized metrics on ScholarFolio.`;
 }
 
 export function buildHead({ data, authorId, claimedSlug, fallbackName, colleagues }: HeadInput): { tags: string; title: string } {
