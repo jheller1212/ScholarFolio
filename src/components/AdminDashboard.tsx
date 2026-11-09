@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
+import { AcquisitionPanel } from './admin/AcquisitionPanel';
 import { MergeRequestsPanel } from './admin/MergeRequestsPanel';
 import { ProfileReportsPanel, type ProfileReport } from './admin/ProfileReportsPanel';
 
@@ -590,6 +591,8 @@ export function AdminDashboard({ onBack }: AdminDashboardProps) {
             {analyticsEvents.length > 0 && (
               <AttributionSection events={analyticsEvents} />
             )}
+
+            <AcquisitionPanel />
 
             {/* Purchase history */}
             {stats.purchases.length > 0 && (
