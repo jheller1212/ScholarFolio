@@ -119,3 +119,13 @@ export function injectHead(html: string, tags: string, title: string): string {
 
   return cleaned.replace('</head>', `${tags}\n  </head>`);
 }
+
+// Shell for a URL crawlers should not index: drop any canonical (it would
+// point a non-page at a real one) and say noindex in the markup as well as
+// the X-Robots-Tag header, for fetchers that only read one of them.
+export function markNoindex(html: string): string {
+  return html
+    .replace(/<link\s+rel="canonical"[^>]*\/?>/gi, '')
+    .replace(/<meta\s+name="robots"[^>]*\/?>/gi, '')
+    .replace('</head>', '    <meta name="robots" content="noindex" />\n  </head>');
+}

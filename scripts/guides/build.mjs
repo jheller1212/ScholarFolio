@@ -106,6 +106,23 @@ function renderIndex() {
   });
 }
 
+// Served by the /guides/* 404 rule in public/_redirects for any guide URL
+// that doesn't exist, instead of the SPA's homepage shell.
+function renderNotFound() {
+  const body = `<h1>Guide not found</h1>
+<p class="lede">There is no guide at this address. It may have moved, or the link may have a typo.</p>
+<ul class="guides">${GUIDES.map(g => `<li><a href="/guides/${g.slug}/">${esc(g.h1)}</a></li>`).join('')}</ul>
+<p><a href="/guides/">All guides</a> · <a href="/">Open ScholarFolio</a></p>`;
+  return page({
+    path: '/guides/404.html',
+    title: 'Guide not found — ScholarFolio',
+    description: 'This guide does not exist. Browse the narrative CV guides for NWO, ERC, MSCA, UKRI, SNSF and DFG.',
+    ogType: 'website',
+    body,
+    noindex: true,
+  });
+}
+
 function write(file, contents) {
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, contents);
@@ -113,6 +130,7 @@ function write(file, contents) {
 
 for (const guide of GUIDES) write(join(OUT, guide.slug, 'index.html'), renderGuide(guide));
 write(join(OUT, 'index.html'), renderIndex());
+write(join(OUT, '404.html'), renderNotFound());
 
 const newest = GUIDES.map(g => g.lastChecked).sort().at(-1);
 const manifest = {

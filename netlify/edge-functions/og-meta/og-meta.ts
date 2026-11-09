@@ -2,8 +2,9 @@ import type { Context } from '@netlify/edge-functions';
 import { buildBody, injectBody } from './body.ts';
 import type { CoauthorLink } from './body.ts';
 import { candidateProfiles, frequentCoauthorKeys, listsAuthor } from './coauthors.ts';
-import { buildHead, canonicalUrl, injectHead, slugToName } from './head.ts';
-import { answerAgent, resolveProfileTarget, wantsHead, wantsText } from './routes.ts';
+import { buildHead, canonicalUrl, injectHead, markNoindex, slugToName } from './head.ts';
+import { answerAgent, classifyRoute, wantsHead, wantsText } from './routes.ts';
+import type { ProfileTarget } from './routes.ts';
 import {
   fetchAuthorStrings, fetchClaimByAuthor, fetchClaimBySlug, fetchProfileIndex, fetchScholarData, logAgentFetch,
 } from './supabase.ts';
@@ -22,7 +23,7 @@ async function findCoauthorLinks(data: ScholarData, authorId: string): Promise<C
   if (!keys.length) return [];
   const candidates = candidateProfiles(keys, await fetchProfileIndex(), authorId).slice(0, MAX_COAUTHOR_CHECKS);
   const confirmed = await Promise.all(
-    candidates.map(async (c) => (listsAuthor(await fetchAuthorStrings(c.id), data.name ?? '') ? c : null)),
+    candidates.map(async (c) => (listsAuthor(await fetchAuthorStrings(c.id).catch(() => []), data.name ?? '') ? c : null)),
   );
   return confirmed
     .filter((c): c is NonNullable<typeof c> => c !== null)
@@ -31,16 +32,51 @@ async function findCoauthorLinks(data: ScholarData, authorId: string): Promise<C
 
 interface Resolved { authorId: string; claim: Claim | null; data: ScholarData | null }
 
-async function resolve(url: URL): Promise<Resolved | null> {
-  const target = resolveProfileTarget(url.pathname, url.searchParams);
-  if (!target) return null;
+// null = the slug is not claimed by anyone. Throws when Supabase can't be
+// reached, so a lookup failure is never mistaken for "not found".
+async function resolve(target: ProfileTarget): Promise<Resolved | null> {
   if (target.kind === 'id') {
     const [data, claim] = await Promise.all([fetchScholarData(target.id), fetchClaimByAuthor(target.id)]);
     return { authorId: target.id, claim, data };
   }
   const claim = await fetchClaimBySlug(target.slug);
-  if (!claim) return null; // unknown slug — let the SPA show its not-found state
+  if (!claim) return null;
   return { authorId: claim.authorId, claim, data: await fetchScholarData(claim.authorId) };
+}
+
+// The SPA shell from the origin; html is null for anything that isn't HTML
+// (or can't be read), which callers pass through untouched.
+async function readHtml(context: Context): Promise<{ res: Response; html: string | null }> {
+  const res = await context.next();
+  if (!(res.headers.get('content-type') || '').includes('text/html')) return { res, html: null };
+  try {
+    return { res, html: await res.text() };
+  } catch {
+    return { res, html: null };
+  }
+}
+
+function htmlResponse(html: string, origin: Response, status: number, extra: Record<string, string>): Response {
+  const inherited = Object.fromEntries(origin.headers.entries());
+  delete inherited['content-length']; // the body was rewritten
+  return new Response(html, {
+    status,
+    headers: {
+      ...inherited,
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=300, s-maxage=300',
+      ...extra,
+    },
+  });
+}
+
+// Crawler sees nothing to index here. 404 when the URL can't be anything
+// (unknown slug or path); noindex with 200 for an uncached /scholar/<id>,
+// which a human visit would fetch live and render, so it isn't "gone".
+async function excluded(context: Context, status: 404 | 200): Promise<Response> {
+  const { res, html } = await readHtml(context);
+  if (html === null) return res;
+  return htmlResponse(markNoindex(html), res, status, { 'x-robots-tag': 'noindex, noai, noimageai' });
 }
 
 export default async function handler(req: Request, context: Context): Promise<Response> {
@@ -48,27 +84,28 @@ export default async function handler(req: Request, context: Context): Promise<R
   if (!wantsHead(userAgent)) return context.next();
 
   const url = new URL(req.url);
-  const resolved = await resolve(url);
+  const route = classifyRoute(url.pathname, url.searchParams);
   const agent = answerAgent(userAgent);
-  if (agent) await logAgentFetch(agent, url.pathname, !!resolved?.data);
-  if (!resolved) return context.next();
+  if (route.kind === 'unknown') {
+    if (agent) await logAgentFetch(agent, url.pathname, false);
+    return excluded(context, 404);
+  }
+  if (route.kind !== 'profile') return context.next();
 
-  let originalResponse: Response;
+  let resolved: Resolved | null;
   try {
-    originalResponse = await context.next();
+    resolved = await resolve(route.target);
   } catch {
+    // Couldn't check: serve the plain shell rather than risk a false 404.
+    if (agent) await logAgentFetch(agent, url.pathname, false);
     return context.next();
   }
+  if (agent) await logAgentFetch(agent, url.pathname, !!resolved?.data);
+  if (!resolved) return excluded(context, 404);
+  if (!resolved.data && !resolved.claim) return excluded(context, 200);
 
-  const contentType = originalResponse.headers.get('content-type') || '';
-  if (!contentType.includes('text/html')) return originalResponse;
-
-  let html: string;
-  try {
-    html = await originalResponse.text();
-  } catch {
-    return originalResponse;
-  }
+  const { res, html } = await readHtml(context);
+  if (html === null) return res;
 
   const { authorId, claim, data } = resolved;
   const isSearch = wantsText(userAgent);
@@ -84,12 +121,5 @@ export default async function handler(req: Request, context: Context): Promise<R
   });
   const body = isSearch && data ? buildBody(data, authorId, coauthors) : '';
 
-  return new Response(injectBody(injectHead(html, tags, title), body), {
-    status: originalResponse.status,
-    headers: {
-      ...Object.fromEntries(originalResponse.headers.entries()),
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'public, max-age=300, s-maxage=300',
-    },
-  });
+  return htmlResponse(injectBody(injectHead(html, tags, title), body), res, res.status, {});
 }

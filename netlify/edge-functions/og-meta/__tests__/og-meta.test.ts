@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildHead, injectHead, slugToName } from '../head.ts';
-import { answerAgent, resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
+import { buildHead, injectHead, markNoindex, slugToName } from '../head.ts';
+import { answerAgent, classifyRoute, resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
 
 const q = (s = '') => new URLSearchParams(s);
 
@@ -30,6 +30,43 @@ describe('resolveProfileTarget', () => {
 
   it('rejects malformed percent-encoding', () => {
     expect(resolveProfileTarget('/scholar/%E0%A4%A', q())).toBeNull();
+  });
+});
+
+describe('classifyRoute', () => {
+  it('routes profiles, app pages and the root', () => {
+    expect(classifyRoute('/jonas-heller', q())).toEqual({ kind: 'profile', target: { kind: 'slug', slug: 'jonas-heller' } });
+    expect(classifyRoute('/scholar/NOSPtp8AAAAJ', q())).toEqual({ kind: 'profile', target: { kind: 'id', id: 'NOSPtp8AAAAJ' } });
+    expect(classifyRoute('/', q())).toEqual({ kind: 'page', page: 'home' });
+    for (const p of ['about', 'institutions', 'trending', 'changelog', 'privacy', 'terms', 'unsubscribe']) {
+      expect(classifyRoute(`/${p}`, q())).toEqual({ kind: 'page', page: p });
+      expect(classifyRoute(`/${p}/`, q())).toEqual({ kind: 'page', page: p });
+    }
+    // The SPA lowercases page paths, so these render the page too.
+    expect(classifyRoute('/About', q())).toEqual({ kind: 'page', page: 'about' });
+  });
+
+  it('never claims static files, functions or server routes', () => {
+    for (const p of ['/guides', '/guides/', '/guides/nope/', '/guides/manifest.json', '/badge/abc', '/og/abc',
+      '/og/abc.png', '/api/orcid-callback', '/assets/index.js', '/fonts/x.woff2', '/llms.txt', '/robots.txt',
+      '/sitemap.xml', '/favicon.svg', '/.netlify/functions/sitemap', '/.well-known/security.txt', '/admin',
+      '/scholar/', '/scholar/a/b', '/report.pdf']) {
+      expect(classifyRoute(p, q())).toEqual({ kind: 'other' });
+    }
+  });
+
+  it('marks paths the SPA cannot render as unknown', () => {
+    for (const p of ['/Jonas-Heller', '/a', '/-bad', '/foo/bar', '/this_is_not_a_slug', '/wp-admin/setup']) {
+      expect(classifyRoute(p, q())).toEqual({ kind: 'unknown' });
+    }
+  });
+});
+
+describe('markNoindex', () => {
+  it('drops the canonical and adds a robots noindex', () => {
+    const out = markNoindex('<html><head><link rel="canonical" href="https://scholarfolio.org/" /></head></html>');
+    expect(out).not.toContain('canonical');
+    expect(out).toContain('<meta name="robots" content="noindex" />');
   });
 });
 

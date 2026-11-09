@@ -75,6 +75,13 @@
   to = "/.netlify/functions/badge?id=:splat"
   status = 200
 
+# Unknown guide URLs get a real 404 instead of the SPA shell. Not forced, so
+# every generated guide (a real file) still shadows it.
+[[redirects]]
+  from = "/guides/*"
+  to = "/guides/404.html"
+  status = 404
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

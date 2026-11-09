@@ -55,17 +55,16 @@ async function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   return value;
 }
 
-async function rest<T>(query: string): Promise<T[] | null> {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T[];
-  } catch {
-    return null;
-  }
+// Throws when the lookup itself fails (timeout, 5xx), so callers can tell
+// "no such profile" (empty array) from "couldn't check". The memo never stores
+// a failure, so the next crawl retries.
+async function rest<T>(query: string): Promise<T[]> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!res.ok) throw new Error(`og-meta: supabase ${res.status}`);
+  return (await res.json()) as T[];
 }
 
 export function scholarCacheKey(id: string): string {
@@ -86,7 +85,7 @@ export function fetchScholarData(id: string): Promise<ScholarData | null> {
     const rows = await rest<{ data: ScholarData; expires_at: string | null }>(
       `scholar_cache?url=eq.${encodeURIComponent(scholarCacheKey(id))}&select=data,expires_at&limit=1`,
     );
-    const row = rows?.[0];
+    const row = rows[0];
     if (!row?.data) return null;
     return { ...row.data, snapshotDate: snapshotDate(row.expires_at) };
   });
@@ -103,7 +102,7 @@ export function fetchClaimBySlug(slug: string): Promise<Claim | null> {
     const rows = await rest<ClaimRow>(
       `claimed_profiles?slug=eq.${encodeURIComponent(slug)}&select=author_id,slug,display_name&limit=1`,
     );
-    return toClaim(rows?.[0]);
+    return toClaim(rows[0]);
   });
 }
 
@@ -119,9 +118,9 @@ export function fetchProfileIndex(): Promise<IndexedProfile[]> {
       ),
       rest<{ author_id: string; slug: string }>('claimed_profiles?select=author_id,slug'),
     ]);
-    const slugs = new Map((claims ?? []).map((c) => [c.author_id, c.slug]));
+    const slugs = new Map(claims.map((c) => [c.author_id, c.slug]));
     const out: IndexedProfile[] = [];
-    for (const row of rows ?? []) {
+    for (const row of rows) {
       if (!row.name) continue;
       let id: string;
       try {
@@ -142,7 +141,7 @@ export function fetchAuthorStrings(id: string): Promise<string[]> {
     const rows = await rest<{ pubs: Publication[] | null }>(
       `scholar_cache?url=eq.${encodeURIComponent(scholarCacheKey(id))}&select=pubs:data->publications&limit=1`,
     );
-    return (rows?.[0]?.pubs ?? []).flatMap((p) => p.authors ?? []);
+    return (rows[0]?.pubs ?? []).flatMap((p) => p.authors ?? []);
   });
 }
 
@@ -151,7 +150,7 @@ export function fetchClaimByAuthor(id: string): Promise<Claim | null> {
     const rows = await rest<ClaimRow>(
       `claimed_profiles?author_id=eq.${encodeURIComponent(id)}&select=author_id,slug,display_name&limit=1`,
     );
-    return toClaim(rows?.[0]);
+    return toClaim(rows[0]);
   });
 }
 
