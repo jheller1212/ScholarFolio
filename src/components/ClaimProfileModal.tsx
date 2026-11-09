@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Link, Check, AlertCircle, Loader2, User, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { nameToSlug } from '../lib/profileSlug';
 import { savePendingAuthIntent, claimIntentFor } from '../lib/pendingAuthIntent';
 import { OrcidIcon } from './OrcidIcon';
@@ -31,7 +30,7 @@ function isValidSlug(slug: string): boolean {
 type SlugStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
 
 export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, onOpenCorrections }: ClaimProfileModalProps) {
-  const { user } = useAuth();
+  const { user, linkOrcid } = useAuth();
   const [slug, setSlug] = useState(() => nameToSlug(authorName));
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
@@ -44,12 +43,19 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
   const [needsOrcid, setNeedsOrcid] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Start the ORCID sign-in flow (same as the auth modal) so an account without
-  // a linked ORCID can connect one. The callback lands on the site root, so
-  // park the claim intent to come back to this profile with the modal open.
-  const connectOrcid = () => {
+  // Link ORCID to THIS account (the sign-in flow would switch the visitor into
+  // a separate ORCID account). The callback lands on the site root, so park
+  // the claim intent to come back to this profile with the modal open.
+  const [connecting, setConnecting] = useState(false);
+  const connectOrcid = async () => {
+    setConnecting(true);
+    setError(null);
     savePendingAuthIntent(claimIntentFor(authorId));
-    startOrcidSignIn();
+    const { error: linkError } = await linkOrcid();
+    if (linkError) {
+      setError(linkError);
+      setConnecting(false);
+    }
   };
 
   // Funnel events carry no author id or user id: only that a claim began,
@@ -374,13 +380,14 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
           {needsOrcid ? (
             <div className="space-y-2">
               <p className="text-xs text-gray-600">
-                To claim your profile we verify it's yours via your ORCID iD. Connect your ORCID to continue.
+                To claim your profile we verify it's yours via your ORCID iD. Connect your ORCID to continue; you stay signed in to this account.
               </p>
               <button
                 onClick={connectOrcid}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg bg-[#A6CE39] text-white hover:brightness-95 transition-all"
+                disabled={connecting}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg bg-[#A6CE39] text-white hover:brightness-95 transition-all disabled:opacity-60"
               >
-                <OrcidIcon glyphOnly />
+                {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <OrcidIcon glyphOnly />}
                 Connect your ORCID iD
               </button>
             </div>

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { logError } from '../lib/errorLogger';
 import { trackEvent } from '../lib/analytics';
 import { flushPendingEmailConsent } from '../lib/emailPreferences';
+import { startOrcidLink } from '../lib/orcidSignIn';
 import { parseLookupAllowance, lookupsAvailable, type LookupAllowance } from '../lib/allowance';
 
 interface AuthState {
@@ -23,6 +24,8 @@ interface AuthState {
   /** needsConfirmation: account created but no session until the emailed link is clicked. */
   signUp: (email: string, password: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
+  /** Connect ORCID to the signed-in account (leaves for ORCID on success). */
+  linkOrcid: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshCredits: () => Promise<void>;
 }
@@ -158,6 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error?.message ?? null };
   };
 
+  const linkOrcid = async () => {
+    const { data: { session: current } } = await supabase.auth.getSession();
+    if (!current) return { error: 'Please sign in first.' };
+    return startOrcidLink(current.access_token);
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setCredits(null);
@@ -165,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, credits, allowance, loading, showWelcome, showPasswordReset, dismissWelcome, dismissPasswordReset, updatePassword, signIn, signUp, signInWithGoogle, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, session, credits, allowance, loading, showWelcome, showPasswordReset, dismissWelcome, dismissPasswordReset, updatePassword, signIn, signUp, signInWithGoogle, linkOrcid, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );

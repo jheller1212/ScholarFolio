@@ -1,6 +1,10 @@
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import type { User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+import {
+  LINK_COOKIE, checkIntent, decideLink, linkCookie, looksLikeState, readCookie, sha256,
+  type AccountSummary, type StoredIntent,
+} from '../lib/orcidLink.ts';
 
 const ORCID_TOKEN_URL = 'https://orcid.org/oauth/token';
 const ORCID_API_URL = 'https://pub.orcid.org/v3.0';
@@ -28,6 +32,108 @@ async function fetchOrcidEmails(orcidId: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+const redirect = (location: string, extra: Record<string, string> = {}) => ({
+  statusCode: 302,
+  headers: { Location: location, 'Cache-Control': 'no-store', ...extra },
+});
+
+/** Every response of a link attempt drops the binding cookie: intents are single use. */
+const clearLinkCookie = { 'Set-Cookie': linkCookie('', 0) };
+
+async function listAllUsers(supabase: SupabaseClient): Promise<User[]> {
+  // Paged so returning users are found beyond the first 1000
+  const allUsers: User[] = [];
+  for (let page = 1; ; page++) {
+    const { data, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (listError || !data?.users?.length) break;
+    allUsers.push(...data.users);
+    if (data.users.length < 1000) break;
+  }
+  return allUsers;
+}
+
+/** Recorded in edge_function_errors so the admin dashboard shows them. */
+async function logLinkEvent(supabase: SupabaseClient, action: string, message: string, context: Record<string, unknown>) {
+  try {
+    await supabase.from('edge_function_errors').insert({
+      function_name: 'orcid-callback', action, error_message: message, context,
+    });
+  } catch {
+    // Logging must never break the redirect.
+  }
+}
+
+/**
+ * Consume the link intent for this state, if any. Deleting and reading in one
+ * statement makes it single use even if the callback URL is replayed.
+ */
+async function takeLinkIntent(supabase: SupabaseClient, state: string): Promise<StoredIntent | null> {
+  if (!looksLikeState(state)) return null;
+  const { data } = await supabase
+    .from('orcid_link_intents')
+    .delete()
+    .eq('state_hash', sha256(state))
+    .select('user_id, binding_hash, expires_at');
+  return (data?.[0] as StoredIntent | undefined) ?? null;
+}
+
+/**
+ * Attach the ORCID iD to the signed-in account that started the link. The
+ * browser keeps its current session: no magic link for any other account.
+ */
+async function linkToUser(supabase: SupabaseClient, userId: string, orcidId: string, state: string) {
+  const { data: targetData, error: targetError } = await supabase.auth.admin.getUserById(userId);
+  const target = targetData?.user;
+  if (targetError || !target) return redirect(`${SITE_URL}?orcid_error=link_failed`, clearLinkCookie);
+
+  const holders = (await listAllUsers(supabase)).filter(
+    (u) => u.id !== target.id && u.app_metadata?.orcid_id === orcidId
+  );
+  const claimed = new Set<string>();
+  if (holders.length > 0) {
+    const { data: claims } = await supabase
+      .from('claimed_profiles').select('user_id').in('user_id', holders.map((h) => h.id));
+    for (const c of claims ?? []) claimed.add((c as { user_id: string }).user_id);
+  }
+  const summarize = (u: User): AccountSummary => ({
+    id: u.id,
+    email: u.email ?? null,
+    orcidId: typeof u.app_metadata?.orcid_id === 'string' ? u.app_metadata.orcid_id : null,
+    hasClaim: claimed.has(u.id),
+  });
+
+  const decision = decideLink(orcidId, summarize(target), holders.map(summarize));
+
+  if (decision.action === 'refuse') {
+    await logLinkEvent(supabase, 'orcid-link-refused', `ORCID link refused: ${decision.reason}`, {
+      orcid_id: orcidId, user_id: target.id, holder_user_id: decision.holderId ?? null, reason: decision.reason,
+    });
+    return redirect(`${SITE_URL}?orcid_error=${decision.reason}`, clearLinkCookie);
+  }
+
+  if (decision.action === 'link') {
+    for (const fromId of decision.moveFrom) {
+      // A null value deletes the key; the rest of the metadata is left alone.
+      const { error: moveError } = await supabase.auth.admin.updateUserById(fromId, {
+        app_metadata: { orcid_id: null },
+        user_metadata: { orcid_id: null },
+      });
+      if (moveError) return redirect(`${SITE_URL}?orcid_error=link_failed`, clearLinkCookie);
+      await logLinkEvent(supabase, 'orcid-link-moved', 'ORCID iD moved from a placeholder account', {
+        orcid_id: orcidId, from_user_id: fromId, to_user_id: target.id,
+      });
+    }
+    const { error: linkError } = await supabase.auth.admin.updateUserById(target.id, {
+      // app_metadata is the verified source; user_metadata keeps a copy for display.
+      app_metadata: { orcid_id: orcidId },
+      user_metadata: { orcid_id: orcidId },
+    });
+    if (linkError) return redirect(`${SITE_URL}?orcid_error=link_failed`, clearLinkCookie);
+  }
+
+  return redirect(`${SITE_URL}?orcid_state=${encodeURIComponent(state)}&orcid_linked=1`, clearLinkCookie);
 }
 
 const handler: Handler = async (event: HandlerEvent) => {
@@ -59,6 +165,21 @@ const handler: Handler = async (event: HandlerEvent) => {
       statusCode: 302,
       headers: { Location: `${SITE_URL}?orcid_error=config` },
     };
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  // A signed-in user connecting ORCID: consumed before the code exchange so a
+  // replayed callback finds nothing. Once an intent matched, this request is
+  // a link attempt and never falls back to signing anyone in.
+  const intent = await takeLinkIntent(supabase, state);
+  let linkUserId: string | null = null;
+  if (intent) {
+    const check = checkIntent(intent, readCookie(event.headers.cookie, LINK_COOKIE), Date.now());
+    if (!check.ok) return redirect(`${SITE_URL}?orcid_error=${check.reason}`, clearLinkCookie);
+    linkUserId = check.userId;
   }
 
   // Exchange authorization code for access token + ORCID iD
@@ -101,20 +222,11 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  if (linkUserId) return linkToUser(supabase, linkUserId, orcidId, state);
 
   const syntheticEmail = `${orcidId.replace(/-/g, '')}@orcid.scholarfolio.org`;
 
-  // Fetch all users in pages so returning users are found beyond the first 1000
-  const allUsers: User[] = [];
-  for (let page = 1; ; page++) {
-    const { data, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
-    if (listError || !data?.users?.length) break;
-    allUsers.push(...data.users);
-    if (data.users.length < 1000) break;
-  }
+  const allUsers = await listAllUsers(supabase);
 
   // Priority 1: Find user who already has this ORCID linked (returning ORCID user).
   // Only app_metadata counts: users can rewrite their own user_metadata from the
