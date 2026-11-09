@@ -5,6 +5,7 @@ import { initWasm, Resvg } from '@resvg/resvg-wasm';
 import type { Config } from '@netlify/functions';
 import { buildCardSvg } from './card.ts';
 import { cardInputFor, fetchCardSource } from './data.ts';
+import { logAssetHit } from '../../lib/assetHit.ts';
 
 // Generated 1200×630 PNG share card for a profile, used as og:image by the
 // og-meta edge function. Reads only the cache — never triggers a paid fetch.
@@ -61,6 +62,12 @@ export default async function handler(req: Request): Promise<Response> {
     return fallback();
   }
 
+  // Runs alongside the render; awaited in `finally` (bounded timeout).
+  const hit = logAssetHit('og_image', authorId, {
+    userAgent: req.headers.get('user-agent'),
+    referer: req.headers.get('referer'),
+  });
+
   try {
     const source = await fetchCardSource(authorId);
     const input = source && cardInputFor(authorId, source);
@@ -85,5 +92,7 @@ export default async function handler(req: Request): Promise<Response> {
   } catch (err) {
     console.error('[og-image] render failed', authorId, err);
     return fallback();
+  } finally {
+    await hit;
   }
 }

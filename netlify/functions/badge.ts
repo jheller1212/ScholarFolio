@@ -1,4 +1,5 @@
 import type { Handler } from '@netlify/functions';
+import { logAssetHit } from '../lib/assetHit.ts';
 
 const supabaseUrl = 'https://mixaxkywkojoclgbjjur.supabase.co';
 // Publishable key — safe to embed, same as client-side
@@ -57,6 +58,12 @@ const handler: Handler = async (event) => {
     return { statusCode: 400, body: 'Invalid profile id' };
   }
 
+  // Runs alongside the cache read; awaited before responding (bounded timeout).
+  const hit = logAssetHit('badge', raw, {
+    userAgent: event.headers['user-agent'],
+    referer: event.headers['referer'] ?? event.headers['referrer'],
+  });
+
   let value = 'research profile';
   try {
     const scholarUrl = `https://scholar.google.com/citations?user=${encodeURIComponent(raw)}`;
@@ -78,6 +85,7 @@ const handler: Handler = async (event) => {
     // fall through to the generic badge
   }
 
+  await hit;
   return {
     statusCode: 200,
     headers: {

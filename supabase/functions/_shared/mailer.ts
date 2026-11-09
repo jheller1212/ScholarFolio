@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.39.3";
+import { tagEmailLinks } from "./emailLinks.ts";
 
 /**
  * Shared lifecycle-email plumbing for the CRON_SECRET / admin gated senders
@@ -107,7 +108,10 @@ export async function sendEmail(
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: FROM, to: [msg.to], reply_to: REPLY_TO,
-      subject: msg.subject, html: msg.html, text: msg.text, headers,
+      subject: msg.subject,
+      html: tagEmailLinks(msg.html, msg.kind),
+      text: tagEmailLinks(msg.text, msg.kind),
+      headers,
     }),
   });
   const body = await res.json().catch(() => ({}));
