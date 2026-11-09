@@ -36,10 +36,27 @@ function latest(a: string | undefined, b: string | undefined): string | undefine
   return a > b ? a : b;
 }
 
+// Author ids that have a scholar_cache row, from rows of any age.
+export function cachedIds(rows: Array<{ url: string }>): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (!row.url.startsWith(SCHOLAR_URL_PREFIX)) continue;
+    try {
+      ids.add(decodeURIComponent(row.url.slice(SCHOLAR_URL_PREFIX.length)));
+    } catch {
+      // malformed key; not a listable profile
+    }
+  }
+  return ids;
+}
+
 // Claimed profiles are listed under their vanity slug (their canonical URL);
 // every other cached Google Scholar profile under /scholar/<id>. lastmod is
 // when the cached data was last refreshed, so crawlers revisit after updates.
-export function profileEntries(claims: ClaimRow[], cache: CacheRow[]): SitemapEntry[] {
+// A claimed profile with no cache row has nothing to show a crawler (thin page,
+// default card), so it is left out; claimedCached is null when that couldn't
+// be checked, and then every claim is listed rather than dropping them all.
+export function profileEntries(claims: ClaimRow[], cache: CacheRow[], claimedCached: Set<string> | null = null): SitemapEntry[] {
   const refreshed = new Map<string, string | undefined>();
   for (const row of cache) {
     if (!row.url.startsWith(SCHOLAR_URL_PREFIX)) continue;
@@ -57,6 +74,7 @@ export function profileEntries(claims: ClaimRow[], cache: CacheRow[]): SitemapEn
   for (const c of claims) {
     if (!c.slug) continue;
     claimed.add(c.author_id);
+    if (claimedCached && !claimedCached.has(c.author_id) && !refreshed.has(c.author_id)) continue;
     entries.push({
       loc: `${SITE}/${c.slug}`,
       lastmod: latest(day(c.updated_at), refreshed.get(c.author_id)),

@@ -117,7 +117,10 @@ describe('buildHead', () => {
   it('falls back to the claimed name when the profile is not cached', () => {
     const { title, tags } = buildHead({ data: {}, authorId: 'X', claimedSlug: 'jonas-heller', fallbackName: slugToName('jonas-heller') });
     expect(title).toBe('Jonas Heller — ScholarFolio');
-    expect(tags).toContain('Jonas Heller on ScholarFolio.');
+    expect(tags).toContain('Research profile of Jonas Heller on ScholarFolio: publications, citation trends');
+    // No cached metrics: the default card, never an empty ?v=0-0 one.
+    expect(tags).toContain('content="https://scholarfolio.org/og-default.png"');
+    expect(tags).not.toContain('v=0-0');
   });
 
   it('escapes cached text so it cannot break out of attributes or the JSON-LD script', () => {

@@ -85,7 +85,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
               <li><strong>Account data</strong> — retained until you delete your account.</li>
               <li><strong>Purchase records</strong> — retained for legal/tax compliance (7 years).</li>
               <li><strong>Technical logs</strong> — automatically deleted after 30 days.</li>
-              <li><strong>Cached profiles</strong> — expire after 14 days and are periodically cleaned up.</li>
+              <li><strong>Cached profiles</strong> — expire after 14 days and are periodically cleaned up, except claimed profiles: their cached public profile data is kept for as long as the profile is claimed and is refreshed in the background.</li>
             </ul>
           </section>
 
