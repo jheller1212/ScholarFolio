@@ -33,6 +33,7 @@ import { useFeedback } from '../hooks/useFeedback';
 import { FeedbackModal } from './FeedbackModal';
 import { FeedbackPromptBanner } from './FeedbackPromptBanner';
 import { trackProfileView } from '../services/profile-views';
+import { useProfileViewEvent } from '../hooks/useProfileViewEvent';
 import packageJson from '../../package.json';
 
 interface ProfileViewProps {
@@ -84,6 +85,7 @@ export function ProfileView({
   const [claimedSlug, setClaimedSlug] = useState<string | null>(null);
   const [claimedByCurrentUser, setClaimedByCurrentUser] = useState(false);
   const [claimedVerified, setClaimedVerified] = useState(false);
+  const [claimCheckedFor, setClaimCheckedFor] = useState<string | null>(null);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [prefetchedGeo, setPrefetchedGeo] = useState<{ mainAuthor: CoAuthorGeoData | null; coAuthors: CoAuthorGeoData[] } | null>(null);
   const [pIndexResult, setPIndexResult] = useState<PIndexResult | null>(null);
@@ -129,9 +131,16 @@ export function ProfileView({
         setClaimedByCurrentUser(false);
         setClaimedVerified(false);
       }
+      setClaimCheckedFor(claimAuthorId);
     };
     checkClaim();
   }, [claimAuthorId, user?.id]);
+
+  useProfileViewEvent(claimAuthorId, {
+    checked: claimCheckedFor === claimAuthorId,
+    isClaimed: !!claimedSlug,
+    isOwner: claimedByCurrentUser,
+  });
 
   // Track profile views for feedback prompt + trending leaderboard
   useEffect(() => {
@@ -428,6 +437,7 @@ export function ProfileView({
           profileUrl={claimedSlug
             ? `https://scholarfolio.org/${claimedSlug}`
             : `https://scholarfolio.org/scholar/${encodeURIComponent(scholarId)}`}
+          isOwner={claimedByCurrentUser}
         />
       )}
 

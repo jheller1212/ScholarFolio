@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Check, Copy, Mail, Linkedin, GraduationCap, Code, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { badgeUrlFor, badgeEmbedCode } from '../lib/badge';
+import { withRef } from '../lib/entryAttribution';
+import { trackEvent } from '../lib/analytics';
 
 interface ClaimSuccessProps {
   slug: string;
@@ -19,11 +21,14 @@ interface ClaimSuccessProps {
 export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrections }: ClaimSuccessProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const profileUrl = `https://scholarfolio.org/${slug}`;
+  // Links handed out from here carry ?ref=share so the visits they bring are attributable.
+  const shareUrl = withRef(profileUrl, 'share');
   const embedCode = badgeEmbedCode(authorId, authorName, profileUrl);
-  const linkedInText = `I just claimed my research portfolio on Scholar Folio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${profileUrl}`;
-  const emailSigHtml = `<a href="${profileUrl}">${authorName.replace(/[<>"&]/g, '')} — Research Profile</a>`;
+  const linkedInText = `I just claimed my research portfolio on Scholar Folio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${shareUrl}`;
+  const emailSigHtml = `<a href="${shareUrl}">${authorName.replace(/[<>"&]/g, '')} — Research Profile</a>`;
 
   const copy = (text: string, id: string) => {
+    trackEvent('share_click', { channel: id, is_owner: true, context: 'claim_success' });
     navigator.clipboard.writeText(text).then(() => {
       setCopied(id);
       setTimeout(() => setCopied(null), 2000);
@@ -89,7 +94,7 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
                 {copied === 'linkedin' ? 'Copied' : 'Copy post'}
               </button>
               <a
-                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}`}
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => copy(linkedInText, 'linkedin')}
@@ -126,7 +131,7 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
           <section>
             <h3 className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-2">More ways to share</h3>
             <div className="space-y-1">
-              <button onClick={() => copy(profileUrl, 'url')} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
+              <button onClick={() => copy(shareUrl, 'url')} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
                 <Copy className="h-4 w-4 text-gray-400" /><span className="flex-1">Copy profile link</span>{copiedTag('url')}
               </button>
               <button onClick={() => copy(emailSigHtml, 'email')} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-left">
@@ -134,7 +139,7 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
               </button>
               <button
                 onClick={() => {
-                  copy(profileUrl, 'scholar');
+                  copy(shareUrl, 'scholar');
                   window.open('https://scholar.google.com/citations?view_op=edit_profile', '_blank', 'noopener');
                 }}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"

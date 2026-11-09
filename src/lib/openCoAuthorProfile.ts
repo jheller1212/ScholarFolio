@@ -38,7 +38,7 @@ export async function openCoAuthorProfile(
   try {
     const results = await scholarService.searchAuthors(name);
     if (results.length >= 1 && newWindow) {
-      newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(results[0].authorId)}`;
+      newWindow.location.href = `${window.location.origin}/scholar/${encodeURIComponent(results[0].authorId)}?ref=coauthor`;
     } else {
       giveUp();
     }

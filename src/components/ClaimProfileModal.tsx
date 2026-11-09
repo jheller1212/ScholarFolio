@@ -9,6 +9,7 @@ import { OrcidIcon } from './OrcidIcon';
 import { ClaimSuccess } from './ClaimSuccess';
 import { logError } from '../lib/errorLogger';
 import { saveEmailPreferences } from '../lib/emailPreferences';
+import { trackEvent } from '../lib/analytics';
 
 interface ClaimProfileModalProps {
   onClose: () => void;
@@ -50,6 +51,13 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
     savePendingAuthIntent(claimIntentFor(authorId));
     startOrcidSignIn();
   };
+
+  // Funnel events carry no author id or user id: only that a claim began,
+  // failed (and why) or completed, tied to the pseudonymous tab session.
+  const claimSource = authorId.startsWith('openalex:') ? 'openalex' : 'gs';
+  useEffect(() => {
+    trackEvent('claim_started', { source: claimSource, signed_in: !!user });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check if user already claimed a profile
   useEffect(() => {
@@ -124,11 +132,16 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
       });
       data = await res.json().catch(() => ({}));
       if (!res.ok || !data.claimed) {
+        const slugTaken = res.status === 409 || /taken|duplicate|unique/i.test(data.error || '');
+        trackEvent('claim_failed', {
+          source: claimSource,
+          reason: data.reason === 'no-orcid' || data.reason === 'not-owner' ? data.reason : slugTaken ? 'slug-taken' : `http-${res.status}`,
+        });
         if (data.reason === 'no-orcid') {
           setNeedsOrcid(true);
         } else if (data.reason === 'not-owner') {
           setError("We couldn't verify that this profile is yours from your ORCID iD. Make sure your ORCID is connected to your publications.");
-        } else if (res.status === 409 || /taken|duplicate|unique/i.test(data.error || '')) {
+        } else if (slugTaken) {
           setError('This URL is already taken. Please choose another.');
           setSlugStatus('taken');
         } else {
@@ -138,6 +151,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
         return;
       }
     } catch {
+      trackEvent('claim_failed', { source: claimSource, reason: 'network' });
       setError('Could not reach the server. Please try again.');
       setSubmitting(false);
       return;
@@ -147,6 +161,7 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
       // Fire-and-forget: consent record must never block the claim UX
       void saveEmailPreferences(user.id, { digest_opt_in: true }, 'claim');
     }
+    trackEvent('claim_completed', { source: claimSource });
     setSuccess(true);
     // Confetti burst
     const colors = ['#2d7d7d', '#3d9494', '#f59e0b', '#10b981', '#6366f1', '#ec4899'];
