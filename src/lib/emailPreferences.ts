@@ -3,7 +3,9 @@ import { logCaughtError } from './errorLogger';
 
 // Bump whenever the user-facing consent wording changes — the stored version
 // is the GDPR Art. 7 record of exactly what the user agreed to.
-export const CONSENT_WORDING_VERSION = 'v1-2026-07-13';
+// v2: sign-up digest consent says it starts once the profile is claimed; the
+// claim form's checkbox moved to the claim success screen.
+export const CONSENT_WORDING_VERSION = 'v2-2026-11-09';
 
 export interface EmailOptIns {
   digest_opt_in: boolean;

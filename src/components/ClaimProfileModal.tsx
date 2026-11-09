@@ -7,7 +7,6 @@ import { savePendingAuthIntent, claimIntentFor } from '../lib/pendingAuthIntent'
 import { OrcidIcon } from './OrcidIcon';
 import { ClaimSuccess } from './ClaimSuccess';
 import { logError } from '../lib/errorLogger';
-import { saveEmailPreferences } from '../lib/emailPreferences';
 import { trackEvent } from '../lib/analytics';
 
 interface ClaimProfileModalProps {
@@ -38,7 +37,6 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [digestOptIn, setDigestOptIn] = useState(false);
   const [existingClaim, setExistingClaim] = useState<string | null>(null);
   const [needsOrcid, setNeedsOrcid] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -163,10 +161,6 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
       return;
     }
 
-    if (digestOptIn) {
-      // Fire-and-forget: consent record must never block the claim UX
-      void saveEmailPreferences(user.id, { digest_opt_in: true }, 'claim');
-    }
     trackEvent('claim_completed', { source: claimSource });
     setSuccess(true);
     // Confetti burst
@@ -354,19 +348,6 @@ export function ClaimProfileModal({ onClose, authorId, authorName, onClaimed, on
               maxLength={500}
             />
           </div>
-
-          {/* Optional email consent — must stay unticked by default (GDPR) */}
-          <label className="flex items-start gap-2 text-xs text-gray-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={digestOptIn}
-              onChange={e => setDigestOptIn(e.target.checked)}
-              className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
-            />
-            <span>
-              Email me when my citation metrics change. <span className="text-gray-400">(optional, unsubscribe anytime)</span>
-            </span>
-          </label>
 
           {/* Error */}
           {error && (
