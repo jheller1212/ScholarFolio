@@ -17,8 +17,6 @@ import { randomToken, sha256 } from '../lib/orcidLink.ts';
  */
 
 const SITE_URL = 'https://scholarfolio.org';
-const FROM = 'Jonas at ScholarFolio <jonas@scholarfolio.org>';
-const REPLY_TO = 'info@scholarfolio.org';
 
 const json = (statusCode: number, body: Record<string, unknown>) => ({
   statusCode,
@@ -44,9 +42,8 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://mixaxkywkojoclgbjjur.supabase.co';
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!serviceRoleKey || !resendKey) {
-    console.error('placeholder-email-change: SUPABASE_SERVICE_ROLE_KEY or RESEND_API_KEY missing');
+  if (!serviceRoleKey) {
+    console.error('placeholder-email-change: SUPABASE_SERVICE_ROLE_KEY missing');
     return json(500, { error: 'server_misconfigured' });
   }
 
@@ -104,16 +101,17 @@ const handler: Handler = async (event: HandlerEvent) => {
   if (storeError) return json(500, { error: 'link_failed' });
 
   const { subject, html, text } = confirmationEmail(actionLink);
-  const res = await fetch('https://api.resend.com/emails', {
+  // Sent by the send-account-email edge function: the Resend key lives only in
+  // Supabase secrets, and that function also records the send in sent_emails.
+  const res = await fetch(`${supabaseUrl}/functions/v1/send-account-email`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: [newEmail], reply_to: REPLY_TO, subject, html, text }),
+    headers: { Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: newEmail, subject, html, text, kind: 'email_change', userId: user.id }),
   });
   if (!res.ok) {
-    console.error('placeholder-email-change resend:', res.status);
+    console.error('placeholder-email-change send:', res.status);
     return json(502, { error: 'send_failed' });
   }
-  await supabase.from('sent_emails').insert({ user_id: user.id, recipient: newEmail, kind: 'email_change' });
 
   return json(200, { sentTo: newEmail });
 };
