@@ -52,4 +52,10 @@ describe.each(manifest.pages.filter(p => p.path !== '/guides/'))('guide $path', 
     const preset = parseCvPreset(new URL(href as string, 'https://scholarfolio.org').search);
     expect(preset).toEqual({ openTab: true, format: format ?? null });
   });
+
+  it('logs a guide page_view into analytics_events', () => {
+    expect(html).toMatch(/fetch\("https:\/\/[a-z0-9]+\.supabase\.co\/rest\/v1\/analytics_events"/);
+    expect(html).toContain("event:'page_view'");
+    expect(html).toContain("page_type:'guide'");
+  });
 });

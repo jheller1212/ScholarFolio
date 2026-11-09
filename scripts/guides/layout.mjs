@@ -84,6 +84,32 @@ footer.site a{color:var(--soft)}
 // Mirrors the app's ThemeToggle ('sf_theme': light | dark | system).
 const THEME_SCRIPT = `<script>try{var t=localStorage.getItem('sf_theme');if(t==='dark'||((t==='system'||!t)&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>`;
 
+// Supabase URL + publishable key for the page_view beacon. Both are public by
+// design (the app bundle ships the same pair); they are read from the env at
+// generation time so a key rotation is a config change plus a re-run, never a
+// source edit. Missing values fail the build instead of shipping a dead beacon.
+function analyticsConfig() {
+  try { process.loadEnvFile?.(); } catch { /* no .env file: rely on the shell env */ }
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('scripts/guides: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set (see .env.example)');
+  }
+  return { url: url.replace(/\/+$/, ''), key };
+}
+
+// The guides are static HTML outside the SPA, so they log their own page_view
+// into the same analytics_events table the app writes to, through the same
+// public anon insert. It mirrors the app's privacy model: the per-tab random
+// session id in sessionStorage ('sf_session_id', shared with the app so a guide
+// reader who clicks through stays one session), no cookies, no personal data.
+// `landing` marks the first page of the tab session (acquisition counting).
+export function analyticsScript(notFound = false) {
+  const { url, key } = analyticsConfig();
+  const endpoint = JSON.stringify(`${url}/rest/v1/analytics_events`);
+  return `<script>(function(){try{var s=sessionStorage,id=s.getItem('sf_session_id'),landing=!id;if(!id){id=crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),function(b){return b.toString(16).padStart(2,'0')}).join('');s.setItem('sf_session_id',id)}var q=new URLSearchParams(location.search),r=document.referrer||'direct',p=location.pathname;fetch(${endpoint},{method:'POST',keepalive:true,headers:{apikey:${JSON.stringify(key)},'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({event:'page_view',session_id:id,referrer:r,pathname:p,properties:{page_type:'guide',path:p,landing:landing,referrer:r,utm_source:q.get('utm_source'),utm_medium:q.get('utm_medium'),utm_campaign:q.get('utm_campaign')${notFound ? ',not_found:true' : ''}}})}).catch(function(){})}catch(e){}})();</script>`;
+}
+
 // noindex: for the guides 404 page, served at whatever URL was requested, so
 // it must not claim a canonical or og:url of its own.
 export function page({ path, title, description, ogType = 'article', body, structuredData = [], noindex = false }) {
@@ -122,6 +148,7 @@ ${body}
 <p>ScholarFolio is a free, open-source academic project. Guides summarise official funder documents; the funder's current call text always takes precedence.</p>
 <p><a href="/guides/">All guides</a> · <a href="/">ScholarFolio</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a></p>
 </div></footer>
+${analyticsScript(noindex)}
 </body>
 </html>
 `;
