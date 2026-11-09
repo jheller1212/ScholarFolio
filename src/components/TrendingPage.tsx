@@ -54,7 +54,7 @@ export function TrendingPage({ onBack }: TrendingPageProps) {
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">Scholar Folio</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">ScholarFolio</span>
         </div>
       </nav>
 
@@ -65,7 +65,7 @@ export function TrendingPage({ onBack }: TrendingPageProps) {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Trending Profiles</h1>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-          Most-viewed researcher profiles on Scholar Folio
+          Most-viewed researcher profiles on ScholarFolio
         </p>
 
         {/* Stats + Time range */}

@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 
 const ADMIN_EMAIL = "jonasheller89@gmail.com";
-const FROM_EMAIL = "Scholar Folio <info@scholarfolio.org>";
+const FROM_EMAIL = "ScholarFolio <info@scholarfolio.org>";
 
 const ALLOWED_ORIGINS = [
   "https://scholarfolio.org",

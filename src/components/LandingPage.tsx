@@ -72,7 +72,7 @@ export function LandingPage({ onSearch, loading, error, onNavigate, authControls
               <Logo size={28} />
             </span>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">Scholar Folio</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight">ScholarFolio</span>
               <span className="text-[11px] text-[#94a3b8] hidden sm:inline">Your research, at a glance</span>
             </div>
           </div>

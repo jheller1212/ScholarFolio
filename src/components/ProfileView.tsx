@@ -155,7 +155,7 @@ export function ProfileView({
   // Update document title and OG meta tags for link previews
   useEffect(() => {
     if (!data) return;
-    const title = `${data.name} — Scholar Folio`;
+    const title = `${data.name} — ScholarFolio`;
     const description = `${data.affiliation} · ${data.totalCitations.toLocaleString()} citations · h-index ${data.hIndex} · ${data.publications.length} publications`;
     // OpenAlex profiles have an empty scholarId; fall back to the raw token
     // (openalex:<id>) so link-preview crawlers get a URL that resolves.
@@ -180,7 +180,7 @@ export function ProfileView({
     setMeta('name', 'twitter:description', description);
 
     return () => {
-      document.title = 'Scholar Folio — Your research, at a glance';
+      document.title = 'ScholarFolio — Your research, at a glance';
     };
   }, [data, claimedSlug, scholarId, rawUserId]);
 
@@ -208,7 +208,7 @@ export function ProfileView({
 
             <div className="flex items-center gap-2">
               <Logo size={24} />
-              <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 hidden sm:inline">Scholar Folio</span>
+              <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 hidden sm:inline">ScholarFolio</span>
               <span className="text-[10px] font-medium text-primary-start bg-primary-start/8 px-1.5 py-0.5 rounded hidden sm:inline">
                 v{packageJson.version.replace('-beta', '')} <span className="text-[8px] opacity-60">beta</span>
               </span>

@@ -15,7 +15,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">ScholarFolio</span>
         </div>
       </nav>
 
@@ -28,7 +28,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">1. Data Controller</h2>
             <p className="mb-3">
-              Scholar Folio is an independent personal project built and operated by Jonas Heller
+              ScholarFolio is an independent personal project built and operated by Jonas Heller
               (Maastricht, the Netherlands) as a private individual. It is <strong>not affiliated with,
               endorsed by, or operated on behalf of</strong> Maastricht University or any other institution.
             </p>
@@ -44,7 +44,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             <p className="mb-3">We collect and process the following categories of personal data:</p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
               <li><strong>Account data</strong> — email address and hashed password (when you sign up), or Google account email (when using Google Sign-In), plus a count of the fresh profile lookups you used this month (for the {MONTHLY_FREE_LOOKUPS}-per-month fair-use limit) and any extra lookups on your account.</li>
-              <li><strong>Voluntary support data</strong> — if you choose to support Scholar Folio: Stripe payment session IDs, the amount you chose, and the thank-you lookups added. We do not store credit card numbers; Stripe handles all payment processing.</li>
+              <li><strong>Voluntary support data</strong> — if you choose to support ScholarFolio: Stripe payment session IDs, the amount you chose, and the thank-you lookups added. We do not store credit card numbers; Stripe handles all payment processing.</li>
               <li><strong>Technical logs</strong> — IP address, user agent, request timestamp, and the Google Scholar profile ID searched. These are used for rate limiting, abuse prevention, and debugging. Logs are automatically deleted after 30 days.</li>
               <li><strong>Local storage</strong> — We store a theme preference (<code>sf_theme</code>) and an anonymous search counter (<code>sf_searches</code>) in your browser's localStorage. These are strictly functional and contain no personal identifiers.</li>
               <li><strong>Cached profile data</strong> — Publicly available Google Scholar profile data (name, affiliation, publications) is cached for up to 14 days to reduce redundant API calls.</li>
@@ -66,7 +66,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
 
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">4. Third-Party Processors</h2>
-            <p className="mb-3">We use the following third-party services to operate Scholar Folio:</p>
+            <p className="mb-3">We use the following third-party services to operate ScholarFolio:</p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
               <li><strong>Supabase</strong> (EU/US) — authentication, database hosting, and serverless functions.</li>
               <li><strong>Stripe</strong> (US) — payment processing. Subject to <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="text-[#2d7d7d] hover:underline">Stripe's Privacy Policy</a>.</li>
@@ -140,7 +140,7 @@ export function PrivacyPage({ onBack }: PrivacyPageProps) {
             <p>
               We use browser sessionStorage (cleared when you close the tab) to store a random session identifier
               and the referring URL that brought you to the site. This helps us understand how visitors find
-              Scholar Folio. The session identifier is a random value that cannot be used to identify you across
+              ScholarFolio. The session identifier is a random value that cannot be used to identify you across
               sessions or devices. No personal data is stored in sessionStorage.
             </p>
           </section>

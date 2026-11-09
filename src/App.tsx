@@ -77,7 +77,7 @@ function Footer({ onNavigate, onSupport }: { onNavigate: (page: Page) => void; o
     <footer className="bg-[#1e293b] text-white py-10 px-6">
       <div className="max-w-5xl mx-auto text-center">
         <p className="text-sm text-white/80 mb-4">
-          Scholar Folio — Free and open source, built for researchers.
+          ScholarFolio — Free and open source, built for researchers.
         </p>
         <div className="flex flex-wrap justify-center gap-6 mb-4">
           <a
@@ -274,7 +274,7 @@ function AppContent() {
   // Unique document titles per content page (Google renders JS, so these
   // count for indexing). ProfileView owns the title while a profile is shown.
   useEffect(() => {
-    const DEFAULT_TITLE = 'Scholar Folio — Your research, at a glance';
+    const DEFAULT_TITLE = 'ScholarFolio — Your research, at a glance';
     const PAGE_TITLES: Partial<Record<Page, string>> = {
       about: 'About & Funding — ScholarFolio',
       institutions: 'For Institutions — ScholarFolio',
@@ -656,7 +656,7 @@ function AppContent() {
       {/* Welcome banner for new sign-ups */}
       {showWelcome && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-[#eaf4f4] border border-[#2d7d7d]/20 text-[#1e293b] px-5 py-3 rounded-xl shadow-lg max-w-sm text-center animate-fade-up">
-          <p className="text-sm font-medium mb-1">Welcome to Scholar Folio!</p>
+          <p className="text-sm font-medium mb-1">Welcome to ScholarFolio!</p>
           <p className="text-xs text-gray-600">You get <strong>{MONTHLY_FREE_LOOKUPS} fresh profile lookups every month</strong>, free. Recently viewed profiles don&apos;t count.</p>
           <button
             onClick={dismissWelcome}

@@ -1,10 +1,10 @@
-# Scholar Folio
+# ScholarFolio
 
 **Claim your research profile. Share it with one link.**
 
 [Live App](https://scholarfolio.org/) | [Report an Issue](https://github.com/jheller1212/ScholarFolio/issues)
 
-Scholar Folio turns a Google Scholar profile into a shareable research portfolio page — citation metrics, collaboration network, open access stats, and a plain-language research narrative. Claim a permanent vanity URL like `scholarfolio.org/your-name` and put it in your email signature, CV, or LinkedIn.
+ScholarFolio turns a Google Scholar profile into a shareable research portfolio page — citation metrics, collaboration network, open access stats, and a plain-language research narrative. Claim a permanent vanity URL like `scholarfolio.org/your-name` and put it in your email signature, CV, or LinkedIn.
 
 > Numbers here are context, not verdict. Use them to tell your story.
 
@@ -47,7 +47,7 @@ One-click Word download formatted for NWO, ERC, and MSCA grant applications. Aut
 ## How It Works
 
 1. Paste a Google Scholar profile URL (or search by author name)
-2. Scholar Folio fetches profile data via SerpAPI
+2. ScholarFolio fetches profile data via SerpAPI
 3. Results are cached for 7 days; claimed profiles serve from cache indefinitely
 4. Data is visualized across multiple tabs: Impact Metrics, Citation Trends, Co-author Network, Open Science, Publications, and more
 5. After viewing, sign in to claim the profile with a vanity URL
@@ -172,7 +172,7 @@ npm run build
 
 ## Key Design Decisions
 
-- **Not a ranking tool** — Terms of Use prohibit using Scholar Folio for evaluating researchers for employment or promotion.
+- **Not a ranking tool** — Terms of Use prohibit using ScholarFolio for evaluating researchers for employment or promotion.
 - **Cache hits are free** — Only fresh API calls consume credits. Claimed profiles always serve from cache.
 - **One claim per user** — Each account can claim one profile to prevent abuse.
 - **Vanity URLs are public** — No login needed to view a claimed profile.

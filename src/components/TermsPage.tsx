@@ -15,7 +15,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <span className="font-semibold text-gray-900 text-sm tracking-tight ml-3">ScholarFolio</span>
         </div>
       </nav>
 
@@ -28,7 +28,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">1. Service Description</h2>
             <p>
-              Scholar Folio is a free tool that generates visual academic portfolios from publicly available research data.
+              ScholarFolio is a free tool that generates visual academic portfolios from publicly available research data.
               It is provided as-is for personal and academic use. The service is operated by Jonas Heller,
               Assistant Professor at Maastricht University, the Netherlands.
             </p>
@@ -37,7 +37,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">2. Data Sources</h2>
             <p className="mb-3">
-              Scholar Folio aggregates publicly available data from multiple academic data sources:
+              ScholarFolio aggregates publicly available data from multiple academic data sources:
             </p>
             <ul className="list-disc list-inside space-y-1.5 ml-2">
               <li><strong>Google Scholar</strong> (via SerpAPI) — publication lists, citation counts, h-index, and profile information.</li>
@@ -46,7 +46,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
               <li><strong>NIH iCite</strong> — Relative Citation Ratio (RCR) for papers indexed in PubMed.</li>
             </ul>
             <p className="mt-3">
-              Scholar Folio is not affiliated with Google, Google Scholar, OpenAlex, ORCID, or NIH.
+              ScholarFolio is not affiliated with Google, Google Scholar, OpenAlex, ORCID, or NIH.
             </p>
           </section>
 
@@ -71,7 +71,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
               <li>Automated scraping or data harvesting beyond personal use.</li>
             </ul>
             <p className="mt-3">
-              By using Scholar Folio you agree to use the tool responsibly and in line with the
+              By using ScholarFolio you agree to use the tool responsibly and in line with the
               principles of responsible research assessment (e.g., DORA, Leiden Manifesto).
             </p>
           </section>
@@ -85,7 +85,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
               claimed profile URLs does not count towards this limit.
             </p>
             <p className="mt-3">
-              Users may voluntarily support Scholar Folio with a one-off payment. As a thank-you, supporters receive extra
+              Users may voluntarily support ScholarFolio with a one-off payment. As a thank-you, supporters receive extra
               lookups that do not expire. Payments are processed by Stripe in EUR. Extra lookups are non-refundable and
               non-transferable.
             </p>
@@ -94,7 +94,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">6. Intellectual Property</h2>
             <p>
-              The Scholar Folio application is open source. The academic data displayed belongs to the
+              The ScholarFolio application is open source. The academic data displayed belongs to the
               original sources and their respective terms of use apply. Generated narratives and visualisations
               are derived works provided for personal academic use.
             </p>
@@ -103,7 +103,7 @@ export function TermsPage({ onBack }: TermsPageProps) {
           <section>
             <h2 className="text-lg font-semibold text-[#1e293b] mb-2">7. Limitation of Liability</h2>
             <p>
-              Scholar Folio is provided "as is" without warranty of any kind. To the maximum extent permitted
+              ScholarFolio is provided "as is" without warranty of any kind. To the maximum extent permitted
               by applicable law, we disclaim all liability for damages arising from the use of this service,
               including but not limited to inaccurate data, service interruptions, or reliance on generated metrics.
             </p>
