@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHead, injectHead, markNoindex, slugToName } from '../head.ts';
+import { buildPageHead, PAGE_HEADS } from '../pages.ts';
 import { answerAgent, classifyRoute, resolveProfileTarget, wantsHead, wantsText } from '../routes.ts';
 
 const q = (s = '') => new URLSearchParams(s);
@@ -38,6 +39,8 @@ describe('classifyRoute', () => {
     expect(classifyRoute('/jonas-heller', q())).toEqual({ kind: 'profile', target: { kind: 'slug', slug: 'jonas-heller' } });
     expect(classifyRoute('/scholar/NOSPtp8AAAAJ', q())).toEqual({ kind: 'profile', target: { kind: 'id', id: 'NOSPtp8AAAAJ' } });
     expect(classifyRoute('/', q())).toEqual({ kind: 'page', page: 'home' });
+    expect(classifyRoute('/', q('page=about'))).toEqual({ kind: 'page', page: 'about' });
+    expect(classifyRoute('/', q('page=admin'))).toEqual({ kind: 'page', page: 'home' });
     for (const p of ['about', 'institutions', 'trending', 'changelog', 'privacy', 'terms', 'unsubscribe']) {
       expect(classifyRoute(`/${p}`, q())).toEqual({ kind: 'page', page: p });
       expect(classifyRoute(`/${p}/`, q())).toEqual({ kind: 'page', page: p });
@@ -59,6 +62,27 @@ describe('classifyRoute', () => {
     for (const p of ['/Jonas-Heller', '/a', '/-bad', '/foo/bar', '/this_is_not_a_slug', '/wp-admin/setup']) {
       expect(classifyRoute(p, q())).toEqual({ kind: 'unknown' });
     }
+  });
+});
+
+describe('buildPageHead', () => {
+  it('gives each content page its own title, description and canonical', () => {
+    const titles = new Set<string>();
+    const descriptions = new Set<string>();
+    for (const page of ['home', 'about', 'institutions', 'trending', 'changelog', 'privacy', 'terms']) {
+      const head = buildPageHead(page);
+      expect(head).not.toBeNull();
+      expect(head!.title).toContain('ScholarFolio');
+      expect(head!.title).not.toContain('Scholar Folio');
+      expect(head!.tags).toContain('og-default.png');
+      titles.add(head!.title);
+      descriptions.add(PAGE_HEADS[page].description);
+    }
+    expect(titles.size).toBe(7);
+    expect(descriptions.size).toBe(7);
+    expect(buildPageHead('home')!.tags).toContain('href="https://scholarfolio.org/"');
+    expect(buildPageHead('terms')!.tags).toContain('href="https://scholarfolio.org/terms"');
+    expect(buildPageHead('unsubscribe')).toBeNull();
   });
 });
 

@@ -75,9 +75,23 @@ describe('og-meta handler', () => {
     expect(res.headers.get('x-robots-tag')).toBeNull();
   });
 
-  it('passes humans and app routes straight through', async () => {
+  it('gives every visitor a distinct head on content pages', async () => {
+    for (const ua of [GOOGLEBOT, BROWSER]) {
+      const home = await (await get('/', ua)).text();
+      expect(home).toContain('<link rel="canonical" href="https://scholarfolio.org/" />');
+      expect(home).toContain('<title>ScholarFolio — Your research, at a glance</title>');
+      const about = await (await get('/about', ua)).text();
+      expect(about).toContain('<link rel="canonical" href="https://scholarfolio.org/about" />');
+      expect(about).toContain('<title>About &amp; Funding — ScholarFolio</title>');
+      expect(about).toContain('og-default.png');
+    }
+    expect(await (await get('/?page=privacy', BROWSER)).text()).toContain('href="https://scholarfolio.org/privacy"');
+  });
+
+  it('passes humans and non-page routes straight through', async () => {
     expect((await get('/this-is-not-a-real-slug', BROWSER)).status).toBe(200);
-    for (const path of ['/', '/about', '/guides/', '/badge/abc', '/admin']) {
+    expect(await (await get('/jonas-heller', BROWSER)).text()).toBe(SHELL);
+    for (const path of ['/guides/', '/badge/abc', '/admin', '/unsubscribe']) {
       const res = await get(path);
       expect(res.status).toBe(200);
       expect(res.headers.get('x-robots-tag')).toBeNull();

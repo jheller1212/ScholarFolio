@@ -4,16 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Scholar Folio — your publication history, collaboration network, and research reach on one page." />
+    <meta name="description" content="Free, open-source research profiles from Google Scholar: citation trends, h-index and i10-index, co-author network and field-normalized metrics on one shareable page." />
     <meta name="theme-color" content="#1e293b" />
-    <meta property="og:title" content="Scholar Folio — Your research, at a glance" />
+    <!-- Defaults for any URL served this shell. The og-meta edge function
+         swaps in per-page tags (and the canonical) for /, /about, ... and,
+         for crawlers, per-researcher tags on profile URLs. No canonical here:
+         this same file answers every profile URL, which must not point at /. -->
+    <meta property="og:title" content="ScholarFolio — Your research, at a glance" />
     <meta property="og:description" content="Publication history, collaboration network, and research reach on one page." />
-    <meta property="og:url" content="https://scholarfolio.org" />
+    <meta property="og:url" content="https://scholarfolio.org/" />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Scholar Folio — Your research, at a glance" />
+    <meta property="og:site_name" content="ScholarFolio" />
+    <meta property="og:image" content="https://scholarfolio.org/og-default.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ScholarFolio — Your research, at a glance" />
     <meta name="twitter:description" content="Publication history, collaboration network, and research reach on one page." />
-    <title>Scholar Folio — Your research, at a glance</title>
+    <meta name="twitter:image" content="https://scholarfolio.org/og-default.png" />
+    <title>ScholarFolio — Your research, at a glance</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

@@ -60,7 +60,11 @@ export function classifyRoute(pathname: string, search: URLSearchParams): Route 
   if (target) return { kind: 'profile', target };
 
   const trimmed = pathname.replace(/^\/+/, '').replace(/\/+$/, '');
-  if (trimmed === '') return { kind: 'page', page: 'home' };
+  if (trimmed === '') {
+    // ?page=about on the root renders the About page in the SPA.
+    const pageParam = search.get('page');
+    return { kind: 'page', page: pageParam && APP_PAGES.has(pageParam) ? pageParam : 'home' };
+  }
   const lower = trimmed.toLowerCase();
   if (APP_PAGES.has(lower)) return { kind: 'page', page: lower };
 
