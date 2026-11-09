@@ -20,6 +20,8 @@ import { CreditPacks } from './components/CreditPacks';
 import { SignUpWall, type SignUpWallOutcome } from './components/SignUpWall';
 import { ProfileSkeleton } from './components/ProfileSkeleton';
 import { PasswordResetModal } from './components/PasswordResetModal';
+import { OrcidNoticeBanner } from './components/OrcidNoticeBanner';
+import { readOrcidReturn, type OrcidNotice } from './lib/orcidReturn';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { supabase } from './lib/supabase';
 import { ADMIN_EMAIL, ANON_FREE_LOOKUPS, MONTHLY_FREE_LOOKUPS } from './lib/constants';
@@ -163,6 +165,7 @@ function AppContent() {
   const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [showSignUpWall, setShowSignUpWall] = useState(false);
   const [page, setPage] = useState<Page>('home');
+  const [orcidNotice, setOrcidNotice] = useState<OrcidNotice | null>(null);
   const requestInProgressRef = useRef(false);
   const handleSearchRef = useRef<((url: string, bypassCredits?: boolean, cacheOnly?: boolean, nameFallback?: string) => void) | null>(null);
   const { user, credits, refreshCredits, showWelcome, dismissWelcome, showPasswordReset, dismissPasswordReset, updatePassword } = useAuth();
@@ -194,26 +197,22 @@ function AppContent() {
       setPage(routed as Page);
       return;
     }
-    // Handle ORCID OAuth error
-    const orcidError = params.get('orcid_error');
-    if (orcidError) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('orcid_error');
-      window.history.replaceState({}, '', url.pathname + url.search);
-    }
-
-    // Validate ORCID OAuth state (CSRF protection)
-    const orcidState = params.get('orcid_state');
-    if (orcidState !== null) {
-      const stored = sessionStorage.getItem('orcid_oauth_state');
+    // ORCID OAuth return: validate state (CSRF protection), explain link results
+    const orcid = readOrcidReturn(params, sessionStorage.getItem('orcid_oauth_state'));
+    if (orcid.consumedParams.length > 0) {
       sessionStorage.removeItem('orcid_oauth_state');
       const url = new URL(window.location.href);
-      url.searchParams.delete('orcid_state');
+      orcid.consumedParams.forEach((k) => url.searchParams.delete(k));
       window.history.replaceState({}, '', url.pathname + url.search);
-      if (!stored || stored !== orcidState) {
+      setOrcidNotice(orcid.notice);
+      // A sign-in with a forged state put someone else's session here. A link
+      // never changes the session (and its cookie already proved this browser).
+      if (orcid.stateMismatch && !params.has('orcid_linked')) {
         console.error('ORCID OAuth state mismatch — signing out');
-        import('./lib/supabase').then(({ supabase }) => supabase.auth.signOut());
+        supabase.auth.signOut();
       }
+      // Pick up the newly linked iD in the session's copy of the user.
+      if (orcid.linked) supabase.auth.refreshSession();
     }
     const userParam = params.get('user');
     // OpenAlex fallback profile (?user=openalex:A...) — must be checked before the
@@ -662,6 +661,7 @@ function AppContent() {
           </button>
         </div>
       )}
+      {orcidNotice && !showWelcome && <OrcidNoticeBanner notice={orcidNotice} onDismiss={() => setOrcidNotice(null)} />}
       {showPasswordReset && <PasswordResetModal onSubmit={updatePassword} onClose={dismissPasswordReset} />}
       <div className="flex-1">
         {renderPage()}
