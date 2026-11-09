@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { getEmailPreferences, saveEmailPreferences } from '../lib/emailPreferences';
 import { isPlaceholderEmail } from '../lib/accountEmail';
 import { AddEmailForm } from './AddEmailForm';
+import { supabase } from '../lib/supabase';
+import { DIGEST_DESCRIPTION, DIGEST_STATUS_TEXT, digestStatus } from '../lib/digestConsent';
 
 interface EmailPreferencesModalProps {
   onClose: () => void;
@@ -18,20 +20,28 @@ export function EmailPreferencesModal({ onClose }: EmailPreferencesModalProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const needsEmail = isPlaceholderEmail(user?.email);
+  const [hasVerifiedClaim, setHasVerifiedClaim] = useState(false);
 
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
-    getEmailPreferences(user.id).then(prefs => {
+    Promise.all([
+      getEmailPreferences(user.id),
+      supabase.from('claimed_profiles').select('id').eq('user_id', user.id).eq('verified', true).maybeSingle(),
+    ]).then(([prefs, claim]) => {
       if (prefs) {
         setDigest(prefs.digest_opt_in);
         setMarketing(prefs.marketing_opt_in);
       }
+      setHasVerifiedClaim(!!claim.data);
       setLoading(false);
     });
   }, [user]);
+
+  // Same rule as send-digest, so ticking the box never promises mail we won't send.
+  const status = digestStatus({ optedIn: digest, hasVerifiedClaim, hasDeliverableEmail: !needsEmail });
 
   const handleSave = async () => {
     if (!user) return;
@@ -91,7 +101,10 @@ export function EmailPreferencesModal({ onClose }: EmailPreferencesModalProps) {
               />
               <span>
                 <strong>Metric updates</strong>
-                <span className="block text-xs text-gray-500 dark:text-gray-400">Email me when my citation metrics change.</span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{DIGEST_DESCRIPTION}</span>
+                {digest && status !== 'off' && status !== 'on' && (
+                  <span className="block text-xs text-amber-700 dark:text-amber-400 mt-0.5">{DIGEST_STATUS_TEXT[status]}</span>
+                )}
               </span>
             </label>
             <label className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300 mb-4 cursor-pointer">

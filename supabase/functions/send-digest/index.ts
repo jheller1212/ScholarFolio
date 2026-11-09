@@ -6,8 +6,10 @@ import {
 } from "../_shared/mailer.ts";
 
 /**
- * Monthly citation digest — the email the sign-up wall promises ("Email me when
- * my citation metrics change"). Runs right after snapshot-metrics in the
+ * Monthly citation digest — the email behind "Monthly citation updates for
+ * your profile — starts once you claim it" (sign-up) and the claim success
+ * screen. Keep src/lib/digestConsent.ts in step with the recipient rule below.
+ * Runs right after snapshot-metrics in the
  * monthly workflow and diffs this month's Google Scholar snapshot against the
  * previous one.
  *

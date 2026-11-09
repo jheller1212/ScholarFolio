@@ -7,6 +7,7 @@ import { startOrcidSignIn } from '../lib/orcidSignIn';
 import { setPendingEmailConsent, clearPendingEmailConsent } from '../lib/emailPreferences';
 import { AuthLegalNotice } from './AuthLegalNotice';
 import { OrcidIcon } from './OrcidIcon';
+import { DIGEST_SIGNUP_LABEL } from '../lib/digestConsent';
 import { MONTHLY_FREE_LOOKUPS } from '../lib/constants';
 
 export function AuthButton() {
@@ -128,7 +129,7 @@ export function AuthButton() {
                   className="mt-0.5 rounded border-gray-300 text-[#2d7d7d] focus:ring-[#2d7d7d]"
                 />
                 <span>
-                  Email me when my citation metrics change. <span className="text-gray-400">(optional, unsubscribe anytime)</span>
+                  {DIGEST_SIGNUP_LABEL} <span className="text-gray-400">(optional, unsubscribe anytime)</span>
                 </span>
               </label>
             )}

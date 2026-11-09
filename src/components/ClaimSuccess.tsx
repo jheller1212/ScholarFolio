@@ -6,6 +6,7 @@ import { trackEvent } from '../lib/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import { isPlaceholderEmail } from '../lib/accountEmail';
 import { AddEmailForm } from './AddEmailForm';
+import { ClaimDigestOptIn } from './ClaimDigestOptIn';
 
 interface ClaimSuccessProps {
   slug: string;
@@ -67,6 +68,7 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
 
         <div className="p-6 space-y-5">
           {needsEmail && <AddEmailForm />}
+          <ClaimDigestOptIn />
 
           {/* Primary: the badge */}
           <section>
