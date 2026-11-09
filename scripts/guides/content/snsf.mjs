@@ -10,6 +10,8 @@ export default {
     'How to write the Swiss National Science Foundation CV: the five elements, 1–3 major achievements with up to 10 selected works, net academic age, ORCID, and which metrics to leave out.',
   h1: 'SNSF CV format: how to write your major achievements',
   summary: 'Five elements, 1–3 narrative achievements, up to 10 selected works, and no proxy metrics.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that shortlists candidate selected works for an SNSF CV from your Google Scholar profile.',
   lede:
     'Applications to the <strong>Swiss National Science Foundation (SNSF)</strong> use a standardised CV that you create on the SNSF Portal. Instead of a long publication list, reviewers focus on <strong>1 to 3 major achievements</strong> described in your own words, each backed by selected works.',
   facts: [

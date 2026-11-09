@@ -12,6 +12,8 @@ export default {
     'A practical guide to narrative and evidence-based CVs for grant applications: what funders such as NWO, ERC, UKRI, SNSF and DFG ask for, what to leave out, and how to turn a publication list into evidence.',
   h1: 'How to write a narrative CV for a research grant',
   summary: 'What narrative CVs have in common across funders, a side-by-side comparison, and a writing method.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that drafts a narrative CV in NWO, ERC or MSCA layout from your Google Scholar profile.',
   lede:
     'Many research funders have replaced the long publication list with a <strong>narrative CV</strong>: a short, evidence-based account of your contributions, built around a handful of selected outputs. The formats differ in detail, but they share one logic: show what you did, why it mattered, and what your role was, without leaning on journal prestige or author-level metrics.',
   facts: [

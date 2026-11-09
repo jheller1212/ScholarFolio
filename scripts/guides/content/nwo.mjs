@@ -11,6 +11,8 @@ export default {
     "How to write the NWO evidence-based CV for Veni, Vidi and Vici 2026: word limits, the 10 key outputs, which metrics are banned, and a free draft from your Google Scholar profile.",
   h1: 'NWO Veni, Vidi, Vici narrative CV: how to write the evidence-based CV',
   summary: 'Academic profile, 10 key outputs, word limits per instrument, and the full list of banned indicators.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that drafts an NWO evidence-based CV, with an academic-profile starter and candidate key outputs, from your Google Scholar profile.',
   lede:
     'The pre-proposal for every NWO Talent Programme grant (Veni, Vidi and Vici) is built around an <strong>evidence-based CV</strong>: a narrative <em>academic profile</em> plus up to <em>10 key outputs</em>. The committee judges the "quality of the researcher" on this CV alone, so it decides whether you are invited to write a full proposal.',
   facts: [

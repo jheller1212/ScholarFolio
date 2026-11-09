@@ -11,6 +11,8 @@ export default {
     'How to write the researcher CV for a Marie Skłodowska-Curie Postdoctoral Fellowship: required items, the dd/mm/yyyy date rule, outputs without impact factors, and a free draft from your Google Scholar profile.',
   h1: 'MSCA Postdoctoral Fellowship CV: how to write section 4 of Part B-2',
   summary: 'Indicative length 5 pages, exact dates, and outputs described by their significance rather than by impact factor.',
+  // First paragraph: one self-contained sentence answer engines can quote.
+  quote: 'ScholarFolio is a free, open-source tool that drafts the CV section of an MSCA Postdoctoral Fellowship application from your Google Scholar profile.',
   lede:
     'In a Marie Skłodowska-Curie Postdoctoral Fellowship application, your CV goes in <strong>Part B-2, section 4 “CV of the researcher”</strong>. Part B-2 has no overall page limit, but the template gives the CV an <strong>indicative length of 5 pages</strong> and lists exactly what it should contain.',
   facts: [
