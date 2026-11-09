@@ -24,7 +24,7 @@ export function ClaimSuccess({ slug, authorId, authorName, onDone, onOpenCorrect
   // Links handed out from here carry ?ref=share so the visits they bring are attributable.
   const shareUrl = withRef(profileUrl, 'share');
   const embedCode = badgeEmbedCode(authorId, authorName, profileUrl);
-  const linkedInText = `I just claimed my research portfolio on Scholar Folio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${shareUrl}`;
+  const linkedInText = `I just claimed my research portfolio on ScholarFolio — citations, collaboration network, and open access stats on one page.\n\nCheck it out: ${shareUrl}`;
   const emailSigHtml = `<a href="${shareUrl}">${authorName.replace(/[<>"&]/g, '')} — Research Profile</a>`;
 
   const copy = (text: string, id: string) => {

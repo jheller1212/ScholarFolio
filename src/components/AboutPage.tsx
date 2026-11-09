@@ -64,7 +64,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight ml-3">ScholarFolio</span>
           <div className="ml-auto flex items-center gap-3">
             {socialLinks}
             {authControls}
@@ -73,13 +73,13 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
       </nav>
 
       <div className="max-w-2xl mx-auto px-6 py-20">
-        <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-10">About Scholar Folio</h1>
+        <h1 className="font-serif text-4xl font-bold text-[#1e293b] mb-10">About ScholarFolio</h1>
 
         <div className="space-y-10 text-[15px] text-[#334155] leading-relaxed">
           <section>
             <h2 className="font-serif text-xl font-semibold text-[#1e293b] mb-3">The short version</h2>
             <p>
-              Scholar Folio turns your Google Scholar profile into a shareable research portfolio. Paste your URL,
+              ScholarFolio turns your Google Scholar profile into a shareable research portfolio. Paste your URL,
               get back a page with your metrics, citation trends, co-author network, a world map, open access breakdown,
               and a p-index score. The whole thing takes about ten seconds.
             </p>
@@ -152,7 +152,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
               using these tools for my own work, got frustrated with what was available, and decided to make something better.
             </p>
             <p>
-              Scholar Folio is open source, built in my evenings and weekends, and not affiliated with my university.{' '}
+              ScholarFolio is open source, built in my evenings and weekends, and not affiliated with my university.{' '}
               <a
                 href="https://github.com/JonasHeller1212/ResearchFolio"
                 target="_blank"
@@ -172,7 +172,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">How it is funded</h2>
 
             <p className="mb-4">
-              Scholar Folio is free and open source (MIT licence), and it stays that way: no subscriptions, no ads,
+              ScholarFolio is free and open source (MIT licence), and it stays that way: no subscriptions, no ads,
               no paywalled features, and no data monetization. What does cost money is fetching fresh data. Every new
               Google Scholar lookup goes through an API that charges per request, plus hosting and a domain.
             </p>
@@ -200,7 +200,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
                 <strong>Research grants</strong> for open research infrastructure and responsible research assessment.
               </li>
               <li>
-                <strong>Voluntary support</strong> from individual researchers. If Scholar Folio is useful to you, you can
+                <strong>Voluntary support</strong> from individual researchers. If ScholarFolio is useful to you, you can
                 chip in {SUPPORT_PACKS.map((p) => `€${p.priceEur}`).join(' or ')}. As a thank-you you get extra fresh lookups,
                 but supporting is optional and nothing on the site depends on it.
               </li>
@@ -223,7 +223,7 @@ export function AboutPage({ onBack, socialLinks, authControls, onNavigateInstitu
             <h2 className="font-serif text-2xl font-bold text-[#1e293b] mb-6">Transparency</h2>
 
             <p className="mb-4">
-              I want to be upfront about the money side of this. Scholar Folio is not a business. It is an open
+              I want to be upfront about the money side of this. ScholarFolio is not a business. It is an open
               academic project that costs money to run. Here is what has come in and where it goes.
             </p>
 

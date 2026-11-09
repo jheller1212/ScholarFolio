@@ -292,7 +292,7 @@ export function AuthButton() {
 
             <AuthLegalNotice className="mt-4 text-center" />
             <p className="mt-1 text-[11px] text-center text-gray-400">
-              Scholar Folio is not intended for ranking or evaluating researchers.
+              ScholarFolio is not intended for ranking or evaluating researchers.
             </p>
           </div>
         </div>,

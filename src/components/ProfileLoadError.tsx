@@ -39,7 +39,7 @@ export function ProfileLoadError({ code, rawMessage, nameQuery, retrying, onRetr
             <ArrowLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </button>
           <Logo size={24} />
-          <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Scholar Folio</span>
+          <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">ScholarFolio</span>
           <div className="ml-auto">{authControls}</div>
         </div>
       </header>

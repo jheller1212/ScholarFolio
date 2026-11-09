@@ -67,7 +67,7 @@ export function InstitutionsPage({ onBack, onNavigateAbout, socialLinks, authCon
             <ArrowLeft className="h-4 w-4 text-gray-500" />
           </button>
           <Logo size={28} />
-          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight ml-3">Scholar Folio</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm tracking-tight ml-3">ScholarFolio</span>
           <div className="ml-auto flex items-center gap-3">
             {socialLinks}
             {authControls}
