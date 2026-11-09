@@ -77,5 +77,6 @@ footer.site a{color:var(--soft)}</style>
 <p>ScholarFolio is a free, open-source academic project. Guides summarise official funder documents; the funder's current call text always takes precedence.</p>
 <p><a href="/guides/">All guides</a> · <a href="/">ScholarFolio</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a></p>
 </div></footer>
+<script>(function(){try{var s=sessionStorage,id=s.getItem('sf_session_id'),landing=!id;if(!id){id=crypto.randomUUID?crypto.randomUUID():Array.from(crypto.getRandomValues(new Uint8Array(16)),function(b){return b.toString(16).padStart(2,'0')}).join('');s.setItem('sf_session_id',id)}var q=new URLSearchParams(location.search),r=document.referrer||'direct',p=location.pathname;fetch("https://mixaxkywkojoclgbjjur.supabase.co/rest/v1/analytics_events",{method:'POST',keepalive:true,headers:{apikey:"sb_publishable_oKej73idzSJ1eJqwmgF5WQ_m2rvKae5",'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({event:'page_view',session_id:id,referrer:r,pathname:p,properties:{page_type:'guide',path:p,landing:landing,referrer:r,utm_source:q.get('utm_source'),utm_medium:q.get('utm_medium'),utm_campaign:q.get('utm_campaign'),not_found:true}})}).catch(function(){})}catch(e){}})();</script>
 </body>
 </html>
