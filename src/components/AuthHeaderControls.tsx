@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ANON_FREE_LOOKUPS } from '../lib/constants';
 import { supabase } from '../lib/supabase';
 import { ADMIN_EMAIL } from '../lib/constants';
+import { isPlaceholderEmail } from '../lib/accountEmail';
 
 interface AuthHeaderControlsProps {
   onBuyCredits: () => void;
@@ -18,6 +19,8 @@ interface AuthHeaderControlsProps {
 export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0, anonFreeLimit = ANON_FREE_LOOKUPS }: AuthHeaderControlsProps) {
   const { user, credits, signOut } = useAuth();
   const isAdmin = user?.email === ADMIN_EMAIL;
+  // ORCID-only logins have a placeholder address; never present it as theirs.
+  const needsEmail = isPlaceholderEmail(user?.email);
   const [unresolvedCount, setUnresolvedCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEmailPrefs, setShowEmailPrefs] = useState(false);
@@ -137,8 +140,11 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
           >
             <DropdownMenu.Label className="px-3 pt-3 pb-1">
               <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
-                {user.email}
+                {needsEmail ? 'Signed in with ORCID' : user.email}
               </p>
+              {needsEmail && (
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">No email address yet</p>
+              )}
               {credits !== null && (
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
                   {credits} fresh lookup{credits !== 1 ? 's' : ''} left
@@ -170,7 +176,7 @@ export function AuthHeaderControls({ onBuyCredits, onAdmin, anonSearchesUsed = 0
               onSelect={() => setShowEmailPrefs(true)}
             >
               <Mail className="h-3.5 w-3.5" />
-              Email preferences
+              {needsEmail ? 'Add your email for updates' : 'Email preferences'}
             </DropdownMenu.Item>
 
             {isAdmin && onAdmin && (

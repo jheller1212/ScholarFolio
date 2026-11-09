@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { logCaughtError } from '../lib/errorLogger';
 import { useAuth } from '../contexts/AuthContext';
+import { deliverableEmail } from '../lib/accountEmail';
 import { submitProfileReport } from '../services/reports';
 import { ReportThanks } from './report/ReportThanks';
 
@@ -16,7 +17,7 @@ export function NarrativeReportPanel({ authorName, onClose }: NarrativeReportPan
   const [reportMsg, setReportMsg] = useState('');
   // Signed-in reporters see their account address prefilled — visible and
   // editable, so whether we write back stays their choice.
-  const [reportEmail, setReportEmail] = useState(user?.email ?? '');
+  const [reportEmail, setReportEmail] = useState(deliverableEmail(user?.email) ?? '');
   const [sending, setSending] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [result, setResult] = useState<{ reportId: string | null; willNotify: boolean } | null>(null);
