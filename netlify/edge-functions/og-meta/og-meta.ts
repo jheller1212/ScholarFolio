@@ -3,6 +3,7 @@ import { buildBody, injectBody } from './body.ts';
 import type { CoauthorLink } from './body.ts';
 import { candidateProfiles, frequentCoauthorKeys, listsAuthor } from './coauthors.ts';
 import { buildHead, canonicalUrl, injectHead, markNoindex, slugToName } from './head.ts';
+import { buildPageHead } from './pages.ts';
 import { answerAgent, classifyRoute, wantsHead, wantsText } from './routes.ts';
 import type { ProfileTarget } from './routes.ts';
 import {
@@ -79,17 +80,29 @@ async function excluded(context: Context, status: 404 | 200): Promise<Response> 
   return htmlResponse(markNoindex(html), res, status, { 'x-robots-tag': 'noindex, noai, noimageai' });
 }
 
-export default async function handler(req: Request, context: Context): Promise<Response> {
-  const userAgent = req.headers.get('user-agent') || '';
-  if (!wantsHead(userAgent)) return context.next();
+async function servePage(context: Context, page: string): Promise<Response> {
+  const head = buildPageHead(page);
+  if (!head) return context.next();
+  const { res, html } = await readHtml(context);
+  if (html === null) return res;
+  // Humans get this too: keep the origin's revalidating cache policy, or a
+  // browser could hold a shell that points at a previous deploy's bundles.
+  const cacheControl = res.headers.get('cache-control') ?? 'public, max-age=0, must-revalidate';
+  return htmlResponse(injectHead(html, head.tags, head.title), res, res.status, { 'cache-control': cacheControl });
+}
 
+export default async function handler(req: Request, context: Context): Promise<Response> {
   const url = new URL(req.url);
   const route = classifyRoute(url.pathname, url.searchParams);
+  const userAgent = req.headers.get('user-agent') || '';
   const agent = answerAgent(userAgent);
-  if (route.kind === 'unknown') {
-    if (agent) await logAgentFetch(agent, url.pathname, false);
-    return excluded(context, 404);
-  }
+  if (agent && route.kind !== 'profile') await logAgentFetch(agent, url.pathname, false);
+
+  // Content pages need no lookup, so everyone (not only crawlers) gets their
+  // own title, canonical and share tags in the HTML itself.
+  if (route.kind === 'page') return servePage(context, route.page);
+  if (!wantsHead(userAgent)) return context.next();
+  if (route.kind === 'unknown') return excluded(context, 404);
   if (route.kind !== 'profile') return context.next();
 
   let resolved: Resolved | null;
