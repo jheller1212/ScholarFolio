@@ -1,0 +1,36 @@
+name: Ensure auth redirect URLs
+
+# Supabase only redirects auth links to URLs on its allow list. This adds the
+# ones ScholarFolio's server-side flows need, if missing, and leaves every
+# other auth setting untouched. Safe to re-run.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  ensure:
+    runs-on: ubuntu-latest
+    env:
+      REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      REQUIRED: "https://scholarfolio.org/api/placeholder-email-confirm**"
+    steps:
+      - name: Add missing redirect URLs
+        run: |
+          set -euo pipefail
+          api="https://api.supabase.com/v1/projects/$REF/config/auth"
+          current=$(curl -sf -H "Authorization: Bearer $TOKEN" "$api" | jq -r '.uri_allow_list // ""')
+          echo "Current allow list: $current"
+          updated="$current"
+          IFS=',' read -ra want <<< "$REQUIRED"
+          for url in "${want[@]}"; do
+            if [[ ",$updated," == *",$url,"* ]]; then
+              echo "Already allowed: $url"
+            else
+              updated="${updated:+$updated,}$url"
+              echo "Adding: $url"
+            fi
+          done
+          if [ "$updated" = "$current" ]; then echo "Nothing to change."; exit 0; fi
+          curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            --data "$(jq -n --arg l "$updated" '{uri_allow_list: $l}')" "$api" | jq -r '"New allow list: " + .uri_allow_list'
